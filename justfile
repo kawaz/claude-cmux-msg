@@ -14,6 +14,12 @@ validate:
 version:
     @jq -r '.version' .claude-plugin/plugin.json
 
+# バージョン bump (major, minor, patch)
+version-bump level="patch":
+    bump {{level}} -w -f .claude-plugin/plugin.json      -p '"version":\s*"([^"]+)"'
+    bump {{level}} -w -f .claude-plugin/marketplace.json -p '"version":\s*"([^"]+)"'
+    jj split -m "chore: bump version" .claude-plugin/plugin.json .claude-plugin/marketplace.json
+
 # バンドルをリビルドして差分があればエラー
 check-bundle:
     @bun run build >/dev/null 2>&1
@@ -27,11 +33,17 @@ check-versions:
 
 # main@origin から変更があればバージョン bump 必須
 check-version-bump:
-    @remote_ver=$(jj file show .claude-plugin/plugin.json -r main@origin 2>/dev/null | jq -r '.version' 2>/dev/null || echo ""); \
-        local_ver=$(jq -r '.version' .claude-plugin/plugin.json); \
-        if [ -n "$(jj diff --from main@origin --to main --summary 2>/dev/null)" ] && [ "$local_ver" = "$remote_ver" ]; then \
-            echo "ERROR: 変更がありますがバージョンが未更新です。bump不要なら: just push-without-bump" >&2; exit 1; \
-        fi
+    #!/bin/bash
+    remote_ver=$(jj file show .claude-plugin/plugin.json -r main@origin 2>/dev/null | jq -r '.version' 2>/dev/null)
+    local_ver=$(jq -r '.version' .claude-plugin/plugin.json)
+    if [[ "$local_ver" == "$remote_ver" ]]; then
+        {
+            echo "ERROR: 変更がありますがバージョンが未更新です。"
+            echo "  bumpするなら: just version-bump [major|version|patch]"
+            echo "  bump不要なら: just push-without-bump" >&2; exit 1; \
+        } >&2
+        exit 1
+    fi
 
 push: check-bundle check-versions check-version-bump validate
     jj bookmark set main -r @-
