@@ -1,0 +1,12 @@
+{
+  "name": "cmux-msg",
+  "owner": { "name": "kawaz" },
+  "metadata": { "description": "Inter-CC messaging system for cmux terminal", "version": "0.1.0" },
+  "plugins": [
+    {
+      "name": "cmux-msg",
+      "description": "File-based messaging between Claude Code sessions running in cmux panes",
+      "source": "./"
+    }
+  ]
+}
