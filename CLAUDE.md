@@ -31,9 +31,7 @@ hooks/              # プラグインフック定義 (hooks.json)
 `just push` を使う。以下を自動チェック:
 - バンドル (bin/cmux-msg) が最新か
 - plugin.json と marketplace.json のバージョン一致
-- main@origin からの変更に対するバージョン bump
-
-バージョン bump 不要な場合: `just push-without-bump`
+- main@origin からの変更に対するバージョン bump 必要性
 
 ## jj ワークフロー
 
