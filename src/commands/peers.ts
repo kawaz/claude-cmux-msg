@@ -43,6 +43,19 @@ export function cmdPeers(): void {
       }
     }
 
-    console.log(`${sid}  ${alive}${marker}`);
+    // メタ情報からワーカー名・surface ref を取得
+    let extra = "";
+    const metaFile = path.join(dir, sid, "meta.json");
+    if (fs.existsSync(metaFile)) {
+      try {
+        const meta = JSON.parse(fs.readFileSync(metaFile, "utf-8"));
+        const parts: string[] = [];
+        if (meta.worker_name) parts.push(`name=${meta.worker_name}`);
+        if (meta.surface_ref) parts.push(`ref=${meta.surface_ref}`);
+        if (parts.length > 0) extra = `  ${parts.join(" ")}`;
+      } catch {}
+    }
+
+    console.log(`${sid}  ${alive}${marker}${extra}`);
   }
 }

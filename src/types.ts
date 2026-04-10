@@ -16,4 +16,7 @@ export interface PeerMeta {
   tab_id: string;
   init_at: string;
   shell_pid: number;
+  worker_name?: string;
+  parent_surface?: string;
+  surface_ref?: string;
 }

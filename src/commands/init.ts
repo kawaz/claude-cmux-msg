@@ -22,13 +22,16 @@ export function initWorkspace(dir: string): void {
   const shellPid = process.ppid || process.pid;
   fs.writeFileSync(path.join(dir, "pid"), String(shellPid));
 
-  // メタ情報
+  // メタ情報（undefined は JSON.stringify で自動除去）
   const meta = {
     surface_id: getSurfaceId(),
     workspace_id: getWorkspaceId(),
     tab_id: getTabId(),
     init_at: nowIso(),
     shell_pid: shellPid,
+    worker_name: process.env.CMUX_MSG_WORKER_NAME || undefined,
+    parent_surface: process.env.CMUX_MSG_PARENT_SURFACE || undefined,
+    surface_ref: process.env.CMUX_MSG_SURFACE_REF || undefined,
   };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
 }

@@ -17,11 +17,12 @@ export function validateFilename(filename: string): void {
   }
 }
 
+export const SURFACE_REF_PATTERN = /^surface:\d+$/;
+
 /** surface ID バリデーション（UUID形式 or surface:N 形式） */
 export function validateSurfaceId(id: string): void {
   const uuidPattern = /^[0-9a-fA-F-]+$/;
-  const refPattern = /^surface:\d+$/;
-  if (!uuidPattern.test(id) && !refPattern.test(id)) {
+  if (!uuidPattern.test(id) && !SURFACE_REF_PATTERN.test(id)) {
     throw new Error(`不正な surface ID: ${id}`);
   }
 }

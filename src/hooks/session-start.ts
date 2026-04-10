@@ -9,6 +9,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { initWorkspace } from "../commands/init";
+import { saveSurfaceRef } from "../lib/surface-refs";
+import { SURFACE_REF_PATTERN } from "../lib/validate";
 
 interface SessionStartInput {
   session_id: string;
@@ -39,13 +41,34 @@ async function main(): Promise<void> {
     process.env.CMUX_MSG_BASE ||
     path.join(process.env.HOME || "", ".local/share/cmux-messages");
 
+  // bin/cmux-msg が未ビルドなら自動ビルド
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  if (pluginRoot) {
+    const binPath = path.join(pluginRoot, "bin", "cmux-msg");
+    if (!fs.existsSync(binPath)) {
+      try {
+        Bun.spawnSync(["bun", "run", "build"], {
+          cwd: pluginRoot,
+          stdio: ["ignore", "ignore", "ignore"],
+        });
+      } catch {
+        // ビルド失敗は無視（bun run で動作可能）
+      }
+    }
+  }
+
   // init 共通関数で初期化
   const myDir = path.join(msgBase, workspaceId, surfaceId);
   initWorkspace(myDir);
 
+  // surface:N → UUID マッピングを保存（spawn 経由の場合）
+  const surfaceRef = process.env.CMUX_MSG_SURFACE_REF;
+  if (surfaceRef && surfaceId && SURFACE_REF_PATTERN.test(surfaceRef)) {
+    saveSurfaceRef(surfaceRef, surfaceId);
+  }
+
   // $CLAUDE_ENV_FILE に PATH 追記（cmux-msg を PATH に通す）
   const claudeEnvFile = process.env.CLAUDE_ENV_FILE;
-  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
   if (claudeEnvFile && pluginRoot) {
     const binDir = path.join(pluginRoot, "bin");
     const envLine = `export PATH="${binDir}:$PATH"\n`;

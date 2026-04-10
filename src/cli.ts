@@ -29,7 +29,7 @@ const HELP = `cmux-msg: cmux CC間メッセージングシステム
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
   cmux-msg peers                 同一ワークスペースのピア一覧
-  cmux-msg send <surface_id> <メッセージ>  メッセージ送信
+  cmux-msg send <id> <メッセージ>         メッセージ送信 (UUID or surface:N)
   cmux-msg broadcast <メッセージ>          全ピアにブロードキャスト
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示

@@ -9,6 +9,7 @@ import {
   pluginRoot,
   wsDir,
 } from "../config";
+import { resolveSurfaceId } from "../lib/surface-refs";
 import {
   cmuxNewSplit,
   cmuxSend,
@@ -116,7 +117,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
 
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
   const root = pluginRoot();
-  const claudeCmd = `CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SURFACE=${mySurface} CMUX_MSG_WORKER_NAME=${name} claude ${claudeArgs} --plugin-dir ${root} --name ${name}`;
+  const claudeCmd = `CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SURFACE=${mySurface} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude ${claudeArgs} --plugin-dir ${root} --name ${name}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 
@@ -161,7 +162,16 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   await cmuxSend(surfaceRef, "inbox を確認してください");
   await cmuxSendKey(surfaceRef, "Return");
 
+  // surface:N → UUID マッピングを解決して出力
+  let workerUuid = "";
+  try {
+    workerUuid = resolveSurfaceId(surfaceRef);
+  } catch {
+    // session-start フックがまだマッピングを書いていない場合
+  }
+
+  const idPart = workerUuid ? ` id=${workerUuid}` : "";
   console.log(
-    `spawn完了: name=${name} color=${color} surface=${surfaceRef}`
+    `spawn完了: name=${name} color=${color} surface=${surfaceRef}${idPart}`
   );
 }
