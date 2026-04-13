@@ -3,7 +3,7 @@
 all: test build validate
 
 test:
-    @if ls src/**/*.test.ts >/dev/null 2>&1; then bun test; else echo "テストファイルなし (skip)"; fi
+    bun test
 
 build:
     bun run build
