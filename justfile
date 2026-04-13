@@ -18,7 +18,8 @@ version:
 version-bump level="patch":
     bump {{level}} -w -f .claude-plugin/plugin.json      -p '"version":\s*"([^"]+)"'
     bump {{level}} -w -f .claude-plugin/marketplace.json -p '"version":\s*"([^"]+)"'
-    jj split -m "chore: bump version" .claude-plugin/plugin.json .claude-plugin/marketplace.json
+    bump {{level}} -w -f package.json                    -p '"version":\s*"([^"]+)"'
+    jj split -m "chore: bump version" .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json
 
 # バンドルをリビルドして差分があればエラー
 check-bundle:
