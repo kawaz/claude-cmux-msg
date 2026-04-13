@@ -95,14 +95,18 @@ surface_id: ${surfaceId}
 このセッションは自動生成されたもので、セッション日誌の作成対象外です。
 
 ## メッセージング手順
-- cmux-msg list で inbox を確認
-- cmux-msg read <file> で内容確認
-- 指示に従って作業し cmux-msg reply で返信
-- 待機中は次のメッセージを待つ`);
+1. \`cmux-msg list\` で inbox を確認
+2. \`cmux-msg read <file>\` で内容確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
+3. 全タスク完了後は \`cmux-msg watch 600\` で待機（最大10分間 wait-for で新着シグナルを待つ）
+4. watch がタイムアウトしたら再度 \`cmux-msg list\` を確認し、また watch する
+5. ユーザから停止指示があるまで 3-4 を繰り返す
+
+メッセージ受信時に Bash がブロックされないよう、watch のタイムアウトは長めに取ってよい。`);
   } else {
     // 通常の場合
     console.log(`[cmux-msg] 初期化済み (surface: ${surfaceId})
-cmux-msg コマンドで他のCCとメッセージのやり取りができます。`);
+cmux-msg コマンドで他のCCとメッセージのやり取りができます。
+新着待機: \`cmux-msg watch [timeout]\`（wait-for シグナルで効率的にブロック）。`);
   }
 }
 
