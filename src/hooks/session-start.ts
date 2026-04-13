@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { initWorkspace } from "../commands/init";
 import { saveSurfaceRef } from "../lib/surface-refs";
-import { SURFACE_REF_PATTERN } from "../lib/validate";
+import { SURFACE_REF_PATTERN, UUID_PATTERN } from "../lib/validate";
 
 interface SessionStartInput {
   session_id: string;
@@ -61,10 +61,15 @@ async function main(): Promise<void> {
   const myDir = path.join(msgBase, workspaceId, surfaceId);
   initWorkspace(myDir);
 
-  // surface:N → UUID マッピングを保存（spawn 経由の場合）
+  // UUID → surface:N マッピングを保存（spawn 経由の場合）
   const surfaceRef = process.env.CMUX_MSG_SURFACE_REF;
-  if (surfaceRef && surfaceId && SURFACE_REF_PATTERN.test(surfaceRef)) {
-    saveSurfaceRef(surfaceRef, surfaceId);
+  if (
+    surfaceRef &&
+    surfaceId &&
+    SURFACE_REF_PATTERN.test(surfaceRef) &&
+    UUID_PATTERN.test(surfaceId)
+  ) {
+    saveSurfaceRef(surfaceId, surfaceRef);
   }
 
   // $CLAUDE_ENV_FILE に PATH 追記（cmux-msg を PATH に通す）

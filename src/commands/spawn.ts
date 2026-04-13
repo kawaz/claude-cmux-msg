@@ -9,7 +9,7 @@ import {
   pluginRoot,
   wsDir,
 } from "../config";
-import { resolveSurfaceId } from "../lib/surface-refs";
+import { findUuidByRef } from "../lib/surface-refs";
 import {
   cmuxNewSplit,
   cmuxSend,
@@ -168,16 +168,15 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   await cmuxSend(surfaceRef, "inbox を確認してください");
   await cmuxSendKey(surfaceRef, "Return");
 
-  // surface:N → UUID マッピングを解決して出力
-  let workerUuid = "";
-  try {
-    workerUuid = resolveSurfaceId(surfaceRef);
-  } catch {
-    // session-start フックがまだマッピングを書いていない場合
-  }
+  // ワーカーの UUID を逆引き（session-start フックが書き込み済みのはず）
+  const workerUuid = findUuidByRef(surfaceRef);
 
-  const idPart = workerUuid ? ` id=${workerUuid}` : "";
-  console.log(
-    `spawn完了: name=${name} color=${color} surface=${surfaceRef}${idPart}`
-  );
+  if (workerUuid) {
+    console.log(`spawn完了: id=${workerUuid} name=${name} color=${color}`);
+  } else {
+    // session-start がまだ書いていない稀なケース
+    console.log(
+      `spawn完了: name=${name} color=${color} (UUID 未確定: cmux-msg peers で確認)`
+    );
+  }
 }

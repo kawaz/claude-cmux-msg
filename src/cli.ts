@@ -21,16 +21,18 @@ import { cmdScreen } from "./commands/screen";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
+識別子: 全コマンドで <uuid> = CMUX_SURFACE_ID (UUID v4 形式)。cmux-msg peers で確認可能。
+
 ライフサイクル管理:
   cmux-msg spawn [name] [--cwd path] [--args claude-args]   子CC起動 (色は自動ローテーション)
-  cmux-msg stop <surface_ref>               子CCを終了してペインを閉じる
+  cmux-msg stop <uuid>           子CCを終了してペインを閉じる
 
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
   cmux-msg peers                 同一ワークスペースのピア一覧
-  cmux-msg send <id> <メッセージ>         メッセージ送信 (UUID or surface:N)
-  cmux-msg broadcast <メッセージ>          全ピアにブロードキャスト
+  cmux-msg send <uuid> <メッセージ>     メッセージ送信
+  cmux-msg broadcast <メッセージ>      全ピアにブロードキャスト
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示
   cmux-msg accept <filename>     メッセージを受理 (→ accepted/)
@@ -39,8 +41,8 @@ const HELP = `cmux-msg: cmux CC間メッセージングシステム
   cmux-msg watch [timeout]       inbox監視 (wait-forベース、デフォルト60秒)
 
 ダイレクト操作:
-  cmux-msg tell <surface_ref> <テキスト>   対象に直接テキスト入力
-  cmux-msg screen [surface_ref]            画面内容を読み取り
+  cmux-msg tell <uuid> <テキスト>     対象に直接テキスト入力
+  cmux-msg screen [uuid]              画面内容を読み取り
 
 環境変数:
   CMUX_MSG_PRIORITY=urgent  緊急メッセージとして送信

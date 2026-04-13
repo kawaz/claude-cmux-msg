@@ -17,13 +17,17 @@ export function validateFilename(filename: string): void {
   }
 }
 
+/** UUID v4 形式（cmux が CMUX_SURFACE_ID として採番） */
+export const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** cmux 内部参照（cmux API 用、cmux-msg のユーザ I/F では使わない） */
 export const SURFACE_REF_PATTERN = /^surface:\d+$/;
 
-/** surface ID バリデーション（UUID形式 or surface:N 形式） */
+/** surface ID バリデーション（UUID 形式のみ受付） */
 export function validateSurfaceId(id: string): void {
-  const uuidPattern = /^[0-9a-fA-F-]+$/;
-  if (!uuidPattern.test(id) && !SURFACE_REF_PATTERN.test(id)) {
-    throw new Error(`不正な surface ID: ${id}`);
+  if (!UUID_PATTERN.test(id)) {
+    throw new Error(`UUID 形式が必要です: ${id}`);
   }
 }
 

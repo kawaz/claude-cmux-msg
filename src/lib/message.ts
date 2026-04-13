@@ -13,7 +13,6 @@ import {
 } from "./frontmatter";
 import { cmuxSignal } from "./cmux";
 import { validateSurfaceId } from "./validate";
-import { resolveSurfaceId } from "./surface-refs";
 
 export interface SendOptions {
   target: string;
@@ -29,10 +28,7 @@ export interface SendOptions {
 export async function sendMessage(opts: SendOptions): Promise<string> {
   validateSurfaceId(opts.target);
 
-  // surface:N → UUID に解決（ファイルシステムパスとシグナルに UUID が必要）
-  const resolvedTarget = resolveSurfaceId(opts.target);
-
-  const targetDir = peerDir(resolvedTarget);
+  const targetDir = peerDir(opts.target);
   const inboxDir = path.join(targetDir, "inbox");
 
   if (!fs.existsSync(inboxDir)) {
@@ -46,7 +42,7 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
 
   const meta: Record<string, string | undefined> = {
     from: getSurfaceId(),
-    to: resolvedTarget,
+    to: opts.target,
     type: opts.type || process.env.CMUX_MSG_TYPE || "request",
     priority:
       opts.priority ||
@@ -64,7 +60,7 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
 
   // wait-for シグナルで受信側に通知（UUID ベース）
   try {
-    await cmuxSignal(`cmux-msg:${resolvedTarget}`);
+    await cmuxSignal(`cmux-msg:${opts.target}`);
   } catch {
     // cmux が無くても送信自体は成功
   }
