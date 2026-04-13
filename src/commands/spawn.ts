@@ -119,17 +119,11 @@ export async function cmdSpawn(args: string[]): Promise<void> {
 
   const mySurface = getSurfaceId();
 
-  // --cwd 指定があれば claude 起動前に cd（ワーカーのセッションログを正しいプロジェクトに保存）
-  if (cwd) {
-    const cdCmd = `cd ${JSON.stringify(cwd)}`;
-    await cmuxSend(surfaceRef, cdCmd);
-    await cmuxSendKey(surfaceRef, "Return");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
+  // --cwd 指定時は cd を先頭に付けて1コマンドで実行（シェル未準備時の入力混在を防ぐ）
   const root = pluginRoot();
-  const claudeCmd = `CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SURFACE=${mySurface} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude ${claudeArgs} --plugin-dir ${root} --name ${name}`;
+  const cdPrefix = cwd ? `cd ${JSON.stringify(cwd)} && ` : "";
+  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SURFACE=${mySurface} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude ${claudeArgs} --plugin-dir ${root} --name ${name}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 
