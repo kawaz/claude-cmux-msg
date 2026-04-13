@@ -62,6 +62,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
 
   let name = "";
   let claudeArgs = "--dangerously-skip-permissions";
+  let cwd = "";
 
   // オプション解析
   let i = 0;
@@ -72,6 +73,9 @@ export async function cmdSpawn(args: string[]): Promise<void> {
       i += 2;
     } else if (arg === "--args" && i + 1 < args.length) {
       claudeArgs = args[i + 1]!;
+      i += 2;
+    } else if (arg === "--cwd" && i + 1 < args.length) {
+      cwd = args[i + 1]!;
       i += 2;
     } else {
       // 位置引数: name
@@ -114,6 +118,14 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   }
 
   const mySurface = getSurfaceId();
+
+  // --cwd 指定があれば claude 起動前に cd（ワーカーのセッションログを正しいプロジェクトに保存）
+  if (cwd) {
+    const cdCmd = `cd ${JSON.stringify(cwd)}`;
+    await cmuxSend(surfaceRef, cdCmd);
+    await cmuxSendKey(surfaceRef, "Return");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
   const root = pluginRoot();

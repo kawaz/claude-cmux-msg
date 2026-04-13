@@ -22,7 +22,7 @@ import { cmdScreen } from "./commands/screen";
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
 ライフサイクル管理:
-  cmux-msg spawn [name] [--dir right|down] [--args claude-args]  子CC起動 (色は自動ローテーション)
+  cmux-msg spawn [name] [--cwd path] [--args claude-args]   子CC起動 (色は自動ローテーション)
   cmux-msg stop <surface_ref>               子CCを終了してペインを閉じる
 
 メッセージング:
