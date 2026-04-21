@@ -18,16 +18,34 @@ export async function cmdWatch(args: string[]): Promise<void> {
   }
 
   // 未読がなければ wait-for でシグナルを待つ
-  const received = await cmuxWaitFor(`cmux-msg:${mySurface}`, timeout);
-  if (received) {
+  const result = await cmuxWaitFor(`cmux-msg:${mySurface}`, timeout);
+  const elapsedSec = (result.elapsedMs / 1000).toFixed(2);
+
+  if (result.kind === "received") {
     count = countInbox();
     if (count > 0) {
       console.log(
         `inbox に ${count} 件の未読メッセージがあります。cmux-msg list で確認してください。`
       );
+    } else {
+      console.log(
+        `シグナルを受信しましたが未読メッセージはありませんでした。(${elapsedSec}s)`
+      );
     }
+    return;
   }
-  if (!received) {
-    console.log(`${timeout}秒間メッセージはありませんでした。`);
+
+  if (result.kind === "timeout") {
+    console.log(`${timeout}秒間メッセージはありませんでした。(実測 ${elapsedSec}s)`);
+    return;
   }
+
+  // result.kind === "error"
+  console.error(
+    `cmux wait-for がエラー終了しました (exit=${result.exitCode}, ${elapsedSec}s):`
+  );
+  if (result.stderr) {
+    console.error(result.stderr);
+  }
+  process.exit(1);
 }

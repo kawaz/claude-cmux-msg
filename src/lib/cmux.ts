@@ -111,16 +111,42 @@ export async function cmuxCloseSurface(surfaceRef: string): Promise<void> {
   await cmuxExec(["close-surface", "--surface", surfaceRef]);
 }
 
+export type WaitForKind = "received" | "timeout" | "error";
+
+export type WaitForResult =
+  | { kind: "received"; elapsedMs: number }
+  | { kind: "timeout"; elapsedMs: number }
+  | { kind: "error"; elapsedMs: number; exitCode: number; stderr: string };
+
+export function interpretWaitForResult(result: {
+  exitCode: number;
+  stderr: string;
+}): WaitForKind {
+  if (result.exitCode === 0) return "received";
+  if (result.stderr.includes("timed out")) return "timeout";
+  return "error";
+}
+
 export async function cmuxWaitFor(
   signal: string,
   timeout?: number
-): Promise<boolean> {
+): Promise<WaitForResult> {
   const args = ["wait-for", signal];
   if (timeout !== undefined) {
     args.push("--timeout", String(timeout));
   }
+  const start = performance.now();
   const result = await cmuxExec(args);
-  return result.exitCode === 0;
+  const elapsedMs = performance.now() - start;
+  const kind = interpretWaitForResult(result);
+  if (kind === "received") return { kind, elapsedMs };
+  if (kind === "timeout") return { kind, elapsedMs };
+  return {
+    kind: "error",
+    elapsedMs,
+    exitCode: result.exitCode,
+    stderr: result.stderr,
+  };
 }
 
 export async function cmuxSignal(signal: string): Promise<void> {
