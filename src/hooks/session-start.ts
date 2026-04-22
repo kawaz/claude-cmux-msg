@@ -11,6 +11,7 @@ import * as path from "path";
 import { initWorkspace } from "../commands/init";
 import { saveSurfaceRef } from "../lib/surface-refs";
 import { SURFACE_REF_PATTERN, UUID_PATTERN } from "../lib/validate";
+import { countInbox } from "../lib/message";
 
 interface SessionStartInput {
   session_id: string;
@@ -84,6 +85,17 @@ async function main(): Promise<void> {
   const parentSurface = process.env.CMUX_MSG_PARENT_SURFACE;
   const workerName = process.env.CMUX_MSG_WORKER_NAME;
 
+  let unreadCount = 0;
+  try {
+    unreadCount = countInbox();
+  } catch {
+    // inbox 未初期化なら 0 扱い
+  }
+  const unreadLine =
+    unreadCount > 0
+      ? `\n未読メッセージ ${unreadCount} 件: \`cmux-msg list\` で確認してください。`
+      : "";
+
   if (parentSurface) {
     // ワーカーとして spawn された場合
     console.log(`[cmux-msg:spawned-worker]
@@ -95,18 +107,17 @@ surface_id: ${surfaceId}
 このセッションは自動生成されたもので、セッション日誌の作成対象外です。
 
 ## メッセージング手順
-1. \`cmux-msg list\` で inbox を確認
-2. \`cmux-msg read <file>\` で内容確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
-3. 全タスク完了後は \`cmux-msg watch 600\` で待機（最大10分間 wait-for で新着シグナルを待つ）
-4. watch がタイムアウトしたら再度 \`cmux-msg list\` を確認し、また watch する
-5. ユーザから停止指示があるまで 3-4 を繰り返す
-
-メッセージ受信時に Bash がブロックされないよう、watch のタイムアウトは長めに取ってよい。`);
+1. セッション開始直後に Monitor ツールで \`cmux-msg subscribe\` を張る（persistent: true 推奨）
+   - stdout は JSONL。1行 = 1件の未読メッセージ通知
+2. 通知が来たら \`cmux-msg read <filename>\` で本文確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
+3. セッションが resume された場合も同じく Monitor を張り直す
+   - subscribe 起動時に既存未読を全件再通知するため取りこぼし無し
+4. ユーザから停止指示があるまで 2 を繰り返す${unreadLine}`);
   } else {
     // 通常の場合
     console.log(`[cmux-msg] 初期化済み (surface: ${surfaceId})
 cmux-msg コマンドで他のCCとメッセージのやり取りができます。
-新着待機: \`cmux-msg watch [timeout]\`（wait-for シグナルで効率的にブロック）。`);
+新着監視は Monitor ツール + \`cmux-msg subscribe\` を推奨（JSONL 出力、1行 = 1件の新着通知）。${unreadLine}`);
   }
 }
 

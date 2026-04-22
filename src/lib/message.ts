@@ -68,10 +68,19 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
   return filename;
 }
 
+export interface InboxMessage {
+  filename: string;
+  from: string;
+  priority: string;
+  type: string;
+  created_at: string;
+  in_reply_to: string | null;
+}
+
 /**
  * inbox のメッセージ一覧を取得する
  */
-export function listInbox(): { filename: string; from: string; priority: string }[] {
+export function listInbox(): InboxMessage[] {
   const dir = myDir();
   const inboxDir = path.join(dir, "inbox");
 
@@ -82,7 +91,7 @@ export function listInbox(): { filename: string; from: string; priority: string 
   }
 
   const files = fs.readdirSync(inboxDir).filter((f) => f.endsWith(".md")).sort();
-  const result: { filename: string; from: string; priority: string }[] = [];
+  const result: InboxMessage[] = [];
 
   for (const filename of files) {
     const filepath = path.join(inboxDir, filename);
@@ -92,6 +101,9 @@ export function listInbox(): { filename: string; from: string; priority: string 
       filename,
       from: meta.from || "unknown",
       priority: meta.priority || "normal",
+      type: meta.type || "request",
+      created_at: meta.created_at || "",
+      in_reply_to: meta.in_reply_to || null,
     });
   }
 

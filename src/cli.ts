@@ -13,7 +13,7 @@ import { cmdAccept } from "./commands/accept";
 import { cmdDismiss } from "./commands/dismiss";
 import { cmdReply } from "./commands/reply";
 import { cmdBroadcast } from "./commands/broadcast";
-import { cmdWatch } from "./commands/watch";
+import { cmdSubscribe } from "./commands/subscribe";
 import { cmdSpawn } from "./commands/spawn";
 import { cmdStop } from "./commands/stop";
 import { cmdTell } from "./commands/tell";
@@ -38,7 +38,7 @@ const HELP = `cmux-msg: cmux CC間メッセージングシステム
   cmux-msg accept <filename>     メッセージを受理 (→ accepted/)
   cmux-msg dismiss <filename>    メッセージを破棄 (→ archive/)
   cmux-msg reply <filename> <返信内容>  返信送信 & アーカイブ
-  cmux-msg watch [timeout]       inbox監視 (wait-forベース、デフォルト60秒)
+  cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
 
 ダイレクト操作:
   cmux-msg tell <uuid> <テキスト>     対象に直接テキスト入力
@@ -86,8 +86,8 @@ async function main(): Promise<void> {
     case "broadcast":
       await cmdBroadcast(rest);
       break;
-    case "watch":
-      await cmdWatch(rest);
+    case "subscribe":
+      await cmdSubscribe(rest);
       break;
     case "spawn":
       await cmdSpawn(rest);

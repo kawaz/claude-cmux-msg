@@ -60,9 +60,27 @@ cmux-msg dismiss <filename>
 # 返信送信 & アーカイブ
 cmux-msg reply <filename> <返信内容>
 
-# inbox を監視（シグナルベース、デフォルト60秒）
-cmux-msg watch [timeout]
+# inbox 新着を JSONL で連続出力（永続ループ、Monitor 用）
+cmux-msg subscribe
 ```
+
+### subscribe の使い方（Monitor ツール前提）
+
+Claude Code の Monitor ツールで `cmux-msg subscribe` を張ると、新着メッセージが
+JSONL 1 行 = 1 イベントとして通知される。
+
+```
+Monitor({
+  command: "cmux-msg subscribe",
+  description: "cmux-msg inbox",
+  persistent: true
+})
+```
+
+- 起動時に既存未読を全件 emit するので、セッション resume 後の張り直しでも取りこぼし無し
+- 各イベントは `{filename, from, priority, type, created_at, in_reply_to}` の JSON
+- 本文は `cmux-msg read <filename>` で取得（JSONL には含めない）
+- メッセージは `accept` / `dismiss` / `reply` するまで inbox に残るため、再起動時は再通知される
 
 ### ダイレクト操作
 
@@ -78,11 +96,11 @@ cmux-msg screen [uuid]
 
 ### 親CC（タスク依頼側）
 
-1. `cmux-msg spawn worker-a --cwd /path/to/project` でワーカーを起動
-2. spawn 出力の `id=<UUID>` を記録
-3. `cmux-msg send <UUID> "src/foo.ts のリファクタリングをしてください"` で指示
-4. `cmux-msg watch` で返信を待つ
-5. 返信が来たら `cmux-msg list` → `cmux-msg read <file>` で確認
+1. Monitor ツールで `cmux-msg subscribe` を張る（persistent: true）
+2. `cmux-msg spawn worker-a --cwd /path/to/project` でワーカーを起動
+3. spawn 出力の `id=<UUID>` を記録
+4. `cmux-msg send <UUID> "src/foo.ts のリファクタリングをしてください"` で指示
+5. Monitor の通知で返信が届いたら `cmux-msg read <file>` で確認
 
 ### 複数ワーカーの並列起動
 
@@ -101,11 +119,13 @@ wait
 ### 子CC（ワーカー側）
 
 1. SessionStart フックで自動初期化
-2. `cmux-msg list` で inbox を確認
-3. `cmux-msg read <file>` でタスク内容確認
-4. `cmux-msg accept <file>` で受理
+2. Monitor ツールで `cmux-msg subscribe` を張る（persistent: true）
+3. 通知が来たら `cmux-msg read <filename>` でタスク内容確認
+4. `cmux-msg accept <filename>` で受理
 5. 作業実施
-6. `cmux-msg reply <file> "完了しました。変更内容: ..."` で結果報告
+6. `cmux-msg reply <filename> "完了しました。変更内容: ..."` で結果報告
+7. 次の通知を待つ（Monitor に任せて他の作業を並行してよい）
+8. resume された場合は Monitor を張り直す（subscribe が既存未読を再通知する）
 
 ## 環境変数
 
