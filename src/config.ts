@@ -24,6 +24,12 @@ export function requireCmux(): void {
     );
     process.exit(1);
   }
+  if (!getSurfaceId()) {
+    console.error(
+      "エラー: CMUX_SURFACE_ID が未設定です (signal 名衝突・誤配送の原因になるため拒否)"
+    );
+    process.exit(1);
+  }
 }
 
 export function myDir(): string {
