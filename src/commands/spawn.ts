@@ -127,7 +127,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   // --cwd 指定時は cd を先頭に付けて1コマンドで実行（シェル未準備時の入力混在を防ぐ）
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${JSON.stringify(cwd)} && ` : "";
-  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SESSION_ID=${parentSessionId} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --plugin-dir ${root} --name ${name}`;
+  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUXMSG_PARENT_SESSION_ID=${parentSessionId} CMUXMSG_WORKER_NAME=${name} CMUXMSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --plugin-dir ${root} --name ${name}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 

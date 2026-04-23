@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   }
 
   const msgBase =
-    process.env.CMUX_MSG_BASE ||
+    process.env.CMUXMSG_BASE ||
     path.join(process.env.HOME || "", ".local/share/cmux-messages");
 
   // bin/cmux-msg が未ビルドなら自動ビルド
@@ -64,13 +64,13 @@ async function main(): Promise<void> {
   }
 
   // initWorkspace/countInbox が getSessionId() 経由で env を読むので先に設定
-  process.env.CMUX_MSG_SESSION_ID = sessionId;
+  process.env.CMUXMSG_SESSION_ID = sessionId;
 
   // init 共通関数で初期化
   const myDirPath = path.join(msgBase, workspaceId, sessionId);
   initWorkspace(myDirPath);
 
-  // $CLAUDE_ENV_FILE に PATH 追記 + CMUX_MSG_SESSION_ID export
+  // $CLAUDE_ENV_FILE に PATH 追記 + CMUXMSG_SESSION_ID export
   const claudeEnvFile = process.env.CLAUDE_ENV_FILE;
   if (claudeEnvFile) {
     const lines: string[] = [];
@@ -78,13 +78,13 @@ async function main(): Promise<void> {
       const binDir = path.join(pluginRoot, "bin");
       lines.push(`export PATH="${binDir}:$PATH"`);
     }
-    lines.push(`export CMUX_MSG_SESSION_ID=${sessionId}`);
+    lines.push(`export CMUXMSG_SESSION_ID=${sessionId}`);
     fs.appendFileSync(claudeEnvFile, lines.join("\n") + "\n");
   }
 
   // コンテキスト出力
-  const parentSessionId = process.env.CMUX_MSG_PARENT_SESSION_ID;
-  const workerName = process.env.CMUX_MSG_WORKER_NAME;
+  const parentSessionId = process.env.CMUXMSG_PARENT_SESSION_ID;
+  const workerName = process.env.CMUXMSG_WORKER_NAME;
 
   let unreadCount = 0;
   try {

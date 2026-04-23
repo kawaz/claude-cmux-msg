@@ -29,9 +29,9 @@ export function initWorkspace(dir: string): void {
     tab_id: getTabId(),
     init_at: nowIso(),
     shell_pid: shellPid,
-    worker_name: process.env.CMUX_MSG_WORKER_NAME || undefined,
-    parent_session_id: process.env.CMUX_MSG_PARENT_SESSION_ID || undefined,
-    surface_ref: process.env.CMUX_MSG_SURFACE_REF || undefined,
+    worker_name: process.env.CMUXMSG_WORKER_NAME || undefined,
+    parent_session_id: process.env.CMUXMSG_PARENT_SESSION_ID || undefined,
+    surface_ref: process.env.CMUXMSG_SURFACE_REF || undefined,
   };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
 }

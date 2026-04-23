@@ -47,9 +47,9 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg screen [session_id]           画面内容を読み取り
 
 環境変数:
-  CMUX_MSG_SESSION_ID       自分の session_id (SessionStart hook が自動設定)
-  CMUX_MSG_PRIORITY=urgent  緊急メッセージとして送信
-  CMUX_MSG_BASE=<path>      メッセージ保存先 (デフォルト: ~/.local/share/cmux-messages)`;
+  CMUXMSG_SESSION_ID       自分の session_id (SessionStart hook が自動設定)
+  CMUXMSG_PRIORITY=urgent  緊急メッセージとして送信
+  CMUXMSG_BASE=<path>      メッセージ保存先 (デフォルト: ~/.local/share/cmux-messages)`;
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

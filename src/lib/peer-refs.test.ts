@@ -8,7 +8,7 @@ let tmpBase: string;
 
 beforeEach(() => {
   tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-msg-test-"));
-  process.env.CMUX_MSG_BASE = tmpBase;
+  process.env.CMUXMSG_BASE = tmpBase;
   process.env.CMUX_WORKSPACE_ID = TEST_WORKSPACE;
   delete require.cache[require.resolve("./peer-refs")];
   delete require.cache[require.resolve("../config")];

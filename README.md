@@ -20,7 +20,7 @@ claude plugin update cmux-msg@cmux-msg
 
 ## Identifiers
 
-All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`, surfaced via `CMUX_MSG_SESSION_ID` (set by the SessionStart hook). `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
+All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`, surfaced via `CMUXMSG_SESSION_ID` (set by the SessionStart hook). `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
 
 Use `cmux-msg peers` to list peers and their session IDs.
 
@@ -75,7 +75,7 @@ Run `cmux-msg help` for the full help.
 - Atomic delivery via tmp + rename.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - Spawned workers are automatically initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg` on first run if missing.
-- The SessionStart hook exports `CMUX_MSG_SESSION_ID` to `$CLAUDE_ENV_FILE`, so subsequent shells inside the same claude session inherit it automatically.
+- The SessionStart hook exports `CMUXMSG_SESSION_ID` to `$CLAUDE_ENV_FILE`, so subsequent shells inside the same claude session inherit it automatically.
 
 ## Receiving messages (recommended pattern)
 

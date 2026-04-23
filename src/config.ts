@@ -2,7 +2,7 @@ import * as path from "path";
 import * as os from "os";
 
 export const MSG_BASE =
-  process.env.CMUX_MSG_BASE ||
+  process.env.CMUXMSG_BASE ||
   path.join(os.homedir(), ".local/share/cmux-messages");
 
 export function getWorkspaceId(): string {
@@ -14,7 +14,7 @@ export function getWorkspaceId(): string {
  * SessionStart hook が CLAUDE_ENV_FILE 経由で export し、以降のシェルで参照可能。
  */
 export function getSessionId(): string {
-  return process.env.CMUX_MSG_SESSION_ID || "";
+  return process.env.CMUXMSG_SESSION_ID || "";
 }
 
 export function getTabId(): string {
@@ -30,7 +30,7 @@ export function requireCmux(): void {
   }
   if (!getSessionId()) {
     console.error(
-      "エラー: CMUX_MSG_SESSION_ID が未設定です (SessionStart hook が未実行？)"
+      "エラー: CMUXMSG_SESSION_ID が未設定です (SessionStart hook が未実行？)"
     );
     process.exit(1);
   }

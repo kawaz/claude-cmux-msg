@@ -43,13 +43,13 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
   const meta: Record<string, string | undefined> = {
     from: getSessionId(),
     to: opts.target,
-    type: opts.type || process.env.CMUX_MSG_TYPE || "request",
+    type: opts.type || process.env.CMUXMSG_TYPE || "request",
     priority:
       opts.priority ||
-      (process.env.CMUX_MSG_PRIORITY as "normal" | "urgent") ||
+      (process.env.CMUXMSG_PRIORITY as "normal" | "urgent") ||
       "normal",
     created_at: nowIso(),
-    in_reply_to: opts.inReplyTo || process.env.CMUX_MSG_REPLY_TO || undefined,
+    in_reply_to: opts.inReplyTo || process.env.CMUXMSG_REPLY_TO || undefined,
   };
 
   const content = serializeFrontmatter(meta, opts.body);
