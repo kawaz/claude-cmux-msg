@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { requireCmux, wsDir, getSurfaceId } from "../config";
+import { requireCmux, wsDir, getSessionId } from "../config";
 import { sendMessage } from "../lib/message";
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
@@ -13,14 +13,14 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
 
   const body = args.join(" ");
   const dir = wsDir();
-  const mySurface = getSurfaceId();
+  const mySessionId = getSessionId();
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const targets = entries
     .filter((entry) => {
       if (!entry.isDirectory()) return false;
       const sid = entry.name;
-      if (sid === mySurface || sid === "broadcast") return false;
+      if (sid === mySessionId || sid === "broadcast") return false;
       const inboxDir = path.join(dir, sid, "inbox");
       return fs.existsSync(inboxDir);
     })

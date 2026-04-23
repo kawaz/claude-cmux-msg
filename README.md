@@ -20,31 +20,32 @@ claude plugin update cmux-msg@cmux-msg
 
 ## Identifiers
 
-All commands address sessions by **UUID** (the value of `CMUX_SURFACE_ID`, e.g. `1D033978-ACF7-479B-B355-160EC85217B1`).
-Use `cmux-msg peers` to list peers and their UUIDs.
+All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`, surfaced via `CMUX_MSG_SESSION_ID` (set by the SessionStart hook). `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
 
-The cmux-internal `surface:N` reference is hidden from the user interface.
+Use `cmux-msg peers` to list peers and their session IDs.
+
+The cmux-internal `surface:N` reference is used only under the hood for `tell` / `screen` / `stop`; peers expose their `surface_ref` via their own `meta.json`.
 
 ## Quick start
 
 ```bash
 # In a parent CC pane: spawn a worker in /path/to/project
 $ cmux-msg spawn worker-a --cwd /path/to/project
-spawn完了: id=1D033978-ACF7-479B-B355-160EC85217B1 name=worker-a color=red
+spawn完了: id=1d033978-acf7-479b-b355-160ec85217b1 name=worker-a color=red
 
 # Send a task to the worker
-$ cmux-msg send 1D033978-ACF7-479B-B355-160EC85217B1 "Refactor src/foo.ts"
+$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 "Refactor src/foo.ts"
 
 # Stream inbox events as JSONL (for use with Claude Code's Monitor tool)
 $ cmux-msg subscribe
-{"filename":"2026-04-21T...-abcd.md","from":"1D03...","priority":"normal","type":"response","created_at":"2026-04-21T12:34:56Z","in_reply_to":"..."}
+{"filename":"2026-04-21T...-abcd.md","from":"1d03...","priority":"normal","type":"response","created_at":"2026-04-21T12:34:56Z","in_reply_to":"..."}
 
 # Read the reply
 $ cmux-msg list
 $ cmux-msg read <filename>
 
 # Stop the worker when done
-$ cmux-msg stop 1D033978-ACF7-479B-B355-160EC85217B1
+$ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 ```
 
 ## Commands
@@ -52,10 +53,10 @@ $ cmux-msg stop 1D033978-ACF7-479B-B355-160EC85217B1
 | Command | Description |
 |---------|-------------|
 | `spawn [name] [--cwd path] [--args claude-args]` | Spawn a child CC in a new split pane |
-| `stop <uuid>` | Stop a child CC and close its pane |
+| `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
 | `peers` | List peers in the same workspace |
-| `send <uuid> <message>` | Send a message |
+| `send <session_id> <message>` | Send a message |
 | `broadcast <message>` | Broadcast to all peers |
 | `list` | List inbox messages |
 | `read <filename>` | Display message content |
@@ -63,17 +64,18 @@ $ cmux-msg stop 1D033978-ACF7-479B-B355-160EC85217B1
 | `dismiss <filename>` | Discard message → `archive/` |
 | `reply <filename> <body>` | Reply and archive |
 | `subscribe` | Stream inbox events as JSONL to stdout (meant for Monitor tool) |
-| `tell <uuid> <text>` | Send raw text to a pane (bypasses messaging) |
-| `screen [uuid]` | Read pane screen content |
+| `tell <session_id> <text>` | Send raw text to a pane (bypasses messaging) |
+| `screen [session_id]` | Read pane screen content |
 
 Run `cmux-msg help` for the full help.
 
 ## How it works
 
-- Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<workspace>/<uuid>/inbox/`.
+- Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<workspace>/<session_id>/inbox/`.
 - Atomic delivery via tmp + rename.
-- Notification via `cmux wait-for` signals (`cmux-msg:<uuid>`).
+- Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - Spawned workers are automatically initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg` on first run if missing.
+- The SessionStart hook exports `CMUX_MSG_SESSION_ID` to `$CLAUDE_ENV_FILE`, so subsequent shells inside the same claude session inherit it automatically.
 
 ## Receiving messages (recommended pattern)
 

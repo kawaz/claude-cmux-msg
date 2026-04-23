@@ -9,9 +9,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { initWorkspace } from "../commands/init";
-import { saveSurfaceRef } from "../lib/surface-refs";
-import { SURFACE_REF_PATTERN, UUID_PATTERN } from "../lib/validate";
 import { countInbox } from "../lib/message";
+import { UUID_PATTERN } from "../lib/validate";
 
 interface SessionStartInput {
   session_id: string;
@@ -37,7 +36,13 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const surfaceId = process.env.CMUX_SURFACE_ID || "";
+  // session_id は claude から必ず渡される前提
+  const sessionId = input.session_id;
+  if (!sessionId || !UUID_PATTERN.test(sessionId)) {
+    console.error(`[cmux-msg] session_id が不正: ${sessionId}`);
+    process.exit(0);
+  }
+
   const msgBase =
     process.env.CMUX_MSG_BASE ||
     path.join(process.env.HOME || "", ".local/share/cmux-messages");
@@ -58,31 +63,27 @@ async function main(): Promise<void> {
     }
   }
 
+  // initWorkspace/countInbox が getSessionId() 経由で env を読むので先に設定
+  process.env.CMUX_MSG_SESSION_ID = sessionId;
+
   // init 共通関数で初期化
-  const myDir = path.join(msgBase, workspaceId, surfaceId);
-  initWorkspace(myDir);
+  const myDirPath = path.join(msgBase, workspaceId, sessionId);
+  initWorkspace(myDirPath);
 
-  // UUID → surface:N マッピングを保存（spawn 経由の場合）
-  const surfaceRef = process.env.CMUX_MSG_SURFACE_REF;
-  if (
-    surfaceRef &&
-    surfaceId &&
-    SURFACE_REF_PATTERN.test(surfaceRef) &&
-    UUID_PATTERN.test(surfaceId)
-  ) {
-    saveSurfaceRef(surfaceId, surfaceRef);
-  }
-
-  // $CLAUDE_ENV_FILE に PATH 追記（cmux-msg を PATH に通す）
+  // $CLAUDE_ENV_FILE に PATH 追記 + CMUX_MSG_SESSION_ID export
   const claudeEnvFile = process.env.CLAUDE_ENV_FILE;
-  if (claudeEnvFile && pluginRoot) {
-    const binDir = path.join(pluginRoot, "bin");
-    const envLine = `export PATH="${binDir}:$PATH"\n`;
-    fs.appendFileSync(claudeEnvFile, envLine);
+  if (claudeEnvFile) {
+    const lines: string[] = [];
+    if (pluginRoot) {
+      const binDir = path.join(pluginRoot, "bin");
+      lines.push(`export PATH="${binDir}:$PATH"`);
+    }
+    lines.push(`export CMUX_MSG_SESSION_ID=${sessionId}`);
+    fs.appendFileSync(claudeEnvFile, lines.join("\n") + "\n");
   }
 
   // コンテキスト出力
-  const parentSurface = process.env.CMUX_MSG_PARENT_SURFACE;
+  const parentSessionId = process.env.CMUX_MSG_PARENT_SESSION_ID;
   const workerName = process.env.CMUX_MSG_WORKER_NAME;
 
   let unreadCount = 0;
@@ -96,12 +97,11 @@ async function main(): Promise<void> {
       ? `\n未読メッセージ ${unreadCount} 件: \`cmux-msg list\` で確認してください。`
       : "";
 
-  if (parentSurface) {
-    // ワーカーとして spawn された場合
+  if (parentSessionId) {
     console.log(`[cmux-msg:spawned-worker]
-parent_surface: ${parentSurface}
+parent_session_id: ${parentSessionId}
 worker_name: ${workerName || "unnamed"}
-surface_id: ${surfaceId}
+session_id: ${sessionId}
 
 あなたは cmux-msg spawn で起動されたワーカーCCです。
 このセッションは自動生成されたもので、セッション日誌の作成対象外です。
@@ -114,8 +114,7 @@ surface_id: ${surfaceId}
    - subscribe 起動時に既存未読を全件再通知するため取りこぼし無し
 4. ユーザから停止指示があるまで 2 を繰り返す${unreadLine}`);
   } else {
-    // 通常の場合
-    console.log(`[cmux-msg] 初期化済み (surface: ${surfaceId})
+    console.log(`[cmux-msg] 初期化済み (session_id: ${sessionId})
 cmux-msg コマンドで他のCCとメッセージのやり取りができます。
 新着監視は Monitor ツール + \`cmux-msg subscribe\` を推奨（JSONL 出力、1行 = 1件の新着通知）。${unreadLine}`);
   }

@@ -1,17 +1,17 @@
 import { requireCmux } from "../config";
 import { sendMessage } from "../lib/message";
-import { validateSurfaceId } from "../lib/validate";
+import { validateSessionId } from "../lib/validate";
 
 export async function cmdSend(args: string[]): Promise<void> {
   requireCmux();
 
   if (args.length < 2) {
-    console.error("使い方: cmux-msg send <surface_id> <メッセージ>");
+    console.error("使い方: cmux-msg send <session_id> <メッセージ>");
     process.exit(1);
   }
 
   const target = args[0]!;
-  validateSurfaceId(target);
+  validateSessionId(target);
   const body = args.slice(1).join(" ");
 
   try {

@@ -1,4 +1,4 @@
-import { requireCmux, getSurfaceId } from "../config";
+import { requireCmux, getSessionId } from "../config";
 import { listInbox, type InboxMessage } from "../lib/message";
 import { cmuxWaitFor } from "../lib/cmux";
 import { diffInbox } from "../lib/subscribe";
@@ -20,8 +20,8 @@ function emit(msg: InboxMessage): void {
 export async function cmdSubscribe(_args: string[]): Promise<void> {
   requireCmux();
 
-  const mySurface = getSurfaceId();
-  const signal = `cmux-msg:${mySurface}`;
+  const mySessionId = getSessionId();
+  const signal = `cmux-msg:${mySessionId}`;
   let emitted = new Set<string>();
   let running = true;
 

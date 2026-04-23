@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { requireCmux, wsDir, getSurfaceId } from "../config";
+import { requireCmux, wsDir, getSessionId } from "../config";
 
 function isProcessAlive(pid: number): boolean {
   // PID 1 は init プロセス。親プロセスが死んだ場合に ppid が 1 になるため dead 扱い
@@ -17,7 +17,7 @@ export function cmdPeers(): void {
   requireCmux();
 
   const dir = wsDir();
-  const mySurface = getSurfaceId();
+  const mySessionId = getSessionId();
 
   if (!fs.existsSync(dir)) {
     console.log("ピアなし");
@@ -30,7 +30,7 @@ export function cmdPeers(): void {
     const sid = entry.name;
     if (sid === "broadcast") continue;
 
-    const marker = sid === mySurface ? " (self)" : "";
+    const marker = sid === mySessionId ? " (self)" : "";
 
     // 生存確認
     let alive = "dead";

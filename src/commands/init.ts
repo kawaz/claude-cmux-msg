@@ -3,7 +3,7 @@ import * as path from "path";
 import {
   requireCmux,
   myDir,
-  getSurfaceId,
+  getSessionId,
   getWorkspaceId,
   getTabId,
   nowIso,
@@ -24,13 +24,13 @@ export function initWorkspace(dir: string): void {
 
   // メタ情報（undefined は JSON.stringify で自動除去）
   const meta = {
-    surface_id: getSurfaceId(),
+    session_id: getSessionId(),
     workspace_id: getWorkspaceId(),
     tab_id: getTabId(),
     init_at: nowIso(),
     shell_pid: shellPid,
     worker_name: process.env.CMUX_MSG_WORKER_NAME || undefined,
-    parent_surface: process.env.CMUX_MSG_PARENT_SURFACE || undefined,
+    parent_session_id: process.env.CMUX_MSG_PARENT_SESSION_ID || undefined,
     surface_ref: process.env.CMUX_MSG_SURFACE_REF || undefined,
   };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));

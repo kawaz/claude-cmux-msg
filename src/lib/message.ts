@@ -5,14 +5,14 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { timestamp, nowIso, getSurfaceId, peerDir, myDir } from "../config";
+import { timestamp, nowIso, getSessionId, peerDir, myDir } from "../config";
 import {
   parseFrontmatter,
   serializeFrontmatter,
   insertFrontmatterField,
 } from "./frontmatter";
 import { cmuxSignal } from "./cmux";
-import { validateSurfaceId } from "./validate";
+import { validateSessionId } from "./validate";
 
 export interface SendOptions {
   target: string;
@@ -26,7 +26,7 @@ export interface SendOptions {
  * メッセージを送信する
  */
 export async function sendMessage(opts: SendOptions): Promise<string> {
-  validateSurfaceId(opts.target);
+  validateSessionId(opts.target);
 
   const targetDir = peerDir(opts.target);
   const inboxDir = path.join(targetDir, "inbox");
@@ -41,7 +41,7 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
   const inboxFile = path.join(inboxDir, filename);
 
   const meta: Record<string, string | undefined> = {
-    from: getSurfaceId(),
+    from: getSessionId(),
     to: opts.target,
     type: opts.type || process.env.CMUX_MSG_TYPE || "request",
     priority:

@@ -2,6 +2,13 @@
 
 cmux（libghosttyベースのターミナル）上で複数の Claude Code セッション間のファイルベースメッセージングを提供する Claude Code プラグイン。
 
+## 識別子モデル
+
+- **通信単位 = claude session UUID** (`CMUX_MSG_SESSION_ID`)。`claude --session-id <uuid>` で採番
+- **画面操作 = cmux surface_ref** (`surface:N`)。tell / screen / stop の内部で使う
+- spawn は親が UUID を先行生成して `claude --session-id <uuid>` で起動。逆引きや polling は不要
+- peer の surface_ref は peer 自身の `meta.json` に書かれる。共有マップファイルは持たない
+
 ## 構造
 
 ```

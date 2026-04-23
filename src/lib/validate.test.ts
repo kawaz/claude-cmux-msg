@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import {
-  validateSurfaceId,
+  validateSessionId,
   validateName,
   validateFilename,
   UUID_PATTERN,
@@ -40,23 +40,23 @@ describe("SURFACE_REF_PATTERN", () => {
   });
 });
 
-describe("validateSurfaceId", () => {
+describe("validateSessionId", () => {
   test("UUID は通る", () => {
     expect(() =>
-      validateSurfaceId("1D033978-ACF7-479B-B355-160EC85217B1")
+      validateSessionId("1D033978-ACF7-479B-B355-160EC85217B1")
     ).not.toThrow();
   });
 
-  test("surface:N は拒否（v0.2.0 以降）", () => {
-    expect(() => validateSurfaceId("surface:1")).toThrow(/UUID 形式/);
+  test("surface:N は拒否", () => {
+    expect(() => validateSessionId("surface:1")).toThrow(/UUID 形式/);
   });
 
   test("空文字列は拒否", () => {
-    expect(() => validateSurfaceId("")).toThrow();
+    expect(() => validateSessionId("")).toThrow();
   });
 
   test("ランダム文字列は拒否", () => {
-    expect(() => validateSurfaceId("foo-bar")).toThrow();
+    expect(() => validateSessionId("foo-bar")).toThrow();
   });
 });
 

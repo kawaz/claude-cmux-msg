@@ -9,8 +9,12 @@ export function getWorkspaceId(): string {
   return process.env.CMUX_WORKSPACE_ID || "";
 }
 
-export function getSurfaceId(): string {
-  return process.env.CMUX_SURFACE_ID || "";
+/**
+ * claude の session UUID。cmux-msg の通信単位。
+ * SessionStart hook が CLAUDE_ENV_FILE 経由で export し、以降のシェルで参照可能。
+ */
+export function getSessionId(): string {
+  return process.env.CMUX_MSG_SESSION_ID || "";
 }
 
 export function getTabId(): string {
@@ -24,20 +28,20 @@ export function requireCmux(): void {
     );
     process.exit(1);
   }
-  if (!getSurfaceId()) {
+  if (!getSessionId()) {
     console.error(
-      "エラー: CMUX_SURFACE_ID が未設定です (signal 名衝突・誤配送の原因になるため拒否)"
+      "エラー: CMUX_MSG_SESSION_ID が未設定です (SessionStart hook が未実行？)"
     );
     process.exit(1);
   }
 }
 
 export function myDir(): string {
-  return path.join(MSG_BASE, getWorkspaceId(), getSurfaceId());
+  return path.join(MSG_BASE, getWorkspaceId(), getSessionId());
 }
 
-export function peerDir(peerSurface: string): string {
-  return path.join(MSG_BASE, getWorkspaceId(), peerSurface);
+export function peerDir(peerSessionId: string): string {
+  return path.join(MSG_BASE, getWorkspaceId(), peerSessionId);
 }
 
 export function wsDir(): string {

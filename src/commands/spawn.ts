@@ -1,15 +1,15 @@
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 import {
   requireCmux,
-  getSurfaceId,
+  getSessionId,
   getWorkspaceId,
   MSG_BASE,
   SPAWN_COLORS,
   pluginRoot,
   wsDir,
 } from "../config";
-import { findUuidByRef } from "../lib/surface-refs";
 import {
   cmuxNewSplit,
   cmuxSend,
@@ -117,13 +117,17 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  const mySurface = getSurfaceId();
+  // 子 session の UUID を親が先行生成（claude --session-id で採番）
+  // これにより spawn は子の起動完了を待たずに子の識別子を確定できる
+  const childSessionId = randomUUID();
+
+  const parentSessionId = getSessionId();
 
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
   // --cwd 指定時は cd を先頭に付けて1コマンドで実行（シェル未準備時の入力混在を防ぐ）
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${JSON.stringify(cwd)} && ` : "";
-  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SURFACE=${mySurface} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude ${claudeArgs} --plugin-dir ${root} --name ${name}`;
+  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUX_MSG_PARENT_SESSION_ID=${parentSessionId} CMUX_MSG_WORKER_NAME=${name} CMUX_MSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --plugin-dir ${root} --name ${name}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 
@@ -135,7 +139,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     waited += 2;
     try {
       const screen = await cmuxReadScreen(surfaceRef);
-      if (screen.includes("\u276F") && screen.includes("Claude Code")) {
+      if (screen.includes("❯") && screen.includes("Claude Code")) {
         break;
       }
     } catch {
@@ -168,15 +172,6 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   await cmuxSend(surfaceRef, "inbox を確認してください");
   await cmuxSendKey(surfaceRef, "Return");
 
-  // ワーカーの UUID を逆引き（session-start フックが書き込み済みのはず）
-  const workerUuid = findUuidByRef(surfaceRef);
-
-  if (workerUuid) {
-    console.log(`spawn完了: id=${workerUuid} name=${name} color=${color}`);
-  } else {
-    // session-start がまだ書いていない稀なケース
-    console.log(
-      `spawn完了: name=${name} color=${color} (UUID 未確定: cmux-msg peers で確認)`
-    );
-  }
+  // 子の session_id は親が生成した値をそのまま使える（逆引き不要）
+  console.log(`spawn完了: id=${childSessionId} name=${name} color=${color}`);
 }

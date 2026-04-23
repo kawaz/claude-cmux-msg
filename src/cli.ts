@@ -21,17 +21,19 @@ import { cmdScreen } from "./commands/screen";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
-識別子: 全コマンドで <uuid> = CMUX_SURFACE_ID (UUID v4 形式)。cmux-msg peers で確認可能。
+識別子: 全コマンドの宛先は <session_id> = claude --session-id の UUID。
+spawn 経由または手動で claude --session-id <uuid> 起動された CC 間で通信。
+cmux-msg peers で peer 一覧を確認可能。
 
 ライフサイクル管理:
   cmux-msg spawn [name] [--cwd path] [--args claude-args]   子CC起動 (色は自動ローテーション)
-  cmux-msg stop <uuid>           子CCを終了してペインを閉じる
+  cmux-msg stop <session_id>     子CCを終了してペインを閉じる
 
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
   cmux-msg peers                 同一ワークスペースのピア一覧
-  cmux-msg send <uuid> <メッセージ>     メッセージ送信
+  cmux-msg send <session_id> <メッセージ>  メッセージ送信
   cmux-msg broadcast <メッセージ>      全ピアにブロードキャスト
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示
@@ -41,10 +43,11 @@ const HELP = `cmux-msg: cmux CC間メッセージングシステム
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
 
 ダイレクト操作:
-  cmux-msg tell <uuid> <テキスト>     対象に直接テキスト入力
-  cmux-msg screen [uuid]              画面内容を読み取り
+  cmux-msg tell <session_id> <テキスト>  対象に直接テキスト入力
+  cmux-msg screen [session_id]           画面内容を読み取り
 
 環境変数:
+  CMUX_MSG_SESSION_ID       自分の session_id (SessionStart hook が自動設定)
   CMUX_MSG_PRIORITY=urgent  緊急メッセージとして送信
   CMUX_MSG_BASE=<path>      メッセージ保存先 (デフォルト: ~/.local/share/cmux-messages)`;
 
