@@ -20,7 +20,11 @@ claude plugin update cmux-msg@cmux-msg
 
 ## Identifiers
 
-All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`, surfaced via `CMUXMSG_SESSION_ID` (set by the SessionStart hook). `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
+All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`. `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
+
+The session_id is resolved at command time in this order:
+1. `$CMUXMSG_SESSION_ID` (kept for the day Claude Code's `CLAUDE_ENV_FILE` mechanism actually works — Issue #15840)
+2. Lookup `<ws>/by-surface/<CMUX_SURFACE_ID>` (written by the SessionStart hook). This is the working path today.
 
 Use `cmux-msg peers` to list peers and their session IDs.
 
@@ -75,7 +79,7 @@ Run `cmux-msg help` for the full help.
 - Atomic delivery via tmp + rename.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - Spawned workers are automatically initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg` on first run if missing.
-- The SessionStart hook exports `CMUXMSG_SESSION_ID` to `$CLAUDE_ENV_FILE`, so subsequent shells inside the same claude session inherit it automatically.
+- The SessionStart hook writes `<ws>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can look up its session_id without env propagation. (`$CLAUDE_ENV_FILE` is also written for forward compatibility but is not relied upon — Issue #15840.)
 
 ## Receiving messages (recommended pattern)
 

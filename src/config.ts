@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as os from "os";
+import { readBySurfaceIndex } from "./lib/session-index";
 
 export const MSG_BASE =
   process.env.CMUXMSG_BASE ||
@@ -11,10 +12,23 @@ export function getWorkspaceId(): string {
 
 /**
  * claude の session UUID。cmux-msg の通信単位。
- * SessionStart hook が CLAUDE_ENV_FILE 経由で export し、以降のシェルで参照可能。
+ *
+ * 解決順序:
+ *   1. env CMUXMSG_SESSION_ID (将来 CLAUDE_ENV_FILE が機能した時 / 手動設定用)
+ *   2. CMUX_SURFACE_ID 起点で by-surface index から逆引き
+ *      (SessionStart hook が CLAUDE_ENV_FILE バグ Issue #15840 を回避するため
+ *       <ws>/by-surface/<surface_id> に session_id を書いている)
+ *   3. 解決不可なら ""
  */
 export function getSessionId(): string {
-  return process.env.CMUXMSG_SESSION_ID || "";
+  const fromEnv = process.env.CMUXMSG_SESSION_ID;
+  if (fromEnv) return fromEnv;
+  const surfaceId = process.env.CMUX_SURFACE_ID;
+  if (surfaceId) {
+    const found = readBySurfaceIndex(surfaceId);
+    if (found) return found;
+  }
+  return "";
 }
 
 export function getTabId(): string {
@@ -30,7 +44,7 @@ export function requireCmux(): void {
   }
   if (!getSessionId()) {
     console.error(
-      "エラー: CMUXMSG_SESSION_ID が未設定です (SessionStart hook が未実行？)"
+      "エラー: session_id を解決できません (env CMUXMSG_SESSION_ID も by-surface index も無い。SessionStart hook が未実行？)"
     );
     process.exit(1);
   }

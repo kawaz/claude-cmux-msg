@@ -27,6 +27,7 @@ export function initWorkspace(dir: string): void {
     session_id: getSessionId(),
     workspace_id: getWorkspaceId(),
     tab_id: getTabId(),
+    surface_id: process.env.CMUX_SURFACE_ID || undefined,
     init_at: nowIso(),
     shell_pid: shellPid,
     worker_name: process.env.CMUXMSG_WORKER_NAME || undefined,

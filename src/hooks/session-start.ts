@@ -11,6 +11,8 @@ import * as path from "path";
 import { initWorkspace } from "../commands/init";
 import { countInbox } from "../lib/message";
 import { UUID_PATTERN } from "../lib/validate";
+import { writeBySurfaceIndex } from "../lib/session-index";
+import { cmuxIdentify } from "../lib/cmux";
 
 interface SessionStartInput {
   session_id: string;
@@ -66,11 +68,38 @@ async function main(): Promise<void> {
   // initWorkspace/countInbox が getSessionId() 経由で env を読むので先に設定
   process.env.CMUXMSG_SESSION_ID = sessionId;
 
+  // surface_ref は spawn 経由なら env で渡されるが、親セッション等では未設定。
+  // その場合は cmux identify で取得して env に詰める（initWorkspace が読む）。
+  const surfaceId = process.env.CMUX_SURFACE_ID;
+  if (!process.env.CMUXMSG_SURFACE_REF && surfaceId) {
+    try {
+      const ident = await cmuxIdentify(surfaceId);
+      if (ident.surfaceRef) {
+        process.env.CMUXMSG_SURFACE_REF = ident.surfaceRef;
+      }
+    } catch {
+      // identify 失敗時は surface_ref 無しで続行（tell/screen/stop が使えないだけ）
+    }
+  }
+
   // init 共通関数で初期化
   const myDirPath = path.join(msgBase, workspaceId, sessionId);
   initWorkspace(myDirPath);
 
-  // $CLAUDE_ENV_FILE に PATH 追記 + CMUXMSG_SESSION_ID export
+  // CMUX_SURFACE_ID → session_id の lookup index を書く。
+  // CLAUDE_ENV_FILE 経由の env 伝播が claude-code Issue #15840 で動かないため、
+  // 各 cmux-msg コマンドはこの index を経由して session_id を解決する。
+  if (surfaceId) {
+    try {
+      writeBySurfaceIndex(surfaceId, sessionId);
+    } catch {
+      // 書き込み失敗時は cmux-msg コマンドが動かなくなるが hook 自体は続行
+    }
+  }
+
+  // $CLAUDE_ENV_FILE に PATH と CMUXMSG_SESSION_ID を export しておく。
+  // 現状 claude-code 側の Issue #15840 で動かないが、修正された日のために残しておく。
+  // PATH の export は新セッションでログインシェルが読むケースで効くこともあり害がない。
   const claudeEnvFile = process.env.CLAUDE_ENV_FILE;
   if (claudeEnvFile) {
     const lines: string[] = [];
