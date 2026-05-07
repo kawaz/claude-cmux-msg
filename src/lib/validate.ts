@@ -40,10 +40,23 @@ export function isSessionId(name: string): boolean {
   return UUID_PATTERN.test(name);
 }
 
-/** spawn名バリデーション（シェル安全な文字のみ） */
+/** spawn名バリデーション（shell-safe な文字に厳格に絞る） */
 export function validateName(name: string): void {
-  // 日本語も許可するが、シェルに危険な文字は禁止
-  if (!name || /[;&|`$(){}\\!<>'"#\n\r]/.test(name)) {
-    throw new Error(`不正な名前（シェル特殊文字を含む）: ${name}`);
+  // 環境変数代入とコマンドラインに安全な文字に限定。
+  // ASCII 英数字 + `_` + `-` のみ。スペース・記号・日本語は禁止。
+  // 旧実装は「シェル特殊文字を弾く」ブラックリストだったが、shell の単語分割や
+  // ロケール起因の挙動も考えるとホワイトリストの方が確実。
+  if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new Error(
+      `不正な名前 (英数字, '_', '-' のみ可): ${JSON.stringify(name)}`
+    );
   }
+}
+
+/**
+ * 値を bash 単引用符でクォートする (内部の `'` をエスケープ)。
+ * 環境変数代入やコマンド引数の展開先で安全に使える。
+ */
+export function shellSingleQuote(s: string): string {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
 }

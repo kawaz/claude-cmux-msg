@@ -83,14 +83,42 @@ describe("isSessionId", () => {
   });
 });
 
-describe("validateName", () => {
-  test("通常の名前は通る", () => {
-    expect(() => validateName("worker-1")).not.toThrow();
-    expect(() => validateName("task_a")).not.toThrow();
-    expect(() => validateName("ワーカーA")).not.toThrow();
+describe("shellSingleQuote", () => {
+  test("単純な文字列は単引用符で囲む", () => {
+    const { shellSingleQuote } = require("./validate");
+    expect(shellSingleQuote("foo")).toBe("'foo'");
+    expect(shellSingleQuote("worker-1")).toBe("'worker-1'");
   });
 
-  test("シェル特殊文字を拒否", () => {
+  test("単引用符を含む文字列は escape", () => {
+    const { shellSingleQuote } = require("./validate");
+    expect(shellSingleQuote("a'b")).toBe(`'a'\\''b'`);
+  });
+
+  test("空文字列も処理可能", () => {
+    const { shellSingleQuote } = require("./validate");
+    expect(shellSingleQuote("")).toBe("''");
+  });
+
+  test("シェル特殊文字も無害化される", () => {
+    const { shellSingleQuote } = require("./validate");
+    expect(shellSingleQuote("$(rm -rf /)")).toBe("'$(rm -rf /)'");
+    expect(shellSingleQuote("`rm`")).toBe("'`rm`'");
+    expect(shellSingleQuote(";rm -rf /;")).toBe("';rm -rf /;'");
+  });
+});
+
+describe("validateName", () => {
+  test("英数字 + _ - は通る", () => {
+    expect(() => validateName("worker-1")).not.toThrow();
+    expect(() => validateName("task_a")).not.toThrow();
+    expect(() => validateName("Alice2")).not.toThrow();
+    expect(() => validateName("a_b-c-1")).not.toThrow();
+  });
+
+  test("日本語・記号・空白を拒否 (ホワイトリスト)", () => {
+    expect(() => validateName("ワーカーA")).toThrow();
+    expect(() => validateName("worker A")).toThrow();
     expect(() => validateName("a;b")).toThrow();
     expect(() => validateName("a&b")).toThrow();
     expect(() => validateName("a|b")).toThrow();
@@ -101,6 +129,9 @@ describe("validateName", () => {
     expect(() => validateName("a'b")).toThrow();
     expect(() => validateName('a"b')).toThrow();
     expect(() => validateName("a\nb")).toThrow();
+    expect(() => validateName("a/b")).toThrow();
+    expect(() => validateName("a..b")).toThrow();
+    expect(() => validateName("a*b")).toThrow();
   });
 
   test("空文字列は拒否", () => {

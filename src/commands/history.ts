@@ -1,5 +1,7 @@
 import { requireCmux, getSessionId } from "../config";
 import { listAllMessages, MessageRecord } from "../lib/history";
+import { shortId, TYPE_LABEL_WIDTH } from "../lib/format";
+import { validateSessionId } from "../lib/validate";
 
 interface HistoryOpts {
   peer?: string;
@@ -28,19 +30,13 @@ function summary(body: string, max = 60): string {
   return oneLine.slice(0, max - 1) + "…";
 }
 
-function shortId(id: string): string {
-  // UUID なら先頭8文字、そうでなければそのまま
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id)) return id.slice(0, 8);
-  return id;
-}
-
 function formatLine(rec: MessageRecord): string {
   const time = rec.created_at || "????-??-??T??:??:??";
   const arrow = rec.direction === "out" ? "→" : "←";
   const peer = rec.direction === "out" ? rec.to : rec.from;
   const peerShort = shortId(peer);
   const flag = rec.priority === "urgent" ? "⚡" : " ";
-  const type = `[${rec.type}]`.padEnd(11);
+  const type = `[${rec.type}]`.padEnd(TYPE_LABEL_WIDTH);
   return `${time} ${arrow} ${peerShort} ${flag}${type} ${summary(rec.body)}  (${rec.dir}/${rec.filename})`;
 }
 
@@ -52,6 +48,7 @@ export function cmdHistory(args: string[]): void {
   let records = listAllMessages(self);
 
   if (opts.peer) {
+    validateSessionId(opts.peer);
     const peer = opts.peer;
     records = records.filter((r) => r.from === peer || r.to === peer);
   }

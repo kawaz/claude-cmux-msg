@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-05-07
+
+### Security
+- `spawn` now `shellSingleQuote`s every value substituted into the `cmuxSend`'d command line (`name`, `cwd`, `surfaceRef`, `parentSessionId`, `childSessionId`, `pluginRoot`, `msgWsDir`). The previous implementation interpolated some values raw, so a `--cwd '$(rm -rf ~)'` would have been executed during command substitution. `claudeArgs` is intentionally left unquoted (it's the user-supplied flag string), but the documented expectation is that the user is the only caller (personal-tool threat model).
+- `validateName` switched from a blacklist to a strict whitelist (`[a-zA-Z0-9_-]+`). Japanese / spaces / quoting characters / `..` / `*` etc. are now rejected. Workers' display names should remain ASCII-safe; localized labels can be added later via a separate non-shell-bound metadata field.
+
+### Changed
+- `shortId()` and `TYPE_LABEL_WIDTH` extracted into `src/lib/format.ts`; `history.ts` and `thread.ts` no longer duplicate the implementation. Adding a new `type` longer than `broadcast` will widen `TYPE_LABEL_WIDTH` automatically.
+- `cmux-msg history --peer <id>` now `validateSessionId`s its argument instead of silently returning empty.
+- `cmux-msg thread` errors are thrown to `cli.ts` (consistent with `0.15.0`'s error-handling cleanup).
+
 ## [0.15.0] - 2026-05-07
 
 ### Changed

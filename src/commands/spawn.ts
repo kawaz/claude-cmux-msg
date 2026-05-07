@@ -17,8 +17,7 @@ import {
   cmuxReadScreen,
   cmuxRenameTab,
 } from "../lib/cmux";
-import { validateName } from "../lib/validate";
-import { isSessionId } from "../lib/validate";
+import { validateName, isSessionId, shellSingleQuote } from "../lib/validate";
 
 const LAST_WORKER_FILE = ".last-worker-surface";
 
@@ -125,14 +124,31 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   const parentSessionId = getSessionId();
 
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
-  // --cwd 指定時は cd を先頭に付けて1コマンドで実行（シェル未準備時の入力混在を防ぐ）
+  //
+  // セキュリティ: cmuxSend はテキストをそのまま shell に流し込むため、各値を
+  // shellSingleQuote で囲む。validateName でホワイトリスト済みの name でも
+  // 防衛的に quote する。cwd / pluginRoot / surfaceRef / childSessionId も同様。
+  //
+  // ただし claudeArgs はユーザがオプションを意図的に展開して渡す場所なので
+  // **quote しない**。`--args 'foo; rm'` のような任意コードはユーザの責任で
+  // 渡すこと (個人プロジェクトの自分用ツールという脅威モデル)。
+  //
   // --add-dir で MSG_BASE/<workspace> を子CCのサンドボックスに明示的に許可
   // (子CCの cwd 配下外への書き込みは Claude Code のサンドボックスで拒否されるため、
   //  cmux-msg 用ディレクトリを明示しないと reply / accept / send が EPERM になる)
   const root = pluginRoot();
-  const cdPrefix = cwd ? `cd ${JSON.stringify(cwd)} && ` : "";
+  const cdPrefix = cwd ? `cd ${shellSingleQuote(cwd)} && ` : "";
   const msgWsDir = path.join(MSG_BASE, getWorkspaceId());
-  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUXMSG_PARENT_SESSION_ID=${parentSessionId} CMUXMSG_WORKER_NAME=${name} CMUXMSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --add-dir ${JSON.stringify(msgWsDir)} --plugin-dir ${root} --name ${name}`;
+  const claudeCmd =
+    `${cdPrefix}` +
+    `CMUX_CLAUDE_HOOKS_DISABLED=1 ` +
+    `CMUXMSG_PARENT_SESSION_ID=${shellSingleQuote(parentSessionId)} ` +
+    `CMUXMSG_WORKER_NAME=${shellSingleQuote(name)} ` +
+    `CMUXMSG_SURFACE_REF=${shellSingleQuote(surfaceRef)} ` +
+    `claude --session-id ${shellSingleQuote(childSessionId)} ${claudeArgs} ` +
+    `--add-dir ${shellSingleQuote(msgWsDir)} ` +
+    `--plugin-dir ${shellSingleQuote(root)} ` +
+    `--name ${shellSingleQuote(name)}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 

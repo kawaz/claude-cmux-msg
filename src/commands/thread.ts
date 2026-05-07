@@ -1,11 +1,8 @@
 import { requireCmux, getSessionId } from "../config";
 import { buildThread, MessageRecord } from "../lib/history";
 import { validateFilename } from "../lib/validate";
-
-function shortId(id: string): string {
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id)) return id.slice(0, 8);
-  return id;
-}
+import { shortId } from "../lib/format";
+import { UsageError } from "../lib/errors";
 
 function header(rec: MessageRecord): string {
   const arrow = rec.direction === "out" ? "→" : "←";
@@ -19,8 +16,7 @@ export function cmdThread(args: string[]): void {
   const json = args.includes("--json");
   const positional = args.filter((a) => a !== "--json");
   if (positional.length === 0) {
-    console.error("使い方: cmux-msg thread <filename> [--json]");
-    process.exit(1);
+    throw new UsageError("使い方: cmux-msg thread <filename> [--json]");
   }
   const filename = positional[0]!;
   validateFilename(filename);
@@ -33,8 +29,7 @@ export function cmdThread(args: string[]): void {
       process.stdout.write("[]\n");
       return;
     }
-    console.error(`${filename} が見つかりません (inbox/accepted/archive/sent)`);
-    process.exit(1);
+    throw new Error(`${filename} が見つかりません (inbox/accepted/archive/sent)`);
   }
 
   if (json) {
