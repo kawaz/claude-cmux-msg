@@ -15,6 +15,7 @@
 │   └── <yyyyMMddTHHmmss>-<rand8>.md
 ├── accepted/                        ← `cmux-msg accept` 処理済み (返信可能)
 ├── archive/                         ← `cmux-msg dismiss` / `reply` 後の保管庫
+├── sent/                            ← 自分が送信したメッセージ (相手の inbox とは hardlink で同じ実体)
 ├── tmp/                             ← 配送中の一時ファイル (rename で原子的配送)
 ├── pid                              ← セッションのシェル PID (生存確認用)
 └── meta.json                        ← session_id, workspace_id, surface_id 等
@@ -43,6 +44,7 @@ archive_at: <archive 移動時刻> (optional)
 ## 操作の流れ
 
 ```
+受信側:
               cmux-msg send / broadcast
 他セッション ─────────────────────────→ inbox/
                                           │
@@ -52,6 +54,14 @@ archive_at: <archive 移動時刻> (optional)
                                           │
                                 cmux-msg reply ───→ archive/
                                                     (+ 相手の inbox に返信)
+
+送信側 (自分):
+  cmux-msg send / reply / broadcast 実行時に sent/ に hardlink で記録
+  → 後から「自分が誰に何を送ったか」を辿れる
+  → 相手の inbox とは同じ実体を共有するため、相手が accept/dismiss/reply で
+     frontmatter に read_at 等を追記すると、自分の sent/ からも処理状況が見える
 ```
 
-`cmux-msg list` で inbox 一覧、`cmux-msg read <filename>` で内容を確認できる。
+- `cmux-msg list` で inbox 一覧、`cmux-msg read <filename>` で内容を確認
+- `cmux-msg history [--peer <id>]` で sent/ + 受信履歴を時系列マージ表示
+- `cmux-msg thread <filename>` で `in_reply_to` を辿って会話単位で表示

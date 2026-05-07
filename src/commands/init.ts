@@ -17,7 +17,7 @@ import { setupLayoutDocs } from "../lib/layout-docs";
  * session-start.ts からも呼ばれる
  */
 export function initWorkspace(dir: string): void {
-  for (const sub of ["inbox", "accepted", "archive", "tmp"]) {
+  for (const sub of ["inbox", "accepted", "archive", "sent", "tmp"]) {
     fs.mkdirSync(path.join(dir, sub), { recursive: true });
   }
 

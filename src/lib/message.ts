@@ -58,6 +58,28 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
   fs.writeFileSync(tmpFile, content);
   fs.renameSync(tmpFile, inboxFile);
 
+  // 送信側の sent/ にもエントリを残す
+  // 「自分が誰に何を送ったか」を後で辿れるようにするため。
+  // hardlink で配送先 (相手 inbox/) と同じ inode を共有する:
+  //   - メッセージ実体は1つ
+  //   - 受信側で frontmatter (read_at / response_at / archive_at) が追記されると
+  //     送信側からも相手の処理状況が見える
+  //   - 受信側が rename (inbox→accepted/archive) しても inode 不変なので影響なし
+  // hardlink 不可な FS (クロスデバイス等) では copy にフォールバック。
+  // 同期失敗しても送信自体は成功扱いとする。
+  try {
+    const sentDir = path.join(myDir(), "sent");
+    fs.mkdirSync(sentDir, { recursive: true });
+    const sentFile = path.join(sentDir, filename);
+    try {
+      fs.linkSync(inboxFile, sentFile);
+    } catch {
+      try { fs.writeFileSync(sentFile, content); } catch {}
+    }
+  } catch {
+    // sent/ への記録失敗は致命的ではない
+  }
+
   // wait-for シグナルで受信側に通知（UUID ベース）
   try {
     await cmuxSignal(`cmux-msg:${opts.target}`);

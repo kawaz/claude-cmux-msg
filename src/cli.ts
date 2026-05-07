@@ -18,6 +18,8 @@ import { cmdSpawn } from "./commands/spawn";
 import { cmdStop } from "./commands/stop";
 import { cmdTell } from "./commands/tell";
 import { cmdScreen } from "./commands/screen";
+import { cmdHistory } from "./commands/history";
+import { cmdThread } from "./commands/thread";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
@@ -41,6 +43,8 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg dismiss <filename>    メッセージを破棄 (→ archive/)
   cmux-msg reply <filename> <返信内容>  返信送信 & アーカイブ
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
+  cmux-msg history [--peer <id>] [--limit N]  自分が関わった全メッセージを時系列表示
+  cmux-msg thread <filename>     in_reply_to を辿って会話単位で表示
 
 ダイレクト操作:
   cmux-msg tell <session_id> <テキスト>  対象に直接テキスト入力
@@ -103,6 +107,12 @@ async function main(): Promise<void> {
       break;
     case "screen":
       await cmdScreen(rest);
+      break;
+    case "history":
+      cmdHistory(rest);
+      break;
+    case "thread":
+      cmdThread(rest);
       break;
     case "help":
     case "--help":
