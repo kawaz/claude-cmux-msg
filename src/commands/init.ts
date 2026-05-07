@@ -7,7 +7,10 @@ import {
   getWorkspaceId,
   getTabId,
   nowIso,
+  pluginRoot,
+  MSG_BASE,
 } from "../config";
+import { setupLayoutDocs } from "../lib/layout-docs";
 
 /**
  * ワークスペース初期化（共通処理）
@@ -35,6 +38,26 @@ export function initWorkspace(dir: string): void {
     surface_ref: process.env.CMUXMSG_SURFACE_REF || undefined,
   };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
+
+  // 各階層に「ここは何の場所か」を示す README.md (symlink) を貼る
+  // 失敗してもメッセージング機能には影響しないため例外は投げない
+  setupLayoutDocs({
+    msgBase: MSG_BASE,
+    pluginRoot: pluginRoot(),
+    workspaceId: getWorkspaceId(),
+    sessionId: getSessionId(),
+    version: getPluginVersion(),
+  });
+}
+
+function getPluginVersion(): string {
+  try {
+    const pkgPath = path.join(pluginRoot(), ".claude-plugin", "plugin.json");
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    return pkg.version || "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 export function cmdInit(): void {
