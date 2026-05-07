@@ -1,7 +1,7 @@
 {
   "name": "cmux-msg",
   "description": "Inter-CC messaging system for cmux terminal",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "author": { "name": "kawaz" },
   "license": "MIT",
   "repository": "https://github.com/kawaz/claude-cmux-msg"
