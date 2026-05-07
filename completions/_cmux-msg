@@ -1,0 +1,58 @@
+#compdef cmux-msg
+#
+# cmux-msg のサブコマンド + 主要オプションの補完。
+# 動的補完 (peer 一覧 / inbox filename) は cmux-msg 自体を呼ぶと
+# 依存ループするため固定補完のみ。
+
+local -a subcommands
+subcommands=(
+  'init:メッセージディレクトリを初期化'
+  'whoami:自分のID情報を表示'
+  'peers:同一ワークスペースのピア一覧'
+  'ls-peers:peers のエイリアス'
+  'send:メッセージ送信'
+  'broadcast:全ピアにブロードキャスト'
+  'list:inbox のメッセージ一覧'
+  'ls:list のエイリアス'
+  'read:メッセージ内容を表示'
+  'accept:メッセージを受理'
+  'dismiss:メッセージを破棄'
+  'reply:返信送信 & アーカイブ'
+  'subscribe:inbox 新着を JSONL で連続出力'
+  'history:時系列マージで全メッセージ表示'
+  'thread:in_reply_to を辿って会話単位で表示'
+  'spawn:子CCを起動'
+  'stop:子CCを終了'
+  'tell:対象に直接テキスト入力'
+  'screen:画面内容を読み取り'
+  'help:ヘルプ表示'
+)
+
+_arguments -C \
+  '1: :->subcommand' \
+  '*::arg:->args'
+
+case "$state" in
+  subcommand)
+    _describe -t commands 'cmux-msg subcommand' subcommands
+    ;;
+  args)
+    case "$words[1]" in
+      peers|ls-peers)
+        _arguments \
+          '--all[dead セッションも含めて全件表示]'
+        ;;
+      spawn)
+        _arguments \
+          '--name[ワーカー名]:name' \
+          '--cwd[作業ディレクトリ]:dir:_path_files -/' \
+          '--args[claude に渡す引数]:args'
+        ;;
+      history)
+        _arguments \
+          '--peer[相手 session_id でフィルタ]:session_id' \
+          '--limit[件数制限]:N'
+        ;;
+    esac
+    ;;
+esac

@@ -136,12 +136,20 @@ session_id: ${sessionId}
 このセッションは自動生成されたもので、セッション日誌の作成対象外です。
 
 ## メッセージング手順
-1. セッション開始直後に Monitor ツールで \`cmux-msg subscribe\` を張る（persistent: true 推奨）
+1. セッション開始直後に **Monitor ツールで** \`cmux-msg subscribe\` を張る（persistent: true 推奨）
+   - **重要**: subscribe は long-running で blocking。Bash ツールで直接実行するとハングします。必ず Monitor ツール経由で起動してください
    - stdout は JSONL。1行 = 1件の未読メッセージ通知
 2. 通知が来たら \`cmux-msg read <filename>\` で本文確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
+   - reply は内部で accept してから archive に移すので、別途 \`cmux-msg accept\` は不要
+   - 受け取ったが返信不要なメッセージは \`cmux-msg dismiss <filename>\` で archive へ
 3. セッションが resume された場合も同じく Monitor を張り直す
    - subscribe 起動時に既存未読を全件再通知するため取りこぼし無し
-4. ユーザから停止指示があるまで 2 を繰り返す${unreadLine}`);
+4. ユーザから停止指示があるまで 2 を繰り返す
+
+## 補助コマンド
+- \`cmux-msg history [--peer <id>] [--limit N]\`: 自分が関わった全メッセージを時系列マージ表示（送信は sent/, 受信は inbox/accepted/archive/）
+- \`cmux-msg thread <filename>\`: in_reply_to を辿って会話単位で表示
+- \`cmux-msg peers\`: 同一ワークスペースの alive なピア一覧（\`--all\` で dead も含む）${unreadLine}`);
   } else {
     console.log(`[cmux-msg] 初期化済み (session_id: ${sessionId})
 cmux-msg コマンドで他のCCとメッセージのやり取りができます。

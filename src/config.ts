@@ -2,9 +2,22 @@ import * as path from "path";
 import * as os from "os";
 import { readBySurfaceIndex } from "./lib/session-index";
 
-export const MSG_BASE =
-  process.env.CMUXMSG_BASE ||
-  path.join(os.homedir(), ".local/share/cmux-messages");
+/**
+ * メッセージ保管庫のベースパス。
+ *
+ * テストや一時的な切り替えのため、関数として `process.env.CMUXMSG_BASE` を
+ * 毎回評価する。`MSG_BASE` 定数は import 時固定なので、env 切替で挙動を
+ * 変えたい場面では `getMsgBase()` を使う。
+ */
+export function getMsgBase(): string {
+  return (
+    process.env.CMUXMSG_BASE ||
+    path.join(os.homedir(), ".local/share/cmux-messages")
+  );
+}
+
+/** 後方互換: 多くの箇所が import 時に評価された値を使えば十分 */
+export const MSG_BASE = getMsgBase();
 
 export function getWorkspaceId(): string {
   return process.env.CMUX_WORKSPACE_ID || "";
@@ -51,15 +64,15 @@ export function requireCmux(): void {
 }
 
 export function myDir(): string {
-  return path.join(MSG_BASE, getWorkspaceId(), getSessionId());
+  return path.join(getMsgBase(), getWorkspaceId(), getSessionId());
 }
 
 export function peerDir(peerSessionId: string): string {
-  return path.join(MSG_BASE, getWorkspaceId(), peerSessionId);
+  return path.join(getMsgBase(), getWorkspaceId(), peerSessionId);
 }
 
 export function wsDir(): string {
-  return path.join(MSG_BASE, getWorkspaceId());
+  return path.join(getMsgBase(), getWorkspaceId());
 }
 
 export function timestamp(): string {
