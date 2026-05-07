@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { requireCmux, wsDir, getSessionId } from "../config";
 import { sendMessage } from "../lib/message";
+import { listPeers } from "../lib/peer";
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
   requireCmux();
@@ -12,19 +13,18 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
   }
 
   const body = args.join(" ");
-  const dir = wsDir();
   const mySessionId = getSessionId();
 
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const targets = entries
-    .filter((entry) => {
-      if (!entry.isDirectory()) return false;
-      const sid = entry.name;
-      if (sid === mySessionId || sid === "broadcast") return false;
-      const inboxDir = path.join(dir, sid, "inbox");
-      return fs.existsSync(inboxDir);
-    })
-    .map((entry) => entry.name);
+  // alive な peer のみを対象。dead に送ると死蔵されるだけ。
+  // by-surface 等のインデックスは listPeers が UUID パターンで弾く。
+  const targets = listPeers(wsDir())
+    .filter(
+      (p) =>
+        p.sessionId !== mySessionId &&
+        p.alive &&
+        fs.existsSync(path.join(p.dir, "inbox"))
+    )
+    .map((p) => p.sessionId);
 
   const promises = targets.map((sid) =>
     sendMessage({ target: sid, body, type: "broadcast" })
