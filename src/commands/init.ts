@@ -11,6 +11,7 @@ import {
   MSG_BASE,
 } from "../config";
 import { setupLayoutDocs } from "../lib/layout-docs";
+import { formatPidFile } from "../lib/peer";
 
 /**
  * ワークスペース初期化（共通処理）
@@ -21,9 +22,10 @@ export function initWorkspace(dir: string): void {
     fs.mkdirSync(path.join(dir, sub), { recursive: true });
   }
 
-  // シェルの PID を記録して生存確認に使う
+  // シェルの PID + 起動時刻を記録して生存確認に使う。
+  // PID 単独だと再利用で誤判定するため lstart も併記する (formatPidFile)
   const shellPid = process.ppid || process.pid;
-  fs.writeFileSync(path.join(dir, "pid"), String(shellPid));
+  fs.writeFileSync(path.join(dir, "pid"), formatPidFile(shellPid));
 
   // メタ情報（undefined は JSON.stringify で自動除去）
   const meta = {

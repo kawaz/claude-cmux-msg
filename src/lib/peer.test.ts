@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { isProcessAlive, isPeerAlive, listPeers } from "./peer";
+import { isProcessAlive, isPeerAlive, listPeers, formatPidFile } from "./peer";
 
 let workDir: string;
 
@@ -21,8 +21,15 @@ function makePeer(sid: string, pid: number | null): void {
   const dir = path.join(workDir, sid);
   fs.mkdirSync(dir, { recursive: true });
   if (pid !== null) {
-    fs.writeFileSync(path.join(dir, "pid"), String(pid));
+    fs.writeFileSync(path.join(dir, "pid"), formatPidFile(pid));
   }
+}
+
+/** 旧形式 (PID 1 行のみ) の pid ファイルを書く */
+function makePeerLegacy(sid: string, pid: number): void {
+  const dir = path.join(workDir, sid);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "pid"), String(pid));
 }
 
 describe("isProcessAlive", () => {
@@ -54,6 +61,12 @@ describe("isPeerAlive", () => {
   test("不正な PID 文字列は dead", () => {
     fs.mkdirSync(path.join(workDir, SID_A), { recursive: true });
     fs.writeFileSync(path.join(workDir, SID_A, "pid"), "not-a-number");
+    expect(isPeerAlive(path.join(workDir, SID_A))).toBe(false);
+  });
+
+  test("旧形式 (PID 1 行のみ) は厳密性のため dead 扱い", () => {
+    // 旧形式は PID 再利用で誤判定するため新形式必須にした
+    makePeerLegacy(SID_A, process.pid);
     expect(isPeerAlive(path.join(workDir, SID_A))).toBe(false);
   });
 });
