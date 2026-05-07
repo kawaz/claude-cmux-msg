@@ -12,6 +12,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 
 const LAYOUT_FILES = [
   "layout-root.md",
@@ -38,7 +39,8 @@ function ensureSymlink(linkPath: string, target: string): void {
   } catch {
     // 無いだけなら作る
   }
-  const tmp = `${linkPath}.tmp.${process.pid}.${Date.now()}`;
+  // 同 PID で並列実行された場合の衝突を避けるため random 8 文字を加える
+  const tmp = `${linkPath}.tmp.${process.pid}.${Date.now()}.${randomUUID().slice(0, 8)}`;
   try {
     fs.symlinkSync(target, tmp);
     fs.renameSync(tmp, linkPath);

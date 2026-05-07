@@ -3,7 +3,12 @@ import { listInbox, type InboxMessage } from "../lib/message";
 import { cmuxWaitFor } from "../lib/cmux";
 import { diffInbox } from "../lib/subscribe";
 
-const WAIT_TIMEOUT_SEC = 3600;
+// cmux wait-for のタイムアウト。タイムアウト後は inbox を再スキャンして次の wait に入る。
+// 環境変数 CMUXMSG_SUBSCRIBE_TIMEOUT (秒) で上書き可能。
+const DEFAULT_WAIT_TIMEOUT_SEC = 3600;
+const WAIT_TIMEOUT_SEC =
+  parseInt(process.env.CMUXMSG_SUBSCRIBE_TIMEOUT || "", 10) ||
+  DEFAULT_WAIT_TIMEOUT_SEC;
 
 function emit(msg: InboxMessage): void {
   const line = JSON.stringify({

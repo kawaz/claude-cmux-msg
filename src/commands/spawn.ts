@@ -18,6 +18,14 @@ import {
   cmuxRenameTab,
 } from "../lib/cmux";
 import { validateName, isSessionId, shellSingleQuote } from "../lib/validate";
+import { listPeers } from "../lib/peer";
+
+// claude プロンプト検出ポーリング
+const PROMPT_POLL_INTERVAL_MS = 2000;
+const PROMPT_WAIT_MAX_SEC = 30;
+// /color, /rename 等のスラッシュコマンドが claude 側に処理されるまでの待機。
+// claude 側に完了 signal が無いため経験則で 1 秒。
+const SLASH_COMMAND_SETTLE_MS = 1000;
 
 const LAST_WORKER_FILE = ".last-worker-surface";
 
@@ -86,13 +94,9 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     }
   }
 
-  // 既存ピアの数からカラーインデックスを決定
+  // 既存ピアの数からカラーインデックスを決定 (alive/dead 含む全 session)
   const wsDirPath = path.join(MSG_BASE, getWorkspaceId());
-  let peerCount = 0;
-  try {
-    const entries = fs.readdirSync(wsDirPath, { withFileTypes: true });
-    peerCount = entries.filter(e => e.isDirectory() && isSessionId(e.name)).length;
-  } catch {}
+  const peerCount = listPeers(wsDirPath).length;
 
   // 名前未指定なら連番
   if (!name) {
@@ -154,10 +158,9 @@ export async function cmdSpawn(args: string[]): Promise<void> {
 
   // 起動待ち（プロンプトの出現を待つ）
   let waited = 0;
-  const maxWait = 30;
-  while (waited < maxWait) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    waited += 2;
+  while (waited < PROMPT_WAIT_MAX_SEC) {
+    await new Promise((resolve) => setTimeout(resolve, PROMPT_POLL_INTERVAL_MS));
+    waited += PROMPT_POLL_INTERVAL_MS / 1000;
     try {
       const screen = await cmuxReadScreen(surfaceRef);
       if (screen.includes("❯") && screen.includes("Claude Code")) {
@@ -168,8 +171,8 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     }
   }
 
-  if (waited >= maxWait) {
-    console.error(`警告: Claude起動のタイムアウト (${maxWait}秒)`);
+  if (waited >= PROMPT_WAIT_MAX_SEC) {
+    console.error(`警告: Claude起動のタイムアウト (${PROMPT_WAIT_MAX_SEC}秒)`);
   }
 
   // タブタイトル設定
@@ -182,12 +185,12 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   // CC内の色設定
   await cmuxSend(surfaceRef, `/color ${color}`);
   await cmuxSendKey(surfaceRef, "Return");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, SLASH_COMMAND_SETTLE_MS));
 
   // CC内の名前設定
   await cmuxSend(surfaceRef, `/rename ${name}`);
   await cmuxSendKey(surfaceRef, "Return");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, SLASH_COMMAND_SETTLE_MS));
 
   // SessionStartフックが自動で init + コンテキスト注入済み。inbox確認のトリガーだけ送る
   await cmuxSend(surfaceRef, "inbox を確認してください");

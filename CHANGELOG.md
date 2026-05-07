@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-05-07
+
+### Changed
+- `spawn` magic numbers extracted into named constants (`PROMPT_POLL_INTERVAL_MS`, `PROMPT_WAIT_MAX_SEC`, `SLASH_COMMAND_SETTLE_MS`).
+- `spawn` peer-count enumeration now uses `listPeers` (consolidated in 0.12.0) instead of re-implementing the `isSessionId` filter inline.
+- `subscribe` `cmux wait-for` timeout (default 1h) is now overridable via `CMUXMSG_SUBSCRIBE_TIMEOUT` (seconds).
+- `ensureSymlink` tmp suffix now includes 8 random hex chars in addition to PID+timestamp, so concurrent invocations within the same millisecond from the same PID won't clash.
+
 ## [0.16.0] - 2026-05-07
 
 ### Security
