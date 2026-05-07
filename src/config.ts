@@ -88,9 +88,14 @@ export function nowIso(): string {
 }
 
 export function pluginRoot(): string {
-  // CLAUDE_PLUGIN_ROOT > バイナリの親の親 > cwd のフォールバック
+  // CLAUDE_PLUGIN_ROOT > argv[1] が src/cli.ts (bun run 起動) > バイナリの親の親 > cwd
   if (process.env.CLAUDE_PLUGIN_ROOT) return process.env.CLAUDE_PLUGIN_ROOT;
-  // bin/cmux-msg から実行されている場合、bin/ の親がプラグインルート
+  // bun run src/cli.ts のような起動なら argv[1] が cli.ts のフルパス
+  const argv1 = process.argv[1] || "";
+  if (argv1.endsWith(`${path.sep}src${path.sep}cli.ts`)) {
+    return path.dirname(path.dirname(argv1));
+  }
+  // bin/cmux-msg-bin (コンパイル済み) から実行されている場合、bin/ の親がプラグインルート
   const binDir = path.dirname(process.execPath || process.argv[0] || "");
   if (path.basename(binDir) === "bin") return path.dirname(binDir);
   return process.cwd();

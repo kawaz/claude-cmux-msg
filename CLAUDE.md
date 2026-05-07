@@ -30,7 +30,9 @@ hooks/              # プラグインフック定義 (hooks.json)
 
 ## 開発
 
-ビルド: `bun run build` (src/cli.ts → bin/cmux-msg にコンパイル)
+ビルド: `bun run build` (src/cli.ts → bin/cmux-msg-bin にコンパイル)
+- `bin/cmux-msg` は bash ラッパー（git 管理対象）。ラッパーが bin/cmux-msg-bin があれば exec、なければ bun run にフォールバックする
+- `bin/cmux-msg-bin` は gitignore（コンパイル成果物）
 テスト: `bun test`
 検証: `claude plugin validate .`
 全チェック: `just all`
@@ -38,7 +40,7 @@ hooks/              # プラグインフック定義 (hooks.json)
 ## push
 
 `just push` を使う。以下を自動チェック:
-- バンドル (bin/cmux-msg) が最新か
+- コンパイル済みバンドル (bin/cmux-msg-bin) が生成可能か
 - plugin.json と marketplace.json のバージョン一致
 - main@origin からの変更に対するバージョン bump 必要性
 

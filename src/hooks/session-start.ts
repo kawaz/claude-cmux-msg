@@ -49,10 +49,11 @@ async function main(): Promise<void> {
     process.env.CMUXMSG_BASE ||
     path.join(process.env.HOME || "", ".local/share/cmux-messages");
 
-  // bin/cmux-msg が未ビルドなら自動ビルド
+  // bin/cmux-msg-bin (コンパイル済み) が無ければ自動ビルド。
+  // bin/cmux-msg はラッパースクリプトでコミット済み。
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
   if (pluginRoot) {
-    const binPath = path.join(pluginRoot, "bin", "cmux-msg");
+    const binPath = path.join(pluginRoot, "bin", "cmux-msg-bin");
     if (!fs.existsSync(binPath)) {
       try {
         Bun.spawnSync(["bun", "run", "build"], {

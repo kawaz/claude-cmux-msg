@@ -78,7 +78,7 @@ Run `cmux-msg help` for the full help.
 - Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<workspace>/<session_id>/inbox/`.
 - Atomic delivery via tmp + rename.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
-- Spawned workers are automatically initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg` on first run if missing.
+- Spawned workers are automatically initialized via the SessionStart hook, which also auto-builds the compiled `bin/cmux-msg-bin` on first run if missing. The shell wrapper at `bin/cmux-msg` falls back to `bun run src/cli.ts` if the compiled binary is unavailable.
 - The SessionStart hook writes `<ws>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can look up its session_id without env propagation. (`$CLAUDE_ENV_FILE` is also written for forward compatibility but is not relied upon — Issue #15840.)
 
 ## Receiving messages (recommended pattern)
@@ -107,6 +107,28 @@ cmux-msg spawn task-b --cwd /path/B &
 cmux-msg spawn task-c --cwd /path/C &
 wait
 ```
+
+## Using from a regular shell (zsh)
+
+The plugin ships with `cmux-msg.plugin.zsh` so users can drive cmux-msg from
+their interactive shell as well (handy for inspecting AI conversations
+post-hoc with `cmux-msg history` / `cmux-msg thread`).
+
+```bash
+# zinit
+zinit light kawaz/claude-cmux-msg
+
+# antidote
+echo 'kawaz/claude-cmux-msg' >> ~/.zsh_plugins.txt
+
+# manual
+source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
+```
+
+The plugin sets up an alias to the bundled `bin/cmux-msg` wrapper (which
+exec's the compiled `bin/cmux-msg-bin` when present, otherwise falls back to
+`bun run src/cli.ts`). It also adds `completions/` to `fpath` for tab
+completion of subcommands and options.
 
 ## License
 

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# cmux-msg shell wrapper
+#
+# コンパイル済み bin/cmux-msg-bin があれば exec、無ければ bun run src/cli.ts に
+# フォールバックする。CC 側 hook も shell ユーザもこのスクリプト 1 つを呼ぶことで、
+# ビルド済みバイナリの有無を意識しなくて済む。
+#
+# zsh/bash/fish 等から alias で指せば PATH を汚さずに使える。
+
+__here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+__bin="${__here}/cmux-msg-bin"
+__src="${__here}/../src/cli.ts"
+
+if [[ -x "$__bin" ]]; then
+  exec "$__bin" "$@"
+elif command -v bun >/dev/null 2>&1; then
+  exec bun run "$__src" "$@"
+else
+  echo "cmux-msg: bin/cmux-msg-bin が無く bun も見つかりません。" >&2
+  echo "  リポジトリで \`bun run build\` を実行するか bun をインストールしてください。" >&2
+  exit 1
+fi

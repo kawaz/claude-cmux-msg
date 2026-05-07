@@ -5,7 +5,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "bun build src/cli.ts --outfile bin/cmux-msg --target bun --compile",
+    "build": "bun build src/cli.ts --outfile bin/cmux-msg-bin --target bun --compile",
     "dev": "bun run src/cli.ts"
   },
   "devDependencies": {

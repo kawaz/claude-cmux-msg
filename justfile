@@ -21,11 +21,12 @@ version-bump level="patch":
     bump {{level}} -w -f package.json                    -p '"version":\s*"([^"]+)"'
     jj split -m "chore: bump version" .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json
 
-# バンドルをリビルドして差分があればエラー
+# コンパイル済みバンドルが生成されることを確認
+# bin/cmux-msg はラッパースクリプト (git 管理対象)、bin/cmux-msg-bin は git 管理外
 check-bundle:
     @bun run build >/dev/null 2>&1
-    @test -z "$(jj diff --summary bin/cmux-msg 2>/dev/null)" \
-        || { echo "ERROR: バンドルが最新ではありません。ビルド結果をコミットしてください。" >&2; exit 1; }
+    @test -x bin/cmux-msg-bin \
+        || { echo "ERROR: bin/cmux-msg-bin が生成されませんでした。" >&2; exit 1; }
 
 # plugin.json と marketplace.json のバージョン一致チェック
 check-versions:
