@@ -14,15 +14,14 @@ import {
   cmuxNewSplit,
   cmuxSend,
   cmuxSendKey,
-  cmuxReadScreen,
   cmuxRenameTab,
+  cmuxWaitFor,
 } from "../lib/cmux";
 import { validateName, isSessionId, shellSingleQuote } from "../lib/validate";
 import { listPeers } from "../lib/peer";
 
-// claude プロンプト検出ポーリング
-const PROMPT_POLL_INTERVAL_MS = 2000;
-const PROMPT_WAIT_MAX_SEC = 30;
+// 子CC の SessionStart hook が `cmux-msg:spawned-<sid>` を signal するまで待つ。
+const SPAWN_READY_TIMEOUT_SEC = 30;
 // /color, /rename 等のスラッシュコマンドが claude 側に処理されるまでの待機。
 // claude 側に完了 signal が無いため経験則で 1 秒。
 const SLASH_COMMAND_SETTLE_MS = 1000;
@@ -156,23 +155,22 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 
-  // 起動待ち（プロンプトの出現を待つ）
-  let waited = 0;
-  while (waited < PROMPT_WAIT_MAX_SEC) {
-    await new Promise((resolve) => setTimeout(resolve, PROMPT_POLL_INTERVAL_MS));
-    waited += PROMPT_POLL_INTERVAL_MS / 1000;
-    try {
-      const screen = await cmuxReadScreen(surfaceRef);
-      if (screen.includes("❯") && screen.includes("Claude Code")) {
-        break;
-      }
-    } catch {
-      // read-screen 失敗は無視
-    }
-  }
-
-  if (waited >= PROMPT_WAIT_MAX_SEC) {
-    console.error(`警告: Claude起動のタイムアウト (${PROMPT_WAIT_MAX_SEC}秒)`);
+  // 起動待ち: 子CC の SessionStart hook が `cmux-msg:spawned-<sid>` を発信するまで待つ。
+  // 旧実装は cmuxReadScreen で `❯` + `Claude Code` 文字列をポーリングしていたが、
+  // Claude Code のバージョンで表示文字列が変わると壊れる脆さがあった。
+  // signal 駆動なら子CC 側で確実に「起動完了」を発信できる。
+  const readyResult = await cmuxWaitFor(
+    `cmux-msg:spawned-${childSessionId}`,
+    SPAWN_READY_TIMEOUT_SEC
+  );
+  if (readyResult.kind === "timeout") {
+    console.error(
+      `警告: Claude起動の signal を受信できず (${SPAWN_READY_TIMEOUT_SEC}秒タイムアウト)`
+    );
+  } else if (readyResult.kind === "error") {
+    console.error(
+      `警告: cmux wait-for エラー (exit=${readyResult.exitCode}): ${readyResult.stderr || ""}`
+    );
   }
 
   // タブタイトル設定

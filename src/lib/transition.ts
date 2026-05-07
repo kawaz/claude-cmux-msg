@@ -61,11 +61,15 @@ export function dismissMessage(filename: string): void {
 /**
  * reply: 元メッセージを accept してから返信を送信、自分側を archive へ。
  *
- * 失敗パターン (#24):
- *   - send 部分失敗時: accepted/ に半端な状態で残るが、再 reply で復旧可能
- *     (二重送信リスクは極めて低い、cmuxSignal 失敗を握りつぶすため)
- *   - send 後の archive 失敗時: 送信は成功、accepted/ に response_at が
- *     追記されないが、ファイル自体は accepted/ に残るので致命的ではない
+ * 冪等性 (#24 対策):
+ *   accepted/<filename> に既に `response_at` が書かれていれば、前回の reply で
+ *   送信は完了し archive 移動だけ失敗した状態。**二重送信を避け、archive 移動
+ *   だけ完了させる**。前回の sentFilename は復元できないので空文字を返し、
+ *   呼び出し側 (cmd reply) には警告として stderr に出す。
+ *
+ *   accepted/ にあって response_at が無ければ「未送信」とみなし、通常の送信を
+ *   行う (これは旧実装と同じ挙動)。送信途中で失敗した場合の二重送信リスクは、
+ *   sendMessage の cmuxSignal 失敗を握りつぶす設計上、極めて低い。
  */
 export async function replyMessage(
   filename: string,
@@ -93,6 +97,20 @@ export async function replyMessage(
 
   if (!originalFrom) {
     throw new Error("元メッセージのfromが不明です");
+  }
+
+  // 冪等チェック: 前回の reply で response_at が書かれていれば既に送信済み。
+  // 二重送信せず、accepted → archive の移動だけ完了させる。
+  if (meta.response_at) {
+    const archivePath = path.join(dir, "archive", filename);
+    transitionMessage(filename, "accepted", "archive", {
+      archive_at: meta.archive_at || nowIso(),
+    });
+    process.stderr.write(
+      `[warning] ${filename} は既に reply 済み (response_at=${meta.response_at})。` +
+        `再送は行わず、accepted/ → archive/ への移動だけ完了させました。\n`
+    );
+    return "";
   }
 
   // 返信送信

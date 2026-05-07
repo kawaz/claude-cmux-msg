@@ -23,6 +23,11 @@ export interface SendOptions {
   type?: "request" | "response" | "broadcast";
   priority?: "normal" | "urgent";
   inReplyTo?: string;
+  /**
+   * broadcast コマンドが N 個のメッセージを送る際、全部に同じ ID を付ける。
+   * 受信側は frontmatter の broadcast_id でグルーピングできる。
+   */
+  broadcastId?: string;
 }
 
 export async function sendMessage(opts: SendOptions): Promise<string> {
@@ -50,6 +55,7 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
       "normal",
     created_at: nowIso(),
     in_reply_to: opts.inReplyTo || process.env.CMUXMSG_REPLY_TO || undefined,
+    broadcast_id: opts.broadcastId,
   };
 
   const content = serializeFrontmatter(meta, opts.body);

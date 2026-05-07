@@ -21,6 +21,7 @@ export interface InboxMessage {
   type: string;
   created_at: string;
   in_reply_to: string | null;
+  broadcast_id: string | null;
 }
 
 export function listInbox(): InboxMessage[] {
@@ -50,6 +51,7 @@ export function listInbox(): InboxMessage[] {
       type: meta.type || "request",
       created_at: meta.created_at || "",
       in_reply_to: meta.in_reply_to || null,
+      broadcast_id: meta.broadcast_id || null,
     });
   }
 

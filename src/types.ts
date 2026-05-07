@@ -14,6 +14,12 @@ export interface MessageMeta {
   read_at?: string;
   response_at?: string;
   archive_at?: string;
+  /**
+   * 1 回の broadcast コマンドで生成される共通 ID。
+   * 同じ broadcast から派生した N 件のメッセージは同じ broadcast_id を持つ。
+   * 受信側はこの ID で「同じ broadcast の一部」を peer 横断で同定できる。
+   */
+  broadcast_id?: string;
 }
 
 /**

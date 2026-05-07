@@ -1,15 +1,16 @@
 import * as fs from "fs";
 import * as path from "path";
+import { randomUUID } from "crypto";
 import { requireCmux, wsDir, getSessionId } from "../config";
 import { sendMessage } from "../lib/sender";
 import { listPeers } from "../lib/peer";
+import { UsageError } from "../lib/errors";
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
   requireCmux();
 
   if (args.length < 1) {
-    console.error("使い方: cmux-msg broadcast <メッセージ>");
-    process.exit(1);
+    throw new UsageError("使い方: cmux-msg broadcast <メッセージ>");
   }
 
   const body = args.join(" ");
@@ -26,8 +27,12 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
     )
     .map((p) => p.sessionId);
 
+  // この 1 broadcast で送る N 件のメッセージに共通の ID を付ける。
+  // 受信側 / 送信側どちらからでも broadcast_id でグルーピングできる。
+  const broadcastId = randomUUID();
+
   const promises = targets.map((sid) =>
-    sendMessage({ target: sid, body, type: "broadcast" })
+    sendMessage({ target: sid, body, type: "broadcast", broadcastId })
   );
   const results = await Promise.allSettled(promises);
   const sent = results.filter((r) => r.status === "fulfilled").length;

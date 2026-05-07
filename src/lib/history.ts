@@ -21,6 +21,8 @@ export interface MessageRecord {
   priority: string;
   created_at: string;
   in_reply_to: string | null;
+  /** 同じ broadcast から派生した N 件のメッセージは同じ ID を持つ */
+  broadcast_id: string | null;
   body: string;
 }
 
@@ -58,6 +60,7 @@ function readMessageFile(
     priority: meta.priority || "normal",
     created_at: meta.created_at || "",
     in_reply_to: meta.in_reply_to || null,
+    broadcast_id: meta.broadcast_id || null,
     body,
   };
 }

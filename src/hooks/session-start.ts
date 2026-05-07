@@ -12,7 +12,7 @@ import { initWorkspace } from "../commands/init";
 import { countInbox } from "../lib/inbox";
 import { UUID_PATTERN } from "../lib/validate";
 import { writeBySurfaceIndex } from "../lib/session-index";
-import { cmuxIdentify } from "../lib/cmux";
+import { cmuxIdentify, cmuxSignal } from "../lib/cmux";
 import { getMsgBase } from "../lib/paths";
 
 interface SessionStartInput {
@@ -114,6 +114,18 @@ async function main(): Promise<void> {
   // コンテキスト出力
   const parentSessionId = process.env.CMUXMSG_PARENT_SESSION_ID;
   const workerName = process.env.CMUXMSG_WORKER_NAME;
+
+  // spawn 経由で起動された場合、親に「起動完了」を signal で通知する。
+  // 親 (spawn コマンド) は cmux wait-for で待機中。
+  // 旧実装は親が screen の文字列マッチでポーリングしていたが、Claude Code の
+  // 表示文字列バージョン依存だった。signal 駆動のほうが確実。
+  if (parentSessionId) {
+    try {
+      await cmuxSignal(`cmux-msg:spawned-${sessionId}`);
+    } catch {
+      // signal 失敗は致命的ではない (親は timeout で進む)
+    }
+  }
 
   let unreadCount = 0;
   try {

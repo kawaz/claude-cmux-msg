@@ -267,6 +267,43 @@ describe("replyMessage", () => {
     setSelf(PEER_A);
     await expect(replyMessage("ghost.md", "x")).rejects.toThrow();
   });
+
+  test("既に response_at が書かれた accepted へ reply: 再送せず archive へ", async () => {
+    setSelf(SELF);
+    const sentFilename = await sendMessage({ target: PEER_A, body: "q" });
+
+    setSelf(PEER_A);
+    // accept してから手動で response_at を追記 (前回の reply の archive 失敗を再現)
+    acceptMessage(sentFilename);
+    const acceptedFile = path.join(dir(PEER_A), "accepted", sentFilename);
+    let content = fs.readFileSync(acceptedFile, "utf-8");
+    content = content.replace(
+      "---\n\n",
+      "response_at: 2026-05-07T12:00:00+09:00\n---\n\n"
+    );
+    fs.writeFileSync(acceptedFile, content);
+
+    // PEER_A の sent/ には何も無い状態 (前回 send 後に rename が失敗した想定)
+    const peerASentBefore = fs.readdirSync(path.join(dir(PEER_A), "sent")).length;
+    const result = await replyMessage(sentFilename, "should-not-send");
+
+    // 戻り値は空 (再送していない)
+    expect(result).toBe("");
+    // accepted/ から archive/ へ移動完了
+    expect(fs.existsSync(path.join(dir(PEER_A), "accepted", sentFilename))).toBe(
+      false
+    );
+    expect(fs.existsSync(path.join(dir(PEER_A), "archive", sentFilename))).toBe(
+      true
+    );
+    // 再送されていない (PEER_A の sent/ に新規エントリが無い)
+    const peerASentAfter = fs.readdirSync(path.join(dir(PEER_A), "sent")).length;
+    expect(peerASentAfter).toBe(peerASentBefore);
+    // SELF の inbox に "should-not-send" が来ていない (元の sent と reply のみ)
+    setSelf(SELF);
+    const list = listInbox();
+    expect(list.some((m) => m.filename === sentFilename)).toBe(false); // SELF が PEER_A に送ったやつ
+  });
 });
 
 describe("送信→受信のラウンドトリップ", () => {

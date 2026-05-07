@@ -4,6 +4,19 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-05-07
+
+### Added
+- `broadcast_id` フィールドをメッセージ frontmatter に追加。1 回の `cmux-msg broadcast` 実行で送られる N 件のメッセージは全部同じ `broadcast_id` (UUID) を持つ。受信側は peer 横断で「同じ broadcast の一部」を同定可能 (#3 対応)。
+- `MessageMeta` / `InboxMessage` / `MessageRecord` に `broadcast_id` を追加。`history --json` 出力にも含まれる。
+
+### Changed
+- `cmux-msg spawn` の Claude Code 起動完了検出を文字列マッチから signal 駆動に変更。子CC の `SessionStart` hook が `cmux-msg:spawned-<sid>` を発信し、親 (spawn コマンド) は `cmux wait-for` で待機する。Claude Code のバージョンで表示文字列が変わっても壊れない (#14 対応)。
+
+### Fixed
+- `replyMessage` を冪等にした。`accepted/<filename>` に `response_at` が既に書かれている場合 (前回の reply で送信は完了し archive 移動だけ失敗した状態) は二重送信せず、archive 移動だけ完了させて警告を返す (#24 対応)。
+- `cmux-msg broadcast` も `UsageError` 経由のエラー処理に統一 (`process.exit(1)` 直書きの取り残し)。
+
 ## [0.18.0] - 2026-05-07
 
 ### Changed (refactor)
