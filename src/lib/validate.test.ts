@@ -3,6 +3,7 @@ import {
   validateSessionId,
   validateName,
   validateFilename,
+  isSessionId,
   UUID_PATTERN,
   SURFACE_REF_PATTERN,
 } from "./validate";
@@ -57,6 +58,28 @@ describe("validateSessionId", () => {
 
   test("ランダム文字列は拒否", () => {
     expect(() => validateSessionId("foo-bar")).toThrow();
+  });
+});
+
+describe("isSessionId", () => {
+  test("UUID 形式は true", () => {
+    expect(isSessionId("1D033978-ACF7-479B-B355-160EC85217B1")).toBe(true);
+    expect(isSessionId("f695cacc-14c6-4983-94af-d3eeb1d6649a")).toBe(true);
+  });
+
+  test("インデックスディレクトリ名は false", () => {
+    expect(isSessionId("by-surface")).toBe(false);
+    expect(isSessionId("broadcast")).toBe(false);
+    expect(isSessionId("by-name")).toBe(false);
+  });
+
+  test("内部状態ファイル名は false", () => {
+    expect(isSessionId(".last-worker-surface")).toBe(false);
+    expect(isSessionId("tmp")).toBe(false);
+  });
+
+  test("空文字列は false", () => {
+    expect(isSessionId("")).toBe(false);
   });
 });
 

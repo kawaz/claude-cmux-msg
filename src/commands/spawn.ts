@@ -18,6 +18,7 @@ import {
   cmuxRenameTab,
 } from "../lib/cmux";
 import { validateName } from "../lib/validate";
+import { isSessionId } from "../lib/validate";
 
 const LAST_WORKER_FILE = ".last-worker-surface";
 
@@ -91,7 +92,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   let peerCount = 0;
   try {
     const entries = fs.readdirSync(wsDirPath, { withFileTypes: true });
-    peerCount = entries.filter(e => e.isDirectory() && e.name !== "broadcast").length;
+    peerCount = entries.filter(e => e.isDirectory() && isSessionId(e.name)).length;
   } catch {}
 
   // 名前未指定なら連番
@@ -125,9 +126,13 @@ export async function cmdSpawn(args: string[]): Promise<void> {
 
   // claude 起動 (環境変数で親子関係を伝達、SessionStartフックが検出する)
   // --cwd 指定時は cd を先頭に付けて1コマンドで実行（シェル未準備時の入力混在を防ぐ）
+  // --add-dir で MSG_BASE/<workspace> を子CCのサンドボックスに明示的に許可
+  // (子CCの cwd 配下外への書き込みは Claude Code のサンドボックスで拒否されるため、
+  //  cmux-msg 用ディレクトリを明示しないと reply / accept / send が EPERM になる)
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${JSON.stringify(cwd)} && ` : "";
-  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUXMSG_PARENT_SESSION_ID=${parentSessionId} CMUXMSG_WORKER_NAME=${name} CMUXMSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --plugin-dir ${root} --name ${name}`;
+  const msgWsDir = path.join(MSG_BASE, getWorkspaceId());
+  const claudeCmd = `${cdPrefix}CMUX_CLAUDE_HOOKS_DISABLED=1 CMUXMSG_PARENT_SESSION_ID=${parentSessionId} CMUXMSG_WORKER_NAME=${name} CMUXMSG_SURFACE_REF=${surfaceRef} claude --session-id ${childSessionId} ${claudeArgs} --add-dir ${JSON.stringify(msgWsDir)} --plugin-dir ${root} --name ${name}`;
   await cmuxSend(surfaceRef, claudeCmd);
   await cmuxSendKey(surfaceRef, "Return");
 

@@ -31,6 +31,15 @@ export function validateSessionId(id: string): void {
   }
 }
 
+/**
+ * workspace ディレクトリ内のエントリ名が session ID か判定する。
+ * `broadcast`、`by-surface`、`.last-worker-surface` 等のインデックス／内部状態
+ * ディレクトリを peer 列挙から弾くために使う。
+ */
+export function isSessionId(name: string): boolean {
+  return UUID_PATTERN.test(name);
+}
+
 /** spawn名バリデーション（シェル安全な文字のみ） */
 export function validateName(name: string): void {
   // 日本語も許可するが、シェルに危険な文字は禁止

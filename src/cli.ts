@@ -32,7 +32,7 @@ cmux-msg peers で peer 一覧を確認可能。
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
-  cmux-msg peers                 同一ワークスペースのピア一覧
+  cmux-msg peers [--all]         同一ワークスペースのピア一覧 (--all で dead 含む)
   cmux-msg send <session_id> <メッセージ>  メッセージ送信
   cmux-msg broadcast <メッセージ>      全ピアにブロードキャスト
   cmux-msg list                  inbox のメッセージ一覧
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
       break;
     case "ls-peers":
     case "peers":
-      cmdPeers();
+      cmdPeers(rest);
       break;
     case "send":
       await cmdSend(rest);
