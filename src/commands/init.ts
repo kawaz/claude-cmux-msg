@@ -8,7 +8,7 @@ import {
   getTabId,
   nowIso,
   pluginRoot,
-  MSG_BASE,
+  getMsgBase,
 } from "../config";
 import { setupLayoutDocs } from "../lib/layout-docs";
 import { formatPidFile } from "../lib/peer";
@@ -48,7 +48,7 @@ export function initWorkspace(dir: string): void {
   // 各階層に「ここは何の場所か」を示す README.md (symlink) を貼る
   // 失敗してもメッセージング機能には影響しないため例外は投げない
   setupLayoutDocs({
-    msgBase: MSG_BASE,
+    msgBase: getMsgBase(),
     pluginRoot: pluginRoot(),
     workspaceId: getWorkspaceId(),
     sessionId: getSessionId(),

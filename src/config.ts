@@ -1,23 +1,11 @@
 import * as path from "path";
-import * as os from "os";
 import { readBySurfaceIndex } from "./lib/session-index";
+import { getMsgBase } from "./lib/paths";
 
-/**
- * メッセージ保管庫のベースパス。
- *
- * テストや一時的な切り替えのため、関数として `process.env.CMUXMSG_BASE` を
- * 毎回評価する。`MSG_BASE` 定数は import 時固定なので、env 切替で挙動を
- * 変えたい場面では `getMsgBase()` を使う。
- */
-export function getMsgBase(): string {
-  return (
-    process.env.CMUXMSG_BASE ||
-    path.join(os.homedir(), ".local/share/cmux-messages")
-  );
-}
-
-/** 後方互換: 多くの箇所が import 時に評価された値を使えば十分 */
-export const MSG_BASE = getMsgBase();
+// 旧版の `MSG_BASE` 定数は廃止 (import 時固定値で env 切替が反映されない問題)。
+// 全箇所で関数版 `getMsgBase()` を経由する。`config.ts` を import している
+// 既存箇所は引き続き `getMsgBase` を re-export 経由で利用可能。
+export { getMsgBase };
 
 export function getWorkspaceId(): string {
   return process.env.CMUX_WORKSPACE_ID || "";

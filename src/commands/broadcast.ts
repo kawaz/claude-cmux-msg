@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { requireCmux, wsDir, getSessionId } from "../config";
-import { sendMessage } from "../lib/message";
+import { sendMessage } from "../lib/sender";
 import { listPeers } from "../lib/peer";
 
 export async function cmdBroadcast(args: string[]): Promise<void> {

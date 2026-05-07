@@ -1,5 +1,5 @@
 import { requireCmux } from "../config";
-import { replyMessage } from "../lib/message";
+import { replyMessage } from "../lib/transition";
 import { validateFilename } from "../lib/validate";
 import { UsageError } from "../lib/errors";
 

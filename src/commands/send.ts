@@ -1,5 +1,5 @@
 import { requireCmux } from "../config";
-import { sendMessage } from "../lib/message";
+import { sendMessage } from "../lib/sender";
 import { validateSessionId } from "../lib/validate";
 import { UsageError } from "../lib/errors";
 

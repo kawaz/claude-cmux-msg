@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-05-07
+
+### Changed (refactor)
+- `src/lib/message.ts` (258 行、3 系統の関心事が同居していた) を 3 ファイルに分離:
+  - `src/lib/sender.ts` — `sendMessage` (送信)
+  - `src/lib/inbox.ts` — `listInbox` / `readMessage` / `countInbox` (受信読み出し)
+  - `src/lib/transition.ts` — `acceptMessage` / `dismissMessage` / `replyMessage` (状態遷移)
+- `transition.ts` に共通の `transitionMessage(filename, fromDir, toDir, fields)` を導入し、accept / dismiss / reply 内の rename + frontmatter 追記の重複を解消。
+- `MSG_BASE` 定数を完全廃止。`getMsgBase()` 関数経由に統一し、テスト時の env 切替がすべての利用箇所に反映されるようにした (二重提供だった負債を解消)。
+- `getMsgBase` を `src/lib/paths.ts` に独立。`session-index.ts` の env 直読みも `paths.ts` 経由に切り替え、`config.ts` ↔ `session-index.ts` の循環依存懸念を構造的に断った。
+
+### Added
+- `src/lib/message.test.ts` — sender / inbox / transition の統合テスト (17 件)。リファクタの safety net として、送信・受信・accept・dismiss・reply・ラウンドトリップの不変条件を担保。
+
 ## [0.17.0] - 2026-05-07
 
 ### Changed

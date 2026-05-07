@@ -5,7 +5,7 @@ import {
   requireCmux,
   getSessionId,
   getWorkspaceId,
-  MSG_BASE,
+  getMsgBase,
   SPAWN_COLORS,
   pluginRoot,
   wsDir,
@@ -95,7 +95,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   }
 
   // 既存ピアの数からカラーインデックスを決定 (alive/dead 含む全 session)
-  const wsDirPath = path.join(MSG_BASE, getWorkspaceId());
+  const wsDirPath = path.join(getMsgBase(), getWorkspaceId());
   const peerCount = listPeers(wsDirPath).length;
 
   // 名前未指定なら連番
@@ -142,7 +142,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   //  cmux-msg 用ディレクトリを明示しないと reply / accept / send が EPERM になる)
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${shellSingleQuote(cwd)} && ` : "";
-  const msgWsDir = path.join(MSG_BASE, getWorkspaceId());
+  const msgWsDir = path.join(getMsgBase(), getWorkspaceId());
   const claudeCmd =
     `${cdPrefix}` +
     `CMUX_CLAUDE_HOOKS_DISABLED=1 ` +

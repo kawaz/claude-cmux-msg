@@ -1,5 +1,5 @@
 import { requireCmux } from "../config";
-import { readMessage } from "../lib/message";
+import { readMessage } from "../lib/inbox";
 import { validateFilename } from "../lib/validate";
 import { UsageError } from "../lib/errors";
 

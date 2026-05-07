@@ -9,10 +9,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { initWorkspace } from "../commands/init";
-import { countInbox } from "../lib/message";
+import { countInbox } from "../lib/inbox";
 import { UUID_PATTERN } from "../lib/validate";
 import { writeBySurfaceIndex } from "../lib/session-index";
 import { cmuxIdentify } from "../lib/cmux";
+import { getMsgBase } from "../lib/paths";
 
 interface SessionStartInput {
   session_id: string;
@@ -45,9 +46,7 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const msgBase =
-    process.env.CMUXMSG_BASE ||
-    path.join(process.env.HOME || "", ".local/share/cmux-messages");
+  const msgBase = getMsgBase();
 
   // bin/cmux-msg-bin (コンパイル済み) が無ければ自動ビルド。
   // bin/cmux-msg はラッパースクリプトでコミット済み。

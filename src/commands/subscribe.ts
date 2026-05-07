@@ -1,5 +1,5 @@
 import { requireCmux, getSessionId } from "../config";
-import { listInbox, type InboxMessage } from "../lib/message";
+import { listInbox, type InboxMessage } from "../lib/inbox";
 import { cmuxWaitFor } from "../lib/cmux";
 import { diffInbox } from "../lib/subscribe";
 

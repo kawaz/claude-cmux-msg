@@ -1,5 +1,5 @@
 import { requireCmux } from "../config";
-import { listInbox } from "../lib/message";
+import { listInbox } from "../lib/inbox";
 
 export function cmdList(): void {
   requireCmux();
