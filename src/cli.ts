@@ -20,6 +20,7 @@ import { cmdTell } from "./commands/tell";
 import { cmdScreen } from "./commands/screen";
 import { cmdHistory } from "./commands/history";
 import { cmdThread } from "./commands/thread";
+import { cmdGc } from "./commands/gc";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
@@ -45,6 +46,7 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
   cmux-msg history [--peer <id>] [--limit N]  自分が関わった全メッセージを時系列表示
   cmux-msg thread <filename>     in_reply_to を辿って会話単位で表示
+  cmux-msg gc [--force]          inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
 
 ダイレクト操作:
   cmux-msg tell <session_id> <テキスト>  対象に直接テキスト入力
@@ -113,6 +115,9 @@ async function main(): Promise<void> {
       break;
     case "thread":
       cmdThread(rest);
+      break;
+    case "gc":
+      cmdGc(rest);
       break;
     case "help":
     case "--help":

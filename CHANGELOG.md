@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-05-07
+
+### Added
+- `cmux-msg gc [--force]` — clean up dead session directories whose `inbox/` and `accepted/` are both empty. Dry-run by default. Sessions with pending messages are preserved.
+
+### Changed
+- `cmux-msg subscribe` now writes a stderr warning when started in a TTY. Foreground use blocks indefinitely; the recommended invocation is via Claude Code's Monitor tool. The warning does not interfere with the JSONL stream on stdout.
+
 ## [0.12.1] - 2026-05-07
 
 ### Fixed

@@ -20,6 +20,16 @@ function emit(msg: InboxMessage): void {
 export async function cmdSubscribe(_args: string[]): Promise<void> {
   requireCmux();
 
+  // フォアグラウンド (TTY) 起動の警告。Monitor / pipe 経由なら isTTY=false。
+  // subscribe は long-running blocking なので、CC の Bash ツールから叩くとハングする。
+  if (process.stdout.isTTY) {
+    process.stderr.write(
+      "[warning] cmux-msg subscribe is a long-running blocking command.\n" +
+      "[warning] In Claude Code, prefer launching it via the Monitor tool.\n" +
+      "[warning] Press Ctrl-C to stop.\n"
+    );
+  }
+
   const mySessionId = getSessionId();
   const signal = `cmux-msg:${mySessionId}`;
   let emitted = new Set<string>();
