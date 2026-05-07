@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-05-07
+
+### Added
+- `cmux-msg gc --verbose` で保持された peer の理由 (`self` / `alive` / `inbox に残メッセージ` / `accepted に残メッセージ`) を表示。掃除されない peer の診断に使える (#32 対応)。
+
+### Changed
+- CLI のサブコマンドディスパッチを `switch` 文から `Record<string, handler>` テーブルに変更。`peers`/`ls-peers`、`list`/`ls` などの alias は同じハンドラを別キーで指すだけになり、重複ロジックを排除 (#34 対応)。
+- `cmuxExec` の例外捕捉で `e instanceof Error ? e.message : String(e)` を使うよう修正。`Error` の場合に `message` だけ取り出すことで呼び出し側が parse しなくて済む (#31 対応)。
+
 ## [0.19.0] - 2026-05-07
 
 ### Added

@@ -15,9 +15,11 @@ export async function cmuxExec(
       exitCode: result.exitCode,
     };
   } catch (e) {
+    // Error なら message のみ取り出す。それ以外は String() で文字列化。
+    const stderr = e instanceof Error ? e.message : String(e);
     return {
       stdout: "",
-      stderr: String(e),
+      stderr,
       exitCode: 1,
     };
   }

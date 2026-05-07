@@ -47,7 +47,7 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
   cmux-msg history [--peer <id>] [--limit N] [--json]  自分が関わった全メッセージを時系列表示
   cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示
-  cmux-msg gc [--force]          inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
+  cmux-msg gc [--force] [--verbose]  inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
 
 ダイレクト操作:
   cmux-msg tell <session_id> <テキスト>  対象に直接テキスト入力
@@ -58,78 +58,56 @@ cmux-msg peers で peer 一覧を確認可能。
   CMUXMSG_PRIORITY=urgent  緊急メッセージとして送信
   CMUXMSG_BASE=<path>      メッセージ保存先 (デフォルト: ~/.local/share/cmux-messages)`;
 
+type CmdHandler = (args: string[]) => void | Promise<void>;
+
+/**
+ * サブコマンド名 → ハンドラのテーブル。
+ * alias は同じハンドラを別キーで参照させる (重複ロジックなし)。
+ * ヘルプ生成 / 補完 (completions/_cmux-msg) もこのテーブルから派生させたいが
+ * 補完は zsh 側で別管理 (動的生成すると初回ロードが遅くなるため)。
+ */
+const COMMANDS: Record<string, CmdHandler> = {
+  init: () => cmdInit(),
+  whoami: () => cmdWhoami(),
+  peers: cmdPeers,
+  "ls-peers": cmdPeers, // alias
+  send: cmdSend,
+  list: () => cmdList(),
+  ls: () => cmdList(), // alias
+  read: cmdRead,
+  accept: cmdAccept,
+  dismiss: cmdDismiss,
+  reply: cmdReply,
+  broadcast: cmdBroadcast,
+  subscribe: cmdSubscribe,
+  spawn: cmdSpawn,
+  stop: cmdStop,
+  tell: cmdTell,
+  screen: cmdScreen,
+  history: cmdHistory,
+  thread: cmdThread,
+  gc: cmdGc,
+};
+
+const HELP_KEYS = new Set(["help", "--help", "-h"]);
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const cmd = args[0] || "help";
   const rest = args.slice(1);
 
-  switch (cmd) {
-    case "init":
-      cmdInit();
-      break;
-    case "whoami":
-      cmdWhoami();
-      break;
-    case "ls-peers":
-    case "peers":
-      cmdPeers(rest);
-      break;
-    case "send":
-      await cmdSend(rest);
-      break;
-    case "list":
-    case "ls":
-      cmdList();
-      break;
-    case "read":
-      cmdRead(rest);
-      break;
-    case "accept":
-      cmdAccept(rest);
-      break;
-    case "dismiss":
-      cmdDismiss(rest);
-      break;
-    case "reply":
-      await cmdReply(rest);
-      break;
-    case "broadcast":
-      await cmdBroadcast(rest);
-      break;
-    case "subscribe":
-      await cmdSubscribe(rest);
-      break;
-    case "spawn":
-      await cmdSpawn(rest);
-      break;
-    case "stop":
-      await cmdStop(rest);
-      break;
-    case "tell":
-      await cmdTell(rest);
-      break;
-    case "screen":
-      await cmdScreen(rest);
-      break;
-    case "history":
-      cmdHistory(rest);
-      break;
-    case "thread":
-      cmdThread(rest);
-      break;
-    case "gc":
-      cmdGc(rest);
-      break;
-    case "help":
-    case "--help":
-    case "-h":
-      console.log(HELP);
-      break;
-    default:
-      console.error(`不明なコマンド: ${cmd}`);
-      console.error("cmux-msg help でヘルプを表示");
-      process.exit(1);
+  if (HELP_KEYS.has(cmd)) {
+    console.log(HELP);
+    return;
   }
+
+  const handler = COMMANDS[cmd];
+  if (!handler) {
+    console.error(`不明なコマンド: ${cmd}`);
+    console.error("cmux-msg help でヘルプを表示");
+    process.exit(1);
+  }
+  await handler(rest);
 }
 
 main().catch((e) => {
