@@ -81,10 +81,22 @@ export function timestamp(): string {
   return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
 
+/**
+ * ISO 8601 形式の現在時刻 (timezone offset 付き)。
+ * 例: `2026-05-07T12:34:56+09:00`
+ *
+ * 旧実装はローカル時刻を timezone なしで書いていたため、`history --json` で
+ * 別マシンに渡すと曖昧だった。timezone を含めることで「未来から来たメッセージ」
+ * 問題を回避する。
+ */
 export function nowIso(): string {
   const d = new Date();
   const pad = (n: number, w = 2) => String(n).padStart(w, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const absMin = Math.abs(offsetMin);
+  const offset = `${sign}${pad(Math.floor(absMin / 60))}:${pad(absMin % 60)}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${offset}`;
 }
 
 export function pluginRoot(): string {
@@ -98,6 +110,11 @@ export function pluginRoot(): string {
   // bin/cmux-msg-bin (コンパイル済み) から実行されている場合、bin/ の親がプラグインルート
   const binDir = path.dirname(process.execPath || process.argv[0] || "");
   if (path.basename(binDir) === "bin") return path.dirname(binDir);
+  // 最終フォールバック: cwd は確実に違う場所のことが多いので警告を出す
+  process.stderr.write(
+    `[warning] cmux-msg pluginRoot を解決できず cwd (${process.cwd()}) を使います。` +
+      `CLAUDE_PLUGIN_ROOT または bin/cmux-msg-bin 経由の起動を推奨。\n`
+  );
   return process.cwd();
 }
 

@@ -24,8 +24,12 @@ export function initWorkspace(dir: string): void {
 
   // シェルの PID + 起動時刻を記録して生存確認に使う。
   // PID 単独だと再利用で誤判定するため lstart も併記する (formatPidFile)
+  // tmp + rename で原子化。中途半端な内容を他プロセスに読まれない。
   const shellPid = process.ppid || process.pid;
-  fs.writeFileSync(path.join(dir, "pid"), formatPidFile(shellPid));
+  const pidFile = path.join(dir, "pid");
+  const pidTmp = `${pidFile}.tmp.${process.pid}.${Date.now()}`;
+  fs.writeFileSync(pidTmp, formatPidFile(shellPid));
+  fs.renameSync(pidTmp, pidFile);
 
   // メタ情報（undefined は JSON.stringify で自動除去）
   const meta = {

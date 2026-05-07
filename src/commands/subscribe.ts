@@ -56,11 +56,11 @@ export async function cmdSubscribe(_args: string[]): Promise<void> {
     if (!running) break;
     if (r.kind === "error") {
       const elapsedSec = (r.elapsedMs / 1000).toFixed(2);
-      console.error(
-        `cmux wait-for がエラー終了しました (exit=${r.exitCode}, ${elapsedSec}s):`
+      // cli.ts 末尾の catch に任せる (二重防衛しない)
+      throw new Error(
+        `cmux wait-for がエラー終了しました (exit=${r.exitCode}, ${elapsedSec}s)` +
+          (r.stderr ? `: ${r.stderr}` : "")
       );
-      if (r.stderr) console.error(r.stderr);
-      process.exit(1);
     }
     // received でも timeout でも inbox を再スキャン
     const current = listInbox();

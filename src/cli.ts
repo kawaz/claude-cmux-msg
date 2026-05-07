@@ -21,6 +21,7 @@ import { cmdScreen } from "./commands/screen";
 import { cmdHistory } from "./commands/history";
 import { cmdThread } from "./commands/thread";
 import { cmdGc } from "./commands/gc";
+import { UsageError } from "./lib/errors";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム
 
@@ -132,6 +133,11 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  console.error(`エラー: ${e.message || e}`);
+  // UsageError は usage 文をそのまま表示 (「エラー:」プレフィックスなし)
+  if (e instanceof UsageError) {
+    console.error(e.message);
+  } else {
+    console.error(`エラー: ${e?.message || e}`);
+  }
   process.exit(1);
 });

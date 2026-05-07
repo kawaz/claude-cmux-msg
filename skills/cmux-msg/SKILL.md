@@ -75,6 +75,10 @@ cmux-msg history [--peer <session_id>] [--limit N]
 
 # in_reply_to を遡る/前方探索して会話単位で表示
 cmux-msg thread <filename>
+
+# dead な過去セッションのディレクトリを掃除 (inbox/accepted が空のもののみ)
+# 既定 dry-run、--force で実行。archive/sent も一緒に削除されるので注意。
+cmux-msg gc [--force]
 ```
 
 ### subscribe の使い方（Monitor ツール前提）

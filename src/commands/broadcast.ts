@@ -32,5 +32,26 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
   const results = await Promise.allSettled(promises);
   const sent = results.filter((r) => r.status === "fulfilled").length;
 
-  console.log(`ブロードキャスト完了: ${sent} ピアに送信`);
+  // 失敗があれば理由を stderr に詳細出力 + exit code 2 (部分失敗)。
+  // 旧実装は失敗を握りつぶして「N ピアに送信」と表示するだけだった。
+  const failures: Array<{ sid: string; reason: string }> = [];
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      const reason =
+        r.reason instanceof Error
+          ? r.reason.message
+          : String(r.reason);
+      failures.push({ sid: targets[i]!, reason });
+    }
+  });
+
+  for (const f of failures) {
+    process.stderr.write(`broadcast 失敗 [${f.sid}]: ${f.reason}\n`);
+  }
+  console.log(`ブロードキャスト完了: ${sent}/${results.length} ピアに送信`);
+
+  if (failures.length > 0) {
+    // exit code 2 = 部分失敗 (1 = 全体エラーと区別)
+    process.exit(2);
+  }
 }

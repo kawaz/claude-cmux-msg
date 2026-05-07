@@ -65,19 +65,24 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
   //   - 受信側で frontmatter (read_at / response_at / archive_at) が追記されると
   //     送信側からも相手の処理状況が見える
   //   - 受信側が rename (inbox→accepted/archive) しても inode 不変なので影響なし
-  // hardlink 不可な FS (クロスデバイス等) では copy にフォールバック。
-  // 同期失敗しても送信自体は成功扱いとする。
+  // クロス FS など hardlink 不可の場合は sent/ への記録を**諦める**:
+  // copy で埋めると inode 共有という公開仕様 (README/SKILL) を裏切るため。
+  // 一度だけ stderr に警告を出して、メッセージ送信自体は成功扱いで続行する。
   try {
     const sentDir = path.join(myDir(), "sent");
     fs.mkdirSync(sentDir, { recursive: true });
     const sentFile = path.join(sentDir, filename);
     try {
       fs.linkSync(inboxFile, sentFile);
-    } catch {
-      try { fs.writeFileSync(sentFile, content); } catch {}
+    } catch (e) {
+      process.stderr.write(
+        `[warning] sent/ への hardlink 失敗 (${(e as Error).message || e})。` +
+        `送信は成功、ただし sent/ には記録されません。` +
+        `クロス FS 環境では CMUXMSG_BASE を peer と同じファイルシステムに置いてください。\n`
+      );
     }
   } catch {
-    // sent/ への記録失敗は致命的ではない
+    // sent/ ディレクトリ作成失敗等は致命的ではない
   }
 
   // wait-for シグナルで受信側に通知（UUID ベース）

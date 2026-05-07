@@ -36,13 +36,18 @@ export function isProcessAlive(pid: number): boolean {
 /**
  * 指定 PID の起動時刻 (ps -o lstart= 出力) を取得する。
  * mac/Linux 両対応。プロセスが存在しない場合は null。
+ *
+ * `LC_ALL=C` を強制してロケール非依存にする。日本語ロケール下では
+ * `日 5/ 7 12:34:56 2026` のような曜日名が混じり、書き込み時と読み込み時で
+ * ロケールが違うと永遠に不一致になる事故を防ぐ。
  */
-export function getProcessStartTime(pid: number): string | null {
+function getProcessStartTime(pid: number): string | null {
   try {
     const proc = Bun.spawnSync({
       cmd: ["ps", "-o", "lstart=", "-p", String(pid)],
       stdout: "pipe",
       stderr: "ignore",
+      env: { ...process.env, LC_ALL: "C", LANG: "C" },
     });
     const out = new TextDecoder().decode(proc.stdout).trim();
     return out || null;

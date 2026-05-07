@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-05-07
+
+### Changed
+- Error handling unified: each command no longer wraps its body in a redundant `try { ... } catch { console.error; process.exit(1) }`. A new `UsageError` class lets argument-parsing errors print just the usage line, while other errors are caught at `cli.ts` and printed with an `エラー:` prefix.
+- `nowIso()` now emits ISO 8601 with timezone offset (e.g. `2026-05-07T12:34:56+09:00`). Frontmatter `created_at` / `read_at` etc. are now unambiguous across machines, addressing the "messages from the future" issue when `history --json` output is processed elsewhere.
+- `getProcessStartTime()` now invokes `ps` with `LC_ALL=C` / `LANG=C` to avoid locale-dependent `lstart` strings (Japanese weekday name was breaking the `pid` file `lstart` comparison).
+- `init` writes the `pid` file via `tmp + rename` so other processes never read a half-written entry mid-update.
+- `subscribe` no longer calls `process.exit(1)` on `cmux wait-for` failure — it throws and lets `cli.ts` handle the exit code, matching the rest of the codebase.
+
+### Fixed
+- `broadcast` no longer silently swallows partial failures. Each rejection is logged to stderr with the peer ID and reason, and the process exits with code 2 on partial failure (code 0 = all sent, code 1 = total error, code 2 = partial).
+- `sendMessage` no longer falls back to a `writeFileSync` copy when `link()` fails (cross-FS etc.). Such a fallback violated the documented invariant that `sent/` shares an inode with the recipient's `inbox/`. We now emit a stderr warning and skip the `sent/` record instead of producing a misleading separate file.
+- `pluginRoot()` now prints a stderr warning when it falls back to `process.cwd()`, instead of silently returning a possibly wrong directory.
+
+### Documentation
+- `gc` is now documented in README.md and SKILL.md (including the warning that `--force` also removes `archive/` and `sent/` of the targeted sessions).
+
 ## [0.14.0] - 2026-05-07
 
 ### Added

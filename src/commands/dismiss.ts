@@ -1,23 +1,18 @@
 import { requireCmux } from "../config";
 import { dismissMessage } from "../lib/message";
 import { validateFilename } from "../lib/validate";
+import { UsageError } from "../lib/errors";
 
 export function cmdDismiss(args: string[]): void {
   requireCmux();
 
   if (args.length < 1) {
-    console.error("使い方: cmux-msg dismiss <filename>");
-    process.exit(1);
+    throw new UsageError("使い方: cmux-msg dismiss <filename>");
   }
 
   const filename = args[0]!;
   validateFilename(filename);
 
-  try {
-    dismissMessage(filename);
-    console.log(`破棄: ${filename} → archive/`);
-  } catch (e) {
-    console.error(`エラー: ${(e as Error).message}`);
-    process.exit(1);
-  }
+  dismissMessage(filename);
+  console.log(`破棄: ${filename} → archive/`);
 }

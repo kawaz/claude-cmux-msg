@@ -80,6 +80,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `thread <filename>` | Walk `in_reply_to` chains forward and backward to render a conversation |
 | `tell <session_id> <text>` | Send raw text to a pane (bypasses messaging) |
 | `screen [session_id]` | Read pane screen content |
+| `gc [--force]` | Remove dead session directories whose `inbox/` and `accepted/` are both empty (dry-run by default; `--force` actually deletes — note this also removes `archive/` and `sent/` of those sessions) |
 
 Run `cmux-msg help` for the full help.
 
