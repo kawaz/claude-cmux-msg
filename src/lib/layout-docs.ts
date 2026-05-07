@@ -12,7 +12,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 
 const LAYOUT_FILES = [
   "layout-root.md",
@@ -51,19 +51,51 @@ function ensureSymlink(linkPath: string, target: string): void {
 }
 
 /**
+ * plugin 内 docs/layout/ の全ファイルの content から hash を計算する。
+ * 開発中に同 version で内容を変えたケースを検出するため。
+ */
+function computeSourceHash(sourceDir: string): string {
+  const h = createHash("sha256");
+  for (const f of LAYOUT_FILES) {
+    const src = path.join(sourceDir, f);
+    h.update(f);
+    h.update("\0");
+    if (fs.existsSync(src)) {
+      h.update(fs.readFileSync(src));
+    }
+    h.update("\0");
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
+/**
  * `.docs/v<version>/` を作って plugin 内の docs/layout/ からコピー。
- * 既に存在すれば何もしない（バージョン bump 時のみコピー）。
+ * version + content hash で「同 version でも内容変更があれば再コピー」を実現する。
+ *
+ * 既存 `.docs/v<version>/.hash` の内容と現 hash を比較:
+ *   - 一致 → スキップ
+ *   - 不一致 or 未存在 → 全 layout ファイルをコピーして hash を更新
  */
 function ensureVersionedDocs(
   msgBase: string,
   pluginRoot: string,
   version: string
 ): boolean {
-  const versionDir = path.join(msgBase, ".docs", `v${version}`);
-  if (fs.existsSync(versionDir)) return true;
-
   const sourceDir = path.join(pluginRoot, "docs", "layout");
   if (!fs.existsSync(sourceDir)) return false;
+
+  const versionDir = path.join(msgBase, ".docs", `v${version}`);
+  const hashFile = path.join(versionDir, ".hash");
+  const currentHash = computeSourceHash(sourceDir);
+
+  if (fs.existsSync(hashFile)) {
+    try {
+      const recordedHash = fs.readFileSync(hashFile, "utf-8").trim();
+      if (recordedHash === currentHash) return true;
+    } catch {
+      // hash ファイル破損時は再コピー
+    }
+  }
 
   fs.mkdirSync(versionDir, { recursive: true });
   for (const f of LAYOUT_FILES) {
@@ -72,6 +104,7 @@ function ensureVersionedDocs(
       fs.copyFileSync(src, path.join(versionDir, f));
     }
   }
+  fs.writeFileSync(hashFile, currentHash);
   return true;
 }
 

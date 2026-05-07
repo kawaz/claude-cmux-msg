@@ -125,6 +125,31 @@ describe("setupLayoutDocs", () => {
     expect(fs.existsSync(path.join(msgBase, ".docs"))).toBe(false);
   });
 
+  test("同 version で plugin の layout content が変わったら再コピー (content hash)", () => {
+    fs.mkdirSync(path.join(msgBase, WS, SID), { recursive: true });
+
+    setupLayoutDocs({
+      msgBase, pluginRoot, workspaceId: WS, sessionId: SID, version: "0.8.0",
+    });
+    expect(
+      fs.readFileSync(path.join(msgBase, "README.md"), "utf-8")
+    ).toBe("# root v1");
+
+    // plugin 内 layout-root.md を更新 (version は据え置き)
+    fs.writeFileSync(
+      path.join(pluginRoot, "docs", "layout", "layout-root.md"),
+      "# root v1-updated"
+    );
+
+    setupLayoutDocs({
+      msgBase, pluginRoot, workspaceId: WS, sessionId: SID, version: "0.8.0",
+    });
+    // .docs/v0.8.0/ の内容も更新されている
+    expect(
+      fs.readFileSync(path.join(msgBase, "README.md"), "utf-8")
+    ).toBe("# root v1-updated");
+  });
+
   test("既存 regular file の README.md は触らない（ユーザのファイルを保護）", () => {
     fs.mkdirSync(path.join(msgBase, WS, SID), { recursive: true });
     const userReadme = path.join(msgBase, "README.md");

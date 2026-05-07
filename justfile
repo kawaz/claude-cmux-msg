@@ -28,10 +28,21 @@ check-bundle:
     @test -x bin/cmux-msg-bin \
         || { echo "ERROR: bin/cmux-msg-bin が生成されませんでした。" >&2; exit 1; }
 
-# plugin.json と marketplace.json のバージョン一致チェック
+# plugin.json / marketplace.json / package.json のバージョン一致チェック
 check-versions:
-    @test "$(jq -r '.version' .claude-plugin/plugin.json)" = "$(jq -r '.metadata.version' .claude-plugin/marketplace.json)" \
-        || { echo "ERROR: plugin.json と marketplace.json のバージョンが不一致です。" >&2; exit 1; }
+    #!/bin/bash
+    set -e
+    plugin_ver=$(jq -r '.version' .claude-plugin/plugin.json)
+    market_ver=$(jq -r '.metadata.version' .claude-plugin/marketplace.json)
+    pkg_ver=$(jq -r '.version' package.json)
+    if [[ "$plugin_ver" != "$market_ver" ]]; then
+        echo "ERROR: plugin.json ($plugin_ver) と marketplace.json ($market_ver) のバージョンが不一致" >&2
+        exit 1
+    fi
+    if [[ "$plugin_ver" != "$pkg_ver" ]]; then
+        echo "ERROR: plugin.json ($plugin_ver) と package.json ($pkg_ver) のバージョンが不一致" >&2
+        exit 1
+    fi
 
 # main@origin から変更があればバージョン bump 必須
 check-version-bump:

@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-05-07
+
+### Changed
+- `setupLayoutDocs` が `.docs/v<version>/` の存在チェックではなく **content hash 比較** で再コピー判断するよう変更。同じ version でも plugin 内 `docs/layout/*.md` を更新したら自動で `.docs/v<version>/` 側も更新される (開発中の同 version 編集ケース、#19 対応)。
+- `just check-versions` が `package.json` のバージョン整合も検証するよう拡張。`just version-bump` は plugin/marketplace/package を同期更新しているが、check が plugin/marketplace のみだった取り残しを解消 (#33 対応)。
+
+### Documentation
+- `skills/cmux-msg/SKILL.md` に「sent/ の inode 共有が崩れるケース」を追記 (atomic save / クロス FS / `rm` 時の挙動)。0.15.0 で hardlink fallback を廃止した経緯と合わせて、運用上の前提を明文化 (#11 対応)。
+
 ## [0.20.0] - 2026-05-07
 
 ### Added
