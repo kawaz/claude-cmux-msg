@@ -44,8 +44,8 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg dismiss <filename>    メッセージを破棄 (→ archive/)
   cmux-msg reply <filename> <返信内容>  返信送信 & アーカイブ
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
-  cmux-msg history [--peer <id>] [--limit N]  自分が関わった全メッセージを時系列表示
-  cmux-msg thread <filename>     in_reply_to を辿って会話単位で表示
+  cmux-msg history [--peer <id>] [--limit N] [--json]  自分が関わった全メッセージを時系列表示
+  cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示
   cmux-msg gc [--force]          inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
 
 ダイレクト操作:

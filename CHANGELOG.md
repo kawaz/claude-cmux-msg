@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-05-07
+
+### Added
+- `cmux-msg history --json` — JSONL output for machine-readable consumption (one line per message, full record including body).
+- `cmux-msg thread <filename> --json` — JSON array output for the entire thread.
+
 ## [0.13.0] - 2026-05-07
 
 ### Added

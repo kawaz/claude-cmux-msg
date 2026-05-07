@@ -16,19 +16,30 @@ function header(rec: MessageRecord): string {
 
 export function cmdThread(args: string[]): void {
   requireCmux();
-  if (args.length === 0) {
-    console.error("使い方: cmux-msg thread <filename>");
+  const json = args.includes("--json");
+  const positional = args.filter((a) => a !== "--json");
+  if (positional.length === 0) {
+    console.error("使い方: cmux-msg thread <filename> [--json]");
     process.exit(1);
   }
-  const filename = args[0]!;
+  const filename = positional[0]!;
   validateFilename(filename);
 
   const self = getSessionId();
   const thread = buildThread(filename, self);
 
   if (thread.length === 0) {
+    if (json) {
+      process.stdout.write("[]\n");
+      return;
+    }
     console.error(`${filename} が見つかりません (inbox/accepted/archive/sent)`);
     process.exit(1);
+  }
+
+  if (json) {
+    process.stdout.write(JSON.stringify(thread, null, 2) + "\n");
+    return;
   }
 
   for (let i = 0; i < thread.length; i++) {

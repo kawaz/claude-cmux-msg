@@ -4,6 +4,7 @@ import { listAllMessages, MessageRecord } from "../lib/history";
 interface HistoryOpts {
   peer?: string;
   limit?: number;
+  json?: boolean;
 }
 
 function parseArgs(args: string[]): HistoryOpts {
@@ -14,6 +15,8 @@ function parseArgs(args: string[]): HistoryOpts {
       opts.peer = args[++i];
     } else if (a === "--limit" && i + 1 < args.length) {
       opts.limit = parseInt(args[++i] ?? "", 10);
+    } else if (a === "--json") {
+      opts.json = true;
     }
   }
   return opts;
@@ -54,6 +57,7 @@ export function cmdHistory(args: string[]): void {
   }
 
   if (records.length === 0) {
+    if (opts.json) return;
     console.log("(履歴なし)");
     return;
   }
@@ -61,6 +65,14 @@ export function cmdHistory(args: string[]): void {
   // 後ろから limit 件にトリム（最新から見たい）
   if (opts.limit && opts.limit > 0 && records.length > opts.limit) {
     records = records.slice(-opts.limit);
+  }
+
+  if (opts.json) {
+    // JSONL: 1 行 = 1 メッセージ
+    for (const rec of records) {
+      process.stdout.write(JSON.stringify(rec) + "\n");
+    }
+    return;
   }
 
   for (const rec of records) {
