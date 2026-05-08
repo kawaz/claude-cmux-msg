@@ -196,9 +196,8 @@ created_at: 2026-04-13T14:30:00
 
 ```
 ~/.local/share/cmux-messages/
-  README.md                        # 「ここは何の場所か」(.docs/latest/data-layout-root.md への symlink)
-  .docs/v<version>/                # plugin の docs/design/ から SessionStart hook がコピー
-  .docs/latest                     # → v<version> (バージョン bump で付け替え)
+  README.md                        # 各階層の自己言及 (.docs/latest/data-layout-*.md への symlink)
+  .docs/                           # README.md の symlink ターゲット (cmux-msg プラグイン管理。触らない)
   {workspace_id}/
     README.md                      # ワークスペース階層の説明 (symlink)
     by-surface/{surface_uuid}      # 中身=session_id (1行)。getSessionId が逆引きに使う

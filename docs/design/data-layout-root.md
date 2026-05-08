@@ -7,10 +7,8 @@
 
 ```
 ~/.local/share/cmux-messages/        ← ここ (root)
-├── README.md                        ← この文書 (.docs/latest/layout-root.md への symlink)
-├── .docs/                           ← 本文書群の実体
-│   ├── v<version>/                  ← cmux-msg 各バージョンの layout-*.md コピー
-│   └── latest → v<version>          ← 現バージョンを指す symlink
+├── README.md                        ← この文書を指す symlink
+├── .docs/                           ← README.md の参照先 (cmux-msg プラグイン管理、触らない)
 ├── <workspace_id>/                  ← cmux ワークスペース単位 (UUID 大文字)
 │   └── README.md                    ← `<workspace_id>` 階層の説明
 └── ...

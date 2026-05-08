@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1] - 2026-05-08
+
+### Documentation
+- `~/.local/share/cmux-messages/.docs/` の説明を **ユーザ視点に書き換え**。
+  - 旧: `.docs/v<version>/` `latest → v<version> (バージョン bump で付け替え)` のように内部実装を露出していた
+  - 新: `.docs/` を「README.md の参照先 (cmux-msg プラグイン管理、触らない)」と一行で説明。バージョン管理は内部実装なのでユーザに見せない
+- `data-layout-root.md` 内に残っていた旧ファイル名 `layout-root.md` の参照を削除 (各階層 README は「この文書を指す symlink」と簡潔に)
+
 ## [0.22.0] - 2026-05-08
 
 ### Changed (docs 大規模整理)
