@@ -1,5 +1,7 @@
 # cmux-msg
 
+> English | [日本語](./README-ja.md)
+
 A Claude Code plugin that provides file-based messaging between multiple Claude Code sessions running in [cmux](https://github.com/nichochar/cmux) (libghostty-based terminal) panes.
 
 Two main use cases:
@@ -161,7 +163,3 @@ The plugin sets up an alias to the bundled `bin/cmux-msg` wrapper (which exec's 
 ## License
 
 MIT License
-
----
-
-[日本語版: README-ja.md](README-ja.md)

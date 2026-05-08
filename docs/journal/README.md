@@ -4,7 +4,7 @@
 
 ## 命名
 
-`YYYY-MM-DD-<slug>.md`
+`YYYY-MM-DD-<slug>.md`（発生日プレフィックス必須）。
 
 `<slug>` は作業内容を表す短い名前（例: `docs-structure-finalization`、`broadcast-id-introduction`、`nitpick-strengthening`）。
 

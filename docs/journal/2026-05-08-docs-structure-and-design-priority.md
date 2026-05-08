@@ -34,7 +34,7 @@
 | 配布物 vs ドキュメント | `share/` 同梱は古い、URL 誘導がモダン。ただしデータディレクトリ自身の自己言及は別 |
 | 言語ポリシー | DR/research/findings は ja のみ、README/DESIGN は ja 原本 + 英訳 |
 | 翻訳鮮度チェック | `just push` 依存、git log timestamp 比較（stat mtime は jj で揺れる） |
-| `docs/repo-structure.md` 案 | 1 単語ルールに反するため不採用、`docs/structure.md` に |
+| `docs/repo-structure.md` 案 | 1 単語ルールに反するため不採用、`docs/STRUCTURE.md` に |
 | 横展開ルール文書化 | 当初保留 → idea-storage 側の混乱を受けて本セッションで作成 |
 
 ### idea-storage `4c276112` からの引き継ぎ

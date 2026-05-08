@@ -12,6 +12,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - 新: `.docs/` を「README.md の参照先 (cmux-msg プラグイン管理、触らない)」と一行で説明。バージョン管理は内部実装なのでユーザに見せない
 - `data-layout-root.md` 内に残っていた旧ファイル名 `layout-root.md` の参照を削除 (各階層 README は「この文書を指す symlink」と簡潔に)
 
+## [0.24.0] - 2026-05-08
+
+### Changed (docs 命名規則)
+
+- docs 直下の標準ドキュメントを **大文字化**: `STRUCTURE.md` (旧 `structure.md`)、`ROADMAP.md` (旧 `roadmap.md`)。`README.md` の Unix 慣例と整合し、サブディレクトリ (小文字) との視覚区別が明確になる。
+- 全サブディレクトリのファイル命名を **`YYYY-MM-DD-<slug>.md` 必須**に統一 (`research/` `findings/` `journal/` `knowledge/` `runbooks/` `issue/` `archive/`)。例外は `decisions/DR-NNNN-title.md` と `design/` 配下の付随ファイル。理由: 数が増えた時に気付きやすい、jj/git の commit timestamp は rebase で揺れるためファイル名側に作成日を持つほうが信頼できる。
+- 相互リンクの位置を **タイトル直下**に変更（旧: 末尾）。末尾だと存在に気付きにくいため。テンプレ:
+  - 英語版: `> English | [日本語](./README-ja.md)`
+  - 日本語版: `> [English](./README.md) | 日本語`
+- `check-translations` を **先頭 5 行のみ** で grep するよう変更。タイトル直下を強制する。`MANUAL.md` も対象に追加（OSS 必須対象は README/DESIGN/MANUAL）。
+
 ## [0.23.0] - 2026-05-08
 
 ### Added
@@ -19,7 +30,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `docs/journal/` 新設。日々の生記録 (ハマり所 → 解決策のペア、コマンド・設定値) を `YYYY-MM-DD-topic.md` で残す。non-stop 作業や長時間セッションの後、膨大なログより journal を読み返す方が状況復元しやすい (zunsystem の業務リポジトリでの運用実績を参考)。
   - `docs/journal/2026-05-08-docs-structure-and-design-priority.md` を 1 件目として追加 (本セッションの docs 構造議論と設計優先度ルールの確立経緯を記録)。
 - `docs/issue/` 新設。自プロジェクト内 TODO + 上流ライブラリへの要望を置く。解決時は削除 (jj/git 履歴で追える、`done/` 移動はしない)。
-- `docs/structure.md` に kawaz/* 横断の docs 構造ルール (`~/.claude/rules/docs-structure.md`) への参照を追記。
+- `docs/STRUCTURE.md` に kawaz/* 横断の docs 構造ルール (`~/.claude/rules/docs-structure.md`) への参照を追記。
 
 ### Documentation
 - 横展開ルール `~/.claude/rules/docs-structure.md` を新設 (個人ルールなのでこのリポジトリ外)。kawaz/claude-cmux-msg を参考実装と位置付け、命名規則・サブディレクトリ採用条件・言語ポリシー・既存リポマイグレーション方針などを集約。
@@ -36,8 +47,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `docs/decisions/INDEX.md` 新設 (DR 一覧)
 - `docs/layout/` を `docs/design/data-layout-{root,workspace,session}.md` に改名・移動
   - `src/lib/layout-docs.ts` の `LAYOUT_FILES` と参照パスも追従
-- `docs/structure.md` 新設 (リポジトリ物理構造)
-- `docs/roadmap.md` 新設 (将来検討項目: CLI parser 統一、subscribe SIGINT 累積、peers death since、broadcast 意味論再設計、reply トランザクション拡充など)
+- `docs/STRUCTURE.md` 新設 (リポジトリ物理構造)
+- `docs/ROADMAP.md` 新設 (将来検討項目: CLI parser 統一、subscribe SIGINT 累積、peers death since、broadcast 意味論再設計、reply トランザクション拡充など)
 
 ### Added
 

@@ -1,5 +1,7 @@
 # cmux-msg
 
+> [English](./README.md) | 日本語
+
 [cmux](https://github.com/nichochar/cmux)（libghostty ベースのターミナル）のペイン上で動く複数の Claude Code セッション間に、ファイルベースのメッセージングを提供する Claude Code プラグイン。
 
 主なユースケース 2 つ:
@@ -161,7 +163,3 @@ source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
 ## ライセンス
 
 MIT License
-
----
-
-[English: README.md](README.md)

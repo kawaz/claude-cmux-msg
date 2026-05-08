@@ -40,11 +40,11 @@ docs/
   decisions/            DR (Decision Record)
     INDEX.md            DR 一覧
     DR-NNNN-title.md    各 DR
-  findings/             短期・単発の調査結果 (YYYY-MM-DD-title.md)
-  journal/              日々の生記録 (ハマり所→解決策、コマンド・設定値) (YYYY-MM-DD-topic.md)
-  issue/                自プロ TODO + 上流への要望 (解決時は削除)
-  structure.md          このファイル
-  roadmap.md            将来検討項目
+  findings/             短期・単発の調査結果 (YYYY-MM-DD-<slug>.md)
+  journal/              日々の生記録 (ハマり所→解決策、コマンド・設定値) (YYYY-MM-DD-<slug>.md)
+  issue/                自プロ TODO + 上流への要望 (YYYY-MM-DD-<slug>.md、解決時は削除)
+  STRUCTURE.md          このファイル
+  ROADMAP.md            将来検討項目
 
 justfile, package.json, tsconfig.json, .gitignore, .envrc
 README.md / README-ja.md (日本語が原本)

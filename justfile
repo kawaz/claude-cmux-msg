@@ -65,18 +65,18 @@ ensure-clean:
 
 # 多言語ドキュメントの翻訳整合チェック
 # - {BASE}-ja.md と {BASE}.md の両方が存在すること
-# - 相互リンクが互いの末尾に張られていること
+# - 相互リンクが互いの**先頭 5 行以内**に張られていること (タイトル直下を強制)
 # - {BASE}-ja.md が {BASE}.md より新しい場合はエラー (翻訳更新が必要)
 #   タイムスタンプは git log の commit timestamp を使う (stat mtime は jj 切替で揺れる)
 check-translations:
     #!/bin/bash
     set -e
-    for base in README DESIGN; do
+    for base in README DESIGN MANUAL; do
       ja="$base-ja.md"; en="$base.md"
       [ -f "$ja" ] || continue
       [ -f "$en" ] || { echo "ERROR: $ja があるが $en がない" >&2; exit 1; }
-      grep -q "$en" "$ja" || { echo "ERROR: $ja に $en へのリンクがない" >&2; exit 1; }
-      grep -q "$ja" "$en" || { echo "ERROR: $en に $ja へのリンクがない" >&2; exit 1; }
+      head -5 "$ja" | grep -q "$en" || { echo "ERROR: $ja の先頭 5 行に $en へのリンクがない (タイトル直下に置く)" >&2; exit 1; }
+      head -5 "$en" | grep -q "$ja" || { echo "ERROR: $en の先頭 5 行に $ja へのリンクがない (タイトル直下に置く)" >&2; exit 1; }
       ja_t=$(git log -1 --format=%ct -- "$ja" 2>/dev/null)
       en_t=$(git log -1 --format=%ct -- "$en" 2>/dev/null)
       # まだ commit されていないファイルは比較スキップ (相互リンク check は別途効く)
