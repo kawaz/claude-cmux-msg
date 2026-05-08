@@ -196,8 +196,8 @@ created_at: 2026-04-13T14:30:00
 
 ```
 ~/.local/share/cmux-messages/
-  README.md                        # 「ここは何の場所か」(.docs/latest/layout-root.md への symlink)
-  .docs/v<version>/                # plugin の docs/layout/ から SessionStart hook がコピー
+  README.md                        # 「ここは何の場所か」(.docs/latest/data-layout-root.md への symlink)
+  .docs/v<version>/                # plugin の docs/design/ から SessionStart hook がコピー
   .docs/latest                     # → v<version> (バージョン bump で付け替え)
   {workspace_id}/
     README.md                      # ワークスペース階層の説明 (symlink)

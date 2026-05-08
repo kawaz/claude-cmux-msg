@@ -4,6 +4,28 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-05-08
+
+### Changed (docs 大規模整理)
+
+`docs/` 構成を kawaz/* 横断のルールに沿って整理:
+
+- `docs/decisions/` 新設、DR を `DR-NNNN-title.md` 形式 (4 桁 0-padding) に統一
+  - 旧: `docs/design/2026-04-23-session-id-identifier.md` → 新: `docs/decisions/DR-0001-session-id-identifier.md`
+  - 旧: `docs/design/2026-05-07-sandbox-and-peer-listing.md` → 新: `docs/decisions/DR-0002-sandbox-and-peer-listing.md`
+  - `docs/decisions/INDEX.md` 新設 (DR 一覧)
+- `docs/layout/` を `docs/design/data-layout-{root,workspace,session}.md` に改名・移動
+  - `src/lib/layout-docs.ts` の `LAYOUT_FILES` と参照パスも追従
+- `docs/structure.md` 新設 (リポジトリ物理構造)
+- `docs/roadmap.md` 新設 (将来検討項目: CLI parser 統一、subscribe SIGINT 累積、peers death since、broadcast 意味論再設計、reply トランザクション拡充など)
+
+### Added
+
+- `README-ja.md` (日本語原本)。`README.md` (英語) と相互リンク
+- `justfile` に `check-translations` と `ensure-clean` を追加、`push` / `push-without-bump` の依存に組み込み
+  - `check-translations`: `{BASE}-ja.md` と `{BASE}.md` の両方が存在することと、相互リンクが互いに張られていることを確認。`git log` の commit timestamp で `-ja` が新しすぎないか比較 (古い英語版のまま push できないようにする)
+  - `ensure-clean`: working copy に未確定変更が無いことを確認 (describe 忘れ防止)
+
 ## [0.21.0] - 2026-05-07
 
 ### Changed
@@ -148,7 +170,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `peers` and `spawn` now filter directory entries by UUID v4 pattern (`isSessionId`), so non-session entries like `by-surface/` are excluded from peer enumeration.
 
 ### Fixed
-- Spawn now passes `--add-dir <MSG_BASE>/<workspace>` to `claude` so child CCs can read/write `~/.local/share/cmux-messages/...` (without this, `reply`/`accept` failed with EPERM under Claude Code's sandbox). See `docs/design/2026-05-07-sandbox-and-peer-listing.md` for the threat model behind this trust decision.
+- Spawn now passes `--add-dir <MSG_BASE>/<workspace>` to `claude` so child CCs can read/write `~/.local/share/cmux-messages/...` (without this, `reply`/`accept` failed with EPERM under Claude Code's sandbox). See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model behind this trust decision.
 
 ## [0.6.0] - 2026-04-28
 

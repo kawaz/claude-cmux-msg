@@ -90,10 +90,10 @@ Run `cmux-msg help` for the full help.
 - Atomic delivery: write to `tmp/`, then rename into the recipient's `inbox/`.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - **Sender's own copy**: `send` also creates a hardlink under the sender's `sent/` directory, so the sender can later inspect what they sent (and see the recipient's `read_at` / `response_at` updates from the same inode).
-- **Per-directory README.md**: each layer (`~/.local/share/cmux-messages/`, `<workspace>/`, `<session>/`) gets a README.md symlink pointing at `.docs/latest/layout-*.md`. When you cd into a UUID-named directory and `ls`, you can `cat README.md` to remind yourself what that layer is.
+- **Per-directory README.md**: each layer (`~/.local/share/cmux-messages/`, `<workspace>/`, `<session>/`) gets a README.md symlink pointing at `.docs/latest/data-layout-*.md`. When you cd into a UUID-named directory and `ls`, you can `cat README.md` to remind yourself what that layer is.
 - Spawned workers are auto-initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg-bin` (compiled binary) on first run. The shell wrapper at `bin/cmux-msg` falls back to `bun run src/cli.ts` if the compiled binary is unavailable.
 - The SessionStart hook writes `<ws>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can look up its session_id without env propagation. (`$CLAUDE_ENV_FILE` is also written for forward compatibility but is not relied upon — Issue #15840.)
-- Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>/<workspace>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/design/2026-05-07-sandbox-and-peer-listing.md` for the threat model.
+- Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>/<workspace>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model.
 
 ## Receiving messages (recommended pattern)
 
@@ -161,3 +161,7 @@ The plugin sets up an alias to the bundled `bin/cmux-msg` wrapper (which exec's 
 ## License
 
 MIT License
+
+---
+
+[日本語版: README-ja.md](README-ja.md)

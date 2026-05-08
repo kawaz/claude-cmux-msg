@@ -14,11 +14,11 @@ beforeEach(() => {
   msgBase = path.join(workDir, "msg-base");
 
   // ダミープラグインの docs/layout/ を用意
-  const sourceDir = path.join(pluginRoot, "docs", "layout");
+  const sourceDir = path.join(pluginRoot, "docs", "design");
   fs.mkdirSync(sourceDir, { recursive: true });
-  fs.writeFileSync(path.join(sourceDir, "layout-root.md"), "# root v1");
-  fs.writeFileSync(path.join(sourceDir, "layout-workspace.md"), "# ws v1");
-  fs.writeFileSync(path.join(sourceDir, "layout-session.md"), "# session v1");
+  fs.writeFileSync(path.join(sourceDir, "data-layout-root.md"), "# root v1");
+  fs.writeFileSync(path.join(sourceDir, "data-layout-workspace.md"), "# ws v1");
+  fs.writeFileSync(path.join(sourceDir, "data-layout-session.md"), "# session v1");
 
   fs.mkdirSync(msgBase, { recursive: true });
 });
@@ -44,7 +44,7 @@ describe("setupLayoutDocs", () => {
 
     // .docs/v0.8.0/ に layout-*.md がコピーされている
     expect(
-      fs.readFileSync(path.join(msgBase, ".docs", "v0.8.0", "layout-root.md"), "utf-8")
+      fs.readFileSync(path.join(msgBase, ".docs", "v0.8.0", "data-layout-root.md"), "utf-8")
     ).toBe("# root v1");
 
     // .docs/latest が v0.8.0 を指す
@@ -59,7 +59,7 @@ describe("setupLayoutDocs", () => {
     expect(fs.lstatSync(wsReadme).isSymbolicLink()).toBe(true);
     expect(fs.lstatSync(sidReadme).isSymbolicLink()).toBe(true);
 
-    // 内容が辿れる（symlink → .docs/latest/layout-root.md → .docs/v0.8.0/layout-root.md）
+    // 内容が辿れる（symlink → .docs/latest/data-layout-root.md → .docs/v0.8.0/data-layout-root.md）
     expect(fs.readFileSync(rootReadme, "utf-8")).toBe("# root v1");
     expect(fs.readFileSync(wsReadme, "utf-8")).toBe("# ws v1");
     expect(fs.readFileSync(sidReadme, "utf-8")).toBe("# session v1");
@@ -91,7 +91,7 @@ describe("setupLayoutDocs", () => {
     expect(fs.readlinkSync(path.join(msgBase, ".docs", "latest"))).toBe("v0.8.0");
 
     // plugin 側を更新
-    fs.writeFileSync(path.join(pluginRoot, "docs", "layout", "layout-root.md"), "# root v2");
+    fs.writeFileSync(path.join(pluginRoot, "docs", "design", "data-layout-root.md"), "# root v2");
 
     setupLayoutDocs({
       msgBase, pluginRoot, workspaceId: WS, sessionId: SID, version: "0.9.0",
@@ -135,9 +135,9 @@ describe("setupLayoutDocs", () => {
       fs.readFileSync(path.join(msgBase, "README.md"), "utf-8")
     ).toBe("# root v1");
 
-    // plugin 内 layout-root.md を更新 (version は据え置き)
+    // plugin 内 data-layout-root.md を更新 (version は据え置き)
     fs.writeFileSync(
-      path.join(pluginRoot, "docs", "layout", "layout-root.md"),
+      path.join(pluginRoot, "docs", "design", "data-layout-root.md"),
       "# root v1-updated"
     );
 

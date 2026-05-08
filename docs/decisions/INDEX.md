@@ -1,0 +1,12 @@
+# Decision Records (DR)
+
+設計や実装の重要判断とその理由を時系列で記録する。番号は採番順 (`DR-NNNN`、4 桁ゼロパディング)。
+
+各 DR は accepted のまま残し、覆る判断があった場合は新 DR を立てて旧 DR を `Superseded by DR-NNNN` で紐付ける（古い DR は消さない）。
+
+## 一覧
+
+| ID | Title | Status | Date |
+|---|---|---|---|
+| [DR-0001](DR-0001-session-id-identifier.md) | 識別子を claude session UUID に一本化 | Accepted | 2026-04-23 |
+| [DR-0002](DR-0002-sandbox-and-peer-listing.md) | 子CC サンドボックス境界と peer 列挙の整理 | Accepted | 2026-05-07 |

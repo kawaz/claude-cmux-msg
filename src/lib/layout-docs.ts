@@ -2,10 +2,10 @@
  * `~/.local/share/cmux-messages/` 各階層に「ここは何の場所か」を説明する
  * README.md を symlink として配置する。
  *
- * - 原本は `<MSG_BASE>/.docs/v<version>/layout-{root,workspace,session}.md`
- *   (プラグイン内 `docs/layout/` から SessionStart hook 起動時にコピー)
+ * - 原本は `<MSG_BASE>/.docs/v<version>/data-layout-{root,workspace,session}.md`
+ *   (プラグイン内 `docs/design/` から SessionStart hook 起動時にコピー)
  * - `<MSG_BASE>/.docs/latest -> v<version>` を current 版として向ける
- * - 各階層の README.md は `.docs/latest/layout-*.md` への相対 symlink
+ * - 各階層の README.md は `.docs/latest/data-layout-*.md` への相対 symlink
  *
  * 既に同じ symlink target が存在する場合は何もしない。冪等。
  */
@@ -15,9 +15,9 @@ import * as path from "path";
 import { randomUUID, createHash } from "crypto";
 
 const LAYOUT_FILES = [
-  "layout-root.md",
-  "layout-workspace.md",
-  "layout-session.md",
+  "data-layout-root.md",
+  "data-layout-workspace.md",
+  "data-layout-session.md",
 ] as const;
 
 /**
@@ -81,7 +81,7 @@ function ensureVersionedDocs(
   pluginRoot: string,
   version: string
 ): boolean {
-  const sourceDir = path.join(pluginRoot, "docs", "layout");
+  const sourceDir = path.join(pluginRoot, "docs", "design");
   if (!fs.existsSync(sourceDir)) return false;
 
   const versionDir = path.join(msgBase, ".docs", `v${version}`);
@@ -134,25 +134,25 @@ export function setupLayoutDocs(opts: SetupLayoutOptions): void {
     if (!ok) return; // plugin 内 docs/layout/ が無い → 何もしない
     ensureLatestSymlink(opts.msgBase, opts.version);
 
-    // root: ~/.local/share/cmux-messages/README.md → .docs/latest/layout-root.md
+    // root: ~/.local/share/cmux-messages/README.md → .docs/latest/data-layout-root.md
     ensureSymlink(
       path.join(opts.msgBase, "README.md"),
-      path.join(".docs", "latest", "layout-root.md")
+      path.join(".docs", "latest", "data-layout-root.md")
     );
 
-    // workspace: <ws>/README.md → ../.docs/latest/layout-workspace.md
+    // workspace: <ws>/README.md → ../.docs/latest/data-layout-workspace.md
     if (opts.workspaceId) {
       ensureSymlink(
         path.join(opts.msgBase, opts.workspaceId, "README.md"),
-        path.join("..", ".docs", "latest", "layout-workspace.md")
+        path.join("..", ".docs", "latest", "data-layout-workspace.md")
       );
     }
 
-    // session: <ws>/<sid>/README.md → ../../.docs/latest/layout-session.md
+    // session: <ws>/<sid>/README.md → ../../.docs/latest/data-layout-session.md
     if (opts.workspaceId && opts.sessionId) {
       ensureSymlink(
         path.join(opts.msgBase, opts.workspaceId, opts.sessionId, "README.md"),
-        path.join("..", "..", ".docs", "latest", "layout-session.md")
+        path.join("..", "..", ".docs", "latest", "data-layout-session.md")
       );
     }
   } catch {
