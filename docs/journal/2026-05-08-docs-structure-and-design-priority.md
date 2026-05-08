@@ -76,9 +76,39 @@ zunsystem の業務リポジトリで「対象 audience 名を含むガイド」
 
 実際このセッションで一度走らせて 40 件の指摘を得た。ほぼ全て対応または保留判断で消化。
 
+## 命名ルールの最終調整 (5/8 後半)
+
+横展開ルール (0.23.0) 作成後、ユーザから追加判断を受けて命名ルールを詰めた。確定仕様は `~/.claude/rules/docs-structure.md` 参照、0.24.0 でリリース。
+
+経緯のみ記録:
+
+- メタ原則セクションは不要 → 削除
+- docs 直下を大文字化、サブディレクトリ全カテゴリで日付プレフィックス必須
+- OSS 必須対象 (README/DESIGN/MANUAL) と英語版遅延 OK フロー
+- 相互リンクをタイトル直下に
+- `check-translations` を先頭 5 行限定でタイトル直下を強制
+
+日付プレフィックスを全カテゴリで必須にした理由:
+
+- 数が増えた時に気付きやすい (タイムスタンプ表示と違って ls で常に見える)
+- jj/git の commit timestamp は rebase で揺れるため、ファイル名側に作成日を持つほうが信頼できる
+- slug に内容情報があるので日付追加で情報量は減らない
+
+## 業務関連固有名詞の history 書き換え
+
+業務関連の固有名詞 (組織内リポジトリ名、関係者名等) は public リポジトリで避けるルール。push 済みコミットも `--ignore-immutable` で書き換え。具体的な単語自体は本 journal でも記載しない (記載すること自体が同じ問題を起こすため)。
+
+jj 操作のハマり所:
+
+- `jj edit -r <commit> --ignore-immutable` で immutable boundary を越えて書き換え可能
+- 下流 commit は自動 rebase されるが、同じ箇所を編集していると conflict
+- conflict 時は当該 commit に切り替えて working copy で手動解消
+- `just push-without-bump` で sideways move push (history 書き換え、bump なし)
+- commit message にも固有名詞が残ることがあるので `jj describe` も忘れずに
+
 ## 残作業
 
-- idea-storage の docs 再整理（`dr-NNN-...md` → `DR-NNNN-...md`、`guides/recipe-authoring.md` の置き場再決定）→ idea-storage 側で実施
+- idea-storage の docs 再整理（`dr-NNN-...md` → `DR-NNNN-...md`、`guides/recipe-authoring.md` の置き場再決定、issue ファイルの命名を `YYYY-MM-DD-<slug>.md` に）→ idea-storage 側で実施
 - 他既存リポの「触ったついで」マイグレーション（急がない）
 
 ## 参考
@@ -87,4 +117,4 @@ zunsystem の業務リポジトリで「対象 audience 名を含むガイド」
 - 引き継ぎ元: kawaz/idea-storage `4c276112`、`docs/journal/2026-05-08-docs-structure-investigation.md`
 - DR 統一作業（3 桁時代）: kawaz/port-peeker `64bac255`
 - journal 運用の実例: kawaz/zunsystem の業務リポジトリ `a780f941`、`docs/journal/`
-- このセッションの成果: 0.7.0 〜 0.22.0 の 16 リリース、`~/.claude/rules/design-priority.md`、`~/.claude/rules/docs-structure.md`
+- このセッションの成果: 0.7.0 〜 0.24.0 の 18 リリース、`~/.claude/rules/design-priority.md`、`~/.claude/rules/docs-structure.md`、`~/.claude/rules/docs-knowledge-flow.md`
