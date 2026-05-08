@@ -12,6 +12,18 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - 新: `.docs/` を「README.md の参照先 (cmux-msg プラグイン管理、触らない)」と一行で説明。バージョン管理は内部実装なのでユーザに見せない
 - `data-layout-root.md` 内に残っていた旧ファイル名 `layout-root.md` の参照を削除 (各階層 README は「この文書を指す symlink」と簡潔に)
 
+## [0.23.0] - 2026-05-08
+
+### Added
+
+- `docs/journal/` 新設。日々の生記録 (ハマり所 → 解決策のペア、コマンド・設定値) を `YYYY-MM-DD-topic.md` で残す。non-stop 作業や長時間セッションの後、膨大なログより journal を読み返す方が状況復元しやすい (zunsystem の業務リポジトリでの運用実績を参考)。
+  - `docs/journal/2026-05-08-docs-structure-and-design-priority.md` を 1 件目として追加 (本セッションの docs 構造議論と設計優先度ルールの確立経緯を記録)。
+- `docs/issue/` 新設。自プロジェクト内 TODO + 上流ライブラリへの要望を置く。解決時は削除 (jj/git 履歴で追える、`done/` 移動はしない)。
+- `docs/structure.md` に kawaz/* 横断の docs 構造ルール (`~/.claude/rules/docs-structure.md`) への参照を追記。
+
+### Documentation
+- 横展開ルール `~/.claude/rules/docs-structure.md` を新設 (個人ルールなのでこのリポジトリ外)。kawaz/claude-cmux-msg を参考実装と位置付け、命名規則・サブディレクトリ採用条件・言語ポリシー・既存リポマイグレーション方針などを集約。
+
 ## [0.22.0] - 2026-05-08
 
 ### Changed (docs 大規模整理)

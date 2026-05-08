@@ -40,7 +40,9 @@ docs/
   decisions/            DR (Decision Record)
     INDEX.md            DR 一覧
     DR-NNNN-title.md    各 DR
-  findings/             短期・単発の調査ログ (YYYY-MM-DD-title.md)
+  findings/             短期・単発の調査結果 (YYYY-MM-DD-title.md)
+  journal/              日々の生記録 (ハマり所→解決策、コマンド・設定値) (YYYY-MM-DD-topic.md)
+  issue/                自プロ TODO + 上流への要望 (解決時は削除)
   structure.md          このファイル
   roadmap.md            将来検討項目
 
@@ -53,3 +55,7 @@ CLAUDE.md               リポジトリ固有の AI 向け指示
 ## ランタイムデータレイアウト
 
 cmux-msg が起動時に作る `~/.local/share/cmux-messages/` 配下の構造は `docs/design/data-layout-{root,workspace,session}.md` に詳細を記述。これらはランタイムで `.docs/v<version>/` にコピーされ、各階層の `README.md` が symlink で参照する。
+
+## docs 構成について
+
+このリポジトリは kawaz/* 横断の docs 構造ルール (`~/.claude/rules/docs-structure.md`) の参考実装。命名規則・サブディレクトリ採用条件・言語ポリシー (ja 原本 + 英訳) などはそちらを参照。本セッションでの議論経緯は `docs/journal/2026-05-08-docs-structure-and-design-priority.md`。
