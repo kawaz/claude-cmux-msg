@@ -65,50 +65,42 @@ check-version-bump:
 # ワーキングコピーがクリーン (empty) であることを確認
 # `~/.claude/rules/docs-structure.md` の共通テンプレ
 ensure-clean:
-    test "$(jj log -r @ --no-graph -T 'empty')" = "true"
-
+    [ ! -d .jj ] || test "$(jj log -r @ --no-graph -T 'empty')" = "true"
+    [   -d .jj ] || [ -z "$(git status --porcelain)" ]
+   
 # 翻訳ペア (*-ja.md / *.md) の整合性チェック (`~/.claude/rules/docs-structure.md` 共通テンプレ)
-# - リポジトリ内のすべての *-ja.md を find で発見
-# - 対応する *.md の存在 + 相互リンク (タイトル直下) + commit timestamp 順序を検証
 check-translations: ensure-clean
     #!/usr/bin/env bash
     set -euo pipefail
     die() { echo "$*" >&2; exit 1; }
-
-    # commit timestamp 取得 (jj 管理リポジトリなら jj log、それ以外は git log)
     file_ts() {
-        local f="$1"
         if [ -d .jj ]; then
-            jj log --no-graph -T 'committer.timestamp().format("%s")' \
-                -r "latest(::@ & files('$f'))" 2>/dev/null || echo 0
+            jj log --no-graph -T 'committer.timestamp().format("%s")' -r "latest(::@ & files('$1'))"
         else
-            git log -1 --format=%ct -- "$f" 2>/dev/null || echo 0
-        fi
+            git log -1 --format=%ct -- "$1"
+        fi 2>/dev/null || echo 0
     }
-
-    while IFS= read -r ja; do
+    for ja in README-js.md docs/DESIGN-jd.md docs/MANUAL-ja.md; do
         en="${ja/-ja/}"
+        # jaが無ければスキップ
+        [ -f "$ja" ] || continue
         [ -f "$en" ] || die "ERROR: $ja exists but $en is missing"
         # 相互リンク (先頭 5 行内、固定文字列で正確に検出)
-        head -5 "$ja" | grep -qF "> [English](./${en##*/}) | 日本語" \
-            || die "ERROR: $ja: missing '> [English](./${en##*/}) | 日本語' link near the top"
-        head -5 "$en" | grep -qF "> English | [日本語](./${ja##*/})" \
-            || die "ERROR: $en: missing '> English | [日本語](./${ja##*/})' link near the top"
+        head -5 "$ja" | grep -qF "> [English](./${en##*/}) | 日本語" || die "ERROR: $ja: missing '> [English](./${en##*/}) | 日本語' link near the top"
+        head -5 "$en" | grep -qF "> English | [日本語](./${ja##*/})" || die "ERROR: $en: missing '> English | [日本語](./${ja##*/})' link near the top"
         # ja のほうが新しい (= en の翻訳が遅れている) ことを検出
         ja_ts=$(file_ts "$ja")
         en_ts=$(file_ts "$en")
-        [ "$ja_ts" -le "$en_ts" ] \
-            || die "ERROR: $ja was updated after $en. Update the English translation before pushing."
-    done < <(find . -name '*-ja.md' -not -path './.git/*' -not -path './.jj/*')
+        [ "$ja_ts" -le "$en_ts" ] || die "ERROR: $ja was updated after $en. Update the English translation before pushing."
+    done
 
 push: check-bundle check-versions check-version-bump check-translations ensure-clean validate
     jj bookmark set main -r @-
     jj git push
+    # pushしたらローカルのプラグインも更新する
     claude plugin marketplace update cmux-msg
     claude plugin update cmux-msg@cmux-msg
 
 push-without-bump: check-bundle check-translations ensure-clean
     jj bookmark set main -r @-
     jj git push
-    claude plugin marketplace update cmux-msg
-    claude plugin update cmux-msg@cmux-msg
