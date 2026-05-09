@@ -43,14 +43,14 @@ SessionStart hook が起動完了を signal で親に通知し、親はそれを
   --args <args>    claude に渡す追加引数 (デフォルト: --dangerously-skip-permissions)
   --name <name>    子CC の名前 (位置引数の代わり)
   --json           {id, name, color, surface_ref, remote_url} の JSON 1 行で出力
-  --help, -h       このヘルプを表示
+  --help           このヘルプを表示
 
 出力には子CC の Claude Code リモート操作 URL (https://claude.ai/code/session_XXX) を含む。
 URL は spawn 後に画面サンプリングで取得する (取れなければ "(取得できませんでした)" / json では null)。
 
 注意:
   - 引数なしで実行すると副作用なくヘルプを表示します (誤発火防止)。
-  - --help / -h は最優先で処理され、session は起動されません。
+  - --help は最優先で処理され、session は起動されません。
   - 不明なフラグはエラーになります。`;
 
 async function createWorkerSurface(): Promise<string> {
@@ -123,8 +123,8 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
 
-    // ヘルプは最優先で処理 (--help / -h)
-    if (arg === "--help" || arg === "-h") {
+    // ヘルプは最優先で処理
+    if (arg === "--help") {
       return { help: true, claudeArgs, cwd, json };
     }
 

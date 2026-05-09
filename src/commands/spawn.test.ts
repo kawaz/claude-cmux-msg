@@ -13,15 +13,14 @@ describe("parseSpawnArgs", () => {
     expect(r.help).toBe(true);
   });
 
-  test("-h はヘルプモード", () => {
-    const r = parseSpawnArgs(["-h"]);
-    expect(r.help).toBe(true);
-  });
-
   test("--help が他の引数より優先される", () => {
     // 旧実装では --help が name に消費される問題への回帰テスト
     const r = parseSpawnArgs(["worker", "--help"]);
     expect(r.help).toBe(true);
+  });
+
+  test("ショートオプション (-h 等) は提供しない: 不明フラグとしてエラー", () => {
+    expect(() => parseSpawnArgs(["-h"])).toThrow(UsageError);
   });
 
   test("位置引数 1 つは name", () => {

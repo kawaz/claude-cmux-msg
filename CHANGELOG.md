@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.1] - 2026-05-09
+
+### Removed
+
+- **ショートオプション `-h` を提供しない方針に揃える**。kawaz/* 横断の CLI 設計ルール (`~/.claude/rules/cli-design-preferences.md`「ロングオプションを基本、ショートオプションエイリアスを指示なく追加しない」) に従い、`cli.ts` の `HELP_KEYS` から `-h` を削除、`spawn` の引数パースからも `-h` を削除 (不明フラグとしてエラー)。`-h` は補完が効くなら不要、AI が使う場合も不要 (やり方が複数あることは迷いとコンテキストの無駄を生む)。
+
 ## [0.25.0] - 2026-05-09
 
 ### Added

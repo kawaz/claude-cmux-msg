@@ -22,7 +22,7 @@ cmux-msg 自身に蓄積していた `docs/issue/` を、cmux-msg-impl ワーカ
 `cmux-msg spawn --help` が `--help` を name に消費して session を起こす問題を修正。
 
 実装上の判断:
-- `--help` / `-h` は最優先で処理して return (副作用なし)
+- `--help` は最優先で処理して return (副作用なし)。**ショートオプション `-h` は提供しない** (kawaz の global rule `cli-design-preferences.md`「ロングオプションを基本、ショートオプションエイリアスを指示なく追加しない」に従う)
 - 引数なしは案 B (副作用なくヘルプ表示) を採用
 - 不明なフラグはエラー (name に誤消費しない)
 - 位置引数は最初の non-option のみ name として採用、二度目以降はエラー

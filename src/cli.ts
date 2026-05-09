@@ -89,7 +89,7 @@ const COMMANDS: Record<string, CmdHandler> = {
   gc: cmdGc,
 };
 
-const HELP_KEYS = new Set(["help", "--help", "-h"]);
+const HELP_KEYS = new Set(["help", "--help"]);
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
