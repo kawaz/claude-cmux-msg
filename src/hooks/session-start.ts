@@ -164,8 +164,13 @@ session_id: ${sessionId}
 - \`cmux-msg peers\`: 同一ワークスペースの alive なピア一覧（\`--all\` で dead も含む）${unreadLine}`);
   } else {
     console.log(`[cmux-msg] 初期化済み (session_id: ${sessionId})
+
 cmux-msg コマンドで他のCCとメッセージのやり取りができます。
-新着監視は Monitor ツール + \`cmux-msg subscribe\` を推奨（JSONL 出力、1行 = 1件の新着通知）。${unreadLine}`);
+
+**推奨**: セッション開始直後に **Monitor ツールで** \`cmux-msg subscribe\` を persistent: true で起動してください。
+- subscribe は long-running blocking なので Bash ツールで叩くとハングします。必ず Monitor 経由で。
+- stdout は JSONL。1 行 = 1 件の新着メッセージ通知。
+- これを張らないと親 CC は新着メッセージに能動的に気付けません (補完として UserPromptSubmit hook が次ターン送信時に未読件数を通知しますが、ターン中は発火しません)。${unreadLine}`);
   }
 }
 

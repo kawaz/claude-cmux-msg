@@ -115,6 +115,14 @@ Monitor({
 - 既存の未読は `subscribe` 起動のたびに再 emit されるので、resume 後でも取りこぼし無し
 - ファイル自体は `accept` / `dismiss` / `reply` するまで `inbox/` に残る — JSONL イベントは通知のみ
 
+### 補完: UserPromptSubmit hook による未読通知
+
+Monitor を張り忘れた場合の safety net として、`UserPromptSubmit` hook が新着メッセージを次のターンで通知する（プラグインが自動登録）。
+
+- ユーザがプロンプトを送信した時点で `inbox/` を覗き、未読があれば `[cmux-msg] 未読 N 件` を Claude のコンテキストに injection する
+- ターン**中**には発火しないため、リアルタイム通知が必要なら Monitor + `subscribe` のほうが確実
+- 子 CC は spawn 直後の SessionStart hook で「Monitor を張れ」と強く指示されるが、親 CC は明示的に張る必要がある
+
 ## 後から会話を読み返す
 
 `cmux-msg history` と `cmux-msg thread` で会話を再構築する:
