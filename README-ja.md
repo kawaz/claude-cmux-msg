@@ -69,7 +69,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args]` | 新しい split pane に子 CC を spawn |
 | `stop <session_id>` | 子 CC を終了してペインを閉じる |
 | `whoami` | 自分のセッション情報を表示 |
-| `peers [--all]` | 同じワークスペースのピア一覧（既定 alive のみ） |
+| `peers [--all]` | 同じワークスペースのピア一覧（既定 alive のみ）。`name` 列は spawn 時の値で、`/rename` 後も追従しない（[制約](./docs/ROADMAP.md#諦めた--別件)） |
 | `send <session_id> <message>` | メッセージ送信 |
 | `broadcast <message>` | 全ピアにブロードキャスト |
 | `list` | inbox のメッセージ一覧 |
