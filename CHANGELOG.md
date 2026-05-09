@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2] - 2026-05-09
+
+### Changed (内部、機能変更なし)
+
+- **`justfile` の `version-bump` レシピを `bump-semver` 1 行に置換**。`bump-semver` v0.4.0 の multi-file + path-aware で `.claude-plugin/marketplace.json` (`metadata.version` ネスト構造) も組み込みテーブルで認識されるようになり、3 ファイル一括 bump が 1 行で書ける形になった (`bump-semver patch <3 files> --write`)。kawaz/go/bin/bump 依存も削除。レシピ名は `version-bump` → `bump-semver` (kawaz/* 横断ルール、`~/.claude/rules/docs-structure.md`「バージョン bump レシピ」節)。
+- **`all` レシピを `ci` に統合**。`ci: test build check-bundle check-translations validate` を単一エントリ化。`all` は削除 (やり方が複数あることは迷いとコンテキストの無駄を生む)。
+- **`.github/workflows/ci.yml` を新設**。setup-bun + setup-node + setup-just + `npm install -g @anthropic-ai/claude-code` のあと `just ci` 1 行。CI とローカルの検査範囲を完全一致させる構造。
+- `CLAUDE.md` の「全チェック: `just all`」を「全チェック: `just ci`」に更新。
+
+### Documentation
+
+- `docs/journal/2026-05-09-bump-semver-migration.md` を新設、migrate 経緯を集約。
+- `docs/issue/2026-05-09-migrate-to-bump-semver-and-just-ci.md` を削除 (journal に集約)。
+
 ## [0.25.1] - 2026-05-09
 
 ### Removed
