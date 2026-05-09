@@ -11,5 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - uses: extractions/setup-just@v3
+      - name: Install Claude Code (for `claude plugin validate`)
+        run: npm install -g @anthropic-ai/claude-code
       - run: just ci
