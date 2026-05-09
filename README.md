@@ -69,7 +69,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args]` | Spawn a child CC in a new split pane |
 | `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
-| `peers [--all]` | List peers in the same workspace (alive only by default) |
+| `peers [--all]` | List peers in the same workspace (alive only by default). The `name` column shows the value at `spawn` time and does **not** follow `/rename` updates ([known limitation](./docs/ROADMAP.md#諦めた--別件)). |
 | `send <session_id> <message>` | Send a message |
 | `broadcast <message>` | Broadcast to all peers |
 | `list` | List inbox messages |
@@ -114,6 +114,14 @@ Monitor({
 - Each stdout line is a JSON object describing one unread message (`filename`, `from`, `priority`, `type`, `created_at`, `in_reply_to`).
 - Existing unread messages are re-emitted every time `subscribe` starts, so resume-after-exit does not lose messages.
 - The file itself stays in `inbox/` until you `accept`, `dismiss`, or `reply` it — the JSONL event is only a notification.
+
+### Fallback: Unread notification via the UserPromptSubmit hook
+
+As a safety net for when Monitor was not started, the `UserPromptSubmit` hook (auto-registered by this plugin) reports unread messages on the next turn.
+
+- When the user submits a prompt, the hook peeks at `inbox/` and, if there are unread messages, injects `[cmux-msg] 未読 N 件` into the Claude context.
+- The hook does **not** fire mid-turn, so for real-time delivery `Monitor + subscribe` is still the recommended approach.
+- Spawned worker CCs are strongly told to start Monitor in the SessionStart hook output, but the parent CC has to do it explicitly.
 
 ## Reading conversations after the fact
 
