@@ -313,7 +313,11 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   );
   if (readyResult.kind === "timeout") {
     console.error(
-      `警告: Claude起動の signal を受信できず (${SPAWN_READY_TIMEOUT_SEC}秒タイムアウト)`
+      `警告: Claude起動の signal を受信できず (${SPAWN_READY_TIMEOUT_SEC}秒タイムアウト)\n` +
+        `  - 子CC のペインを直接見て初期化が走ったか確認してください\n` +
+        `  - peer 一覧: cmux-msg peers --all\n` +
+        `  - 取り残された session があれば cmux-msg gc --force で掃除\n` +
+        `  - 詳細: docs/runbooks/spawn-troubleshooting.md`
     );
   } else if (readyResult.kind === "error") {
     console.error(

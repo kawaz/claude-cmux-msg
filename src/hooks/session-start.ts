@@ -174,6 +174,12 @@ cmux-msg コマンドで他のCCとメッセージのやり取りができます
   }
 }
 
-main().catch(() => {
+main().catch((e) => {
+  // フックの失敗は CC のターンを止めない (exit 0)。
+  // ただし spawn-claude-not-launching の調査用にエラー詳細を stderr に出す。
+  // claude code は stderr を debug log に流すので、issue 報告時に取得できる。
+  // ref: docs/runbooks/spawn-troubleshooting.md
+  const msg = e instanceof Error ? e.message : String(e);
+  process.stderr.write(`[cmux-msg session-start hook error] ${msg}\n`);
   process.exit(0);
 });

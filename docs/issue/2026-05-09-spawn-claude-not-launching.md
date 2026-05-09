@@ -62,3 +62,13 @@ cmux-msg screen 66df8728-219d-4272-9943-f1a418ce675b
 
 - 親 CC が試みた目的: kawaz/idea-storage の DR-0008 関連で、kawaz/claude-session-analysis 側の改修を並列で進める子 CC を立ち上げようとしていた
 - 結果として idea-storage 側の `docs/issue/` に依頼を起票し、後日 CSA 側で手動着手する形に切り替えた
+
+## 暫定対応 (2026-05-09)
+
+cmux-msg-impl ワーカーが防御的改善を実施 (issue は維持):
+
+- `docs/runbooks/spawn-troubleshooting.md` を新規作成 (切り分け手順をまとめた)
+- spawn の signal タイムアウト警告メッセージに「peers --all / gc / runbook」へのヒントを追加
+- session-start.ts の `main().catch` でエラー詳細を stderr に流すように変更 (デバッグ容易化)
+
+再現条件の特定にはまだ至っていない。再現したらこの issue と runbook 双方に追記する。
