@@ -62,34 +62,44 @@ check-version-bump:
         exit 1
     fi
 
-# working copy が clean (未確定変更がない) ことを確認
+# ワーキングコピーがクリーン (empty) であることを確認
+# `~/.claude/rules/docs-structure.md` の共通テンプレ
 ensure-clean:
-    @[ -z "$(jj diff --summary 2>/dev/null)" ] \
-        || { echo "ERROR: working copy に未確定変更があります。describe してから push してください" >&2; exit 1; }
+    test "$(jj log -r @ --no-graph -T 'empty')" = "true"
 
-# 多言語ドキュメントの翻訳整合チェック
-# - {BASE}-ja.md と {BASE}.md の両方が存在すること
-# - 相互リンクが互いの**先頭 5 行以内**に張られていること (タイトル直下を強制)
-# - {BASE}-ja.md が {BASE}.md より新しい場合はエラー (翻訳更新が必要)
-#   タイムスタンプは git log の commit timestamp を使う (stat mtime は jj 切替で揺れる)
-check-translations:
-    #!/bin/bash
-    set -e
-    for base in README DESIGN MANUAL; do
-      ja="$base-ja.md"; en="$base.md"
-      [ -f "$ja" ] || continue
-      [ -f "$en" ] || { echo "ERROR: $ja があるが $en がない" >&2; exit 1; }
-      head -5 "$ja" | grep -q "$en" || { echo "ERROR: $ja の先頭 5 行に $en へのリンクがない (タイトル直下に置く)" >&2; exit 1; }
-      head -5 "$en" | grep -q "$ja" || { echo "ERROR: $en の先頭 5 行に $ja へのリンクがない (タイトル直下に置く)" >&2; exit 1; }
-      ja_t=$(git log -1 --format=%ct -- "$ja" 2>/dev/null)
-      en_t=$(git log -1 --format=%ct -- "$en" 2>/dev/null)
-      # まだ commit されていないファイルは比較スキップ (相互リンク check は別途効く)
-      [ -n "$ja_t" ] && [ -n "$en_t" ] || continue
-      if [ "$ja_t" -gt "$en_t" ]; then
-        echo "ERROR: $ja ($ja_t) が $en ($en_t) より新しい。翻訳更新が必要" >&2
-        exit 1
-      fi
-    done
+# 翻訳ペア (*-ja.md / *.md) の整合性チェック (`~/.claude/rules/docs-structure.md` 共通テンプレ)
+# - リポジトリ内のすべての *-ja.md を find で発見
+# - 対応する *.md の存在 + 相互リンク (タイトル直下) + commit timestamp 順序を検証
+check-translations: ensure-clean
+    #!/usr/bin/env bash
+    set -euo pipefail
+    die() { echo "$*" >&2; exit 1; }
+
+    # commit timestamp 取得 (jj 管理リポジトリなら jj log、それ以外は git log)
+    file_ts() {
+        local f="$1"
+        if [ -d .jj ]; then
+            jj log --no-graph -T 'committer.timestamp().format("%s")' \
+                -r "latest(::@ & files('$f'))" 2>/dev/null || echo 0
+        else
+            git log -1 --format=%ct -- "$f" 2>/dev/null || echo 0
+        fi
+    }
+
+    while IFS= read -r ja; do
+        en="${ja/-ja/}"
+        [ -f "$en" ] || die "ERROR: $ja exists but $en is missing"
+        # 相互リンク (先頭 5 行内、固定文字列で正確に検出)
+        head -5 "$ja" | grep -qF "> [English](./${en##*/}) | 日本語" \
+            || die "ERROR: $ja: missing '> [English](./${en##*/}) | 日本語' link near the top"
+        head -5 "$en" | grep -qF "> English | [日本語](./${ja##*/})" \
+            || die "ERROR: $en: missing '> English | [日本語](./${ja##*/})' link near the top"
+        # ja のほうが新しい (= en の翻訳が遅れている) ことを検出
+        ja_ts=$(file_ts "$ja")
+        en_ts=$(file_ts "$en")
+        [ "$ja_ts" -le "$en_ts" ] \
+            || die "ERROR: $ja was updated after $en. Update the English translation before pushing."
+    done < <(find . -name '*-ja.md' -not -path './.git/*' -not -path './.jj/*')
 
 push: check-bundle check-versions check-version-bump check-translations ensure-clean validate
     jj bookmark set main -r @-
