@@ -18,9 +18,10 @@ jobs:
                 | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-musl\\.tar\\.gz$")) | .browser_download_url' \
                 | head -1)
           test -n "$URL"
-          curl -fsSL "$URL" -o /tmp/jj.tar.gz
-          tar -xzf /tmp/jj.tar.gz -C /tmp/
-          sudo install /tmp/jj /usr/local/bin/jj
+          mkdir -p "$RUNNER_TEMP/jj-extract"
+          curl -fsSL "$URL" -o "$RUNNER_TEMP/jj.tar.gz"
+          tar -xzf "$RUNNER_TEMP/jj.tar.gz" -C "$RUNNER_TEMP/jj-extract"
+          sudo install "$RUNNER_TEMP/jj-extract/jj" /usr/local/bin/jj
           jj --version
       - name: Install Claude Code via bun (for `claude plugin validate`)
         run: |
