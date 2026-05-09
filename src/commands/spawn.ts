@@ -15,10 +15,12 @@ import {
   cmuxSend,
   cmuxSendKey,
   cmuxRenameTab,
+  cmuxReadScreen,
   cmuxWaitFor,
 } from "../lib/cmux";
 import { validateName, isSessionId, shellSingleQuote } from "../lib/validate";
 import { listPeers } from "../lib/peer";
+import { UsageError } from "../lib/errors";
 
 // 子CC の SessionStart hook が `cmux-msg:spawned-<sid>` を signal するまで待つ。
 const SPAWN_READY_TIMEOUT_SEC = 30;
@@ -27,6 +29,29 @@ const SPAWN_READY_TIMEOUT_SEC = 30;
 const SLASH_COMMAND_SETTLE_MS = 1000;
 
 const LAST_WORKER_FILE = ".last-worker-surface";
+
+const SPAWN_HELP = `使い方: cmux-msg spawn <name> [--cwd <path>] [--args <claude-args>] [--json]
+
+子CC を起動して inbox 等のメッセージング初期化を行う。
+SessionStart hook が起動完了を signal で親に通知し、親はそれを検知して spawn 完了を出力する。
+
+引数:
+  <name>           子CC の名前 (英数字 / '_' / '-' のみ)。位置引数または --name で指定。
+
+オプション:
+  --cwd <path>     子CC の cwd (claude プロセス起動時の cd 先)
+  --args <args>    claude に渡す追加引数 (デフォルト: --dangerously-skip-permissions)
+  --name <name>    子CC の名前 (位置引数の代わり)
+  --json           {id, name, color, surface_ref, remote_url} の JSON 1 行で出力
+  --help, -h       このヘルプを表示
+
+出力には子CC の Claude Code リモート操作 URL (https://claude.ai/code/session_XXX) を含む。
+URL は spawn 後に画面サンプリングで取得する (取れなければ "(取得できませんでした)" / json では null)。
+
+注意:
+  - 引数なしで実行すると副作用なくヘルプを表示します (誤発火防止)。
+  - --help / -h は最優先で処理され、session は起動されません。
+  - 不明なフラグはエラーになります。`;
 
 async function createWorkerSurface(): Promise<string> {
   const lastWorkerFile = path.join(wsDir(), LAST_WORKER_FILE);
@@ -64,40 +89,163 @@ async function createWorkerSurface(): Promise<string> {
   return surfaceRef;
 }
 
-export async function cmdSpawn(args: string[]): Promise<void> {
-  requireCmux();
+export interface ParsedSpawnArgs {
+  /** ヘルプ表示モードなら true (起動はしない) */
+  help: boolean;
+  /** name の明示指定 (--name / 位置引数)。未指定なら undefined。 */
+  name?: string;
+  /** --args の値 (claude プロセスへの追加引数) */
+  claudeArgs: string;
+  /** --cwd の値 (claude プロセスの cwd) */
+  cwd: string;
+  /** --json で構造化出力 */
+  json: boolean;
+}
 
-  let name = "";
+const KNOWN_VALUE_FLAGS = new Set(["--name", "--args", "--cwd"]);
+
+export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
+  // 引数なしは副作用なくヘルプ表示 (案 B、誤発火防止)
+  if (args.length === 0) {
+    return {
+      help: true,
+      claudeArgs: "--dangerously-skip-permissions",
+      cwd: "",
+      json: false,
+    };
+  }
+
+  let name: string | undefined;
   let claudeArgs = "--dangerously-skip-permissions";
   let cwd = "";
+  let json = false;
 
-  // オプション解析
-  let i = 0;
-  while (i < args.length) {
+  for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
-    if (arg === "--name" && i + 1 < args.length) {
-      name = args[i + 1]!;
-      i += 2;
-    } else if (arg === "--args" && i + 1 < args.length) {
-      claudeArgs = args[i + 1]!;
-      i += 2;
-    } else if (arg === "--cwd" && i + 1 < args.length) {
-      cwd = args[i + 1]!;
-      i += 2;
-    } else {
-      // 位置引数: name
-      if (!name) {
-        name = arg;
+
+    // ヘルプは最優先で処理 (--help / -h)
+    if (arg === "--help" || arg === "-h") {
+      return { help: true, claudeArgs, cwd, json };
+    }
+
+    // bool フラグ
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    // 値を取るフラグ
+    if (KNOWN_VALUE_FLAGS.has(arg)) {
+      const v = args[i + 1];
+      if (v === undefined) {
+        throw new UsageError(`${arg} には値が必要です\n\n${SPAWN_HELP}`);
+      }
+      if (arg === "--name") {
+        if (name !== undefined) {
+          throw new UsageError(`name が複数指定されています\n\n${SPAWN_HELP}`);
+        }
+        name = v;
+      } else if (arg === "--args") {
+        claudeArgs = v;
+      } else if (arg === "--cwd") {
+        cwd = v;
       }
       i++;
+      continue;
+    }
+
+    // --foo=bar 形式 (--name=foo / --args=... / --cwd=...)
+    if (arg.startsWith("--") && arg.includes("=")) {
+      const eq = arg.indexOf("=");
+      const key = arg.slice(0, eq);
+      const val = arg.slice(eq + 1);
+      if (KNOWN_VALUE_FLAGS.has(key)) {
+        if (key === "--name") {
+          if (name !== undefined) {
+            throw new UsageError(`name が複数指定されています\n\n${SPAWN_HELP}`);
+          }
+          name = val;
+        } else if (key === "--args") {
+          claudeArgs = val;
+        } else if (key === "--cwd") {
+          cwd = val;
+        }
+        continue;
+      }
+      throw new UsageError(`不明なフラグ: ${key}\n\n${SPAWN_HELP}`);
+    }
+
+    // 不明なオプション (`-` で始まる) はエラーにする (name として誤消費しない)
+    if (arg.startsWith("-")) {
+      throw new UsageError(`不明なフラグ: ${arg}\n\n${SPAWN_HELP}`);
+    }
+
+    // 位置引数: name (最初の non-option 引数のみ採用、二度目以降はエラー)
+    if (name === undefined) {
+      name = arg;
+    } else {
+      throw new UsageError(
+        `name が複数指定されています: ${name}, ${arg}\n\n${SPAWN_HELP}`
+      );
     }
   }
+
+  return { help: false, name, claudeArgs, cwd, json };
+}
+
+/**
+ * Claude Code が画面に出す `https://claude.ai/code/session_XXX` の URL を抽出する。
+ * 子 CC の TUI ステータスバーに表示されるため、screen の文字列ダンプから正規表現で拾う。
+ *
+ * Design rationale: Claude Code 側に「remote URL を返す hook / API」が存在しないため、
+ * spawn 時に画面サンプリングする heuristic を採用。レイアウト変更で URL 行の位置が
+ * 変わっても、URL 自体のパターンは安定しているため正規表現で取れる前提。
+ */
+export const REMOTE_URL_PATTERN =
+  /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;
+
+export function findRemoteUrl(screenText: string): string | undefined {
+  const m = screenText.match(REMOTE_URL_PATTERN);
+  return m ? m[0] : undefined;
+}
+
+async function pollRemoteUrl(
+  surfaceRef: string,
+  options: { maxAttempts: number; intervalMs: number }
+): Promise<string | undefined> {
+  for (let i = 0; i < options.maxAttempts; i++) {
+    try {
+      const screen = await cmuxReadScreen(surfaceRef);
+      const url = findRemoteUrl(screen);
+      if (url) return url;
+    } catch {
+      // 読み取り失敗は無視して次のサンプルへ
+    }
+    if (i < options.maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, options.intervalMs));
+    }
+  }
+  return undefined;
+}
+
+export async function cmdSpawn(args: string[]): Promise<void> {
+  const parsed = parseSpawnArgs(args);
+  if (parsed.help) {
+    console.log(SPAWN_HELP);
+    return;
+  }
+
+  requireCmux();
+
+  let name = parsed.name ?? "";
+  const claudeArgs = parsed.claudeArgs;
+  const cwd = parsed.cwd;
 
   // 既存ピアの数からカラーインデックスを決定 (alive/dead 含む全 session)
   const wsDirPath = path.join(getMsgBase(), getWorkspaceId());
   const peerCount = listPeers(wsDirPath).length;
 
-  // 名前未指定なら連番
+  // 名前未指定なら連番 (--cwd / --args のみ指定時の補完)
   if (!name) {
     name = `worker-${peerCount + 1}`;
   }
@@ -194,6 +342,33 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   await cmuxSend(surfaceRef, "inbox を確認してください");
   await cmuxSendKey(surfaceRef, "Return");
 
+  // remote URL を screen サンプリングで取得 (取れなくても spawn 自体は成功扱い)
+  const remoteUrl = await pollRemoteUrl(surfaceRef, {
+    maxAttempts: 10,
+    intervalMs: 500,
+  });
+
   // 子の session_id は親が生成した値をそのまま使える（逆引き不要）
-  console.log(`spawn完了: id=${childSessionId} name=${name} color=${color}`);
+  if (parsed.json) {
+    process.stdout.write(
+      JSON.stringify({
+        id: childSessionId,
+        name,
+        color,
+        surface_ref: surfaceRef,
+        remote_url: remoteUrl ?? null,
+      }) + "\n"
+    );
+  } else {
+    console.log("spawn完了:");
+    console.log(`  id:      ${childSessionId}`);
+    console.log(`  name:    ${name}`);
+    console.log(`  color:   ${color}`);
+    console.log(`  surface: ${surfaceRef}`);
+    if (remoteUrl) {
+      console.log(`  remote:  ${remoteUrl}`);
+    } else {
+      console.log(`  remote:  (取得できませんでした)`);
+    }
+  }
 }
