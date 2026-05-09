@@ -12,6 +12,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - uses: extractions/setup-just@v3
+      - name: Install jj (required by `just ci` -> ensure-clean / check-translations)
+        run: |
+          URL=$(curl -fsSL https://api.github.com/repos/jj-vcs/jj/releases/latest \
+                | jq -r '.assets[] | select(.name | test("x86_64-unknown-linux-musl\\.tar\\.gz$")) | .browser_download_url' \
+                | head -1)
+          test -n "$URL"
+          curl -fsSL "$URL" -o /tmp/jj.tar.gz
+          tar -xzf /tmp/jj.tar.gz -C /tmp/
+          sudo install /tmp/jj /usr/local/bin/jj
+          jj --version
       - name: Install Claude Code via bun (for `claude plugin validate`)
         run: |
           bun add -g @anthropic-ai/claude-code
