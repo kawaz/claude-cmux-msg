@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-05-09
+
+### Added
+
+- `cmux-msg send <id>` が **stdin / `--file` から本文を読めるように**。長文 heredoc を `$(cat)` 経由でラップする手間が不要に。`--file -` で stdin、`--file <path>` でファイル指定。引数省略時は非 TTY なら自動で stdin から読み込み (TTY なら usage error)。`docs/issue/2026-05-09-send-cannot-read-stdin.md`
+- `cmux-msg spawn` の出力に **Claude Code リモート操作 URL** (`https://claude.ai/code/session_XXX`) を含めるように。spawn 直後に screen をサンプリングして抽出。取得失敗しても spawn は成功扱い。`--json` で `{id, name, color, surface_ref, remote_url}` を 1 行 JSON 出力。`docs/issue/2026-05-09-spawn-output-missing-remote-url.md`
+- **UserPromptSubmit hook** を新規追加。ユーザがプロンプトを送信するたびに inbox/ を覗き、未読があれば `<system-reminder>` として Claude のコンテキストに injection。Monitor + `cmux-msg subscribe` を張り忘れた場合の safety net として機能 (リアルタイム性は subscribe 任せ)。`docs/issue/2026-05-09-inbox-no-active-notification.md`
+- `docs/runbooks/spawn-troubleshooting.md` を新規作成。spawn 完了表示は出るが session が永続化されないケースの切り分け手順。
+- `docs/findings/2026-05-09-claude-slash-command-detection-feasibility.md`: Claude Code ビルトイン slash command (`/rename` `/color`) の検知可能性調査結果を集約。
+
+### Changed
+
+- **`cmux-msg spawn` の引数パースを堅牢化** (破壊的変更):
+  - `--help` / `-h` を最優先で処理して return (副作用なくヘルプ表示)
+  - 引数なし `cmux-msg spawn` は副作用なくヘルプ表示 (旧: 自動 name で session を起こしていた)
+  - 不明なフラグはエラー (旧: `--help` を name に消費して session を起こしていた)
+  - 位置引数は最初の non-option のみ name として採用
+  - `docs/issue/2026-05-09-spawn-args-consume-cli-flags.md`
+- **`cmux-msg spawn` の通常出力フォーマット変更** (破壊的変更): 1 行 `id=... name=... color=...` から複数行 `key: value` 形式に。`--json` モードを追加。
+- spawn の signal タイムアウト警告メッセージに `peers --all` / `gc` / runbook へのヒントを追加。
+- `src/hooks/session-start.ts` の `main().catch` をエラー握り潰しから stderr 出力に変更し、デバッグログから原因解析できるように (spawn-claude-not-launching の調査用)。
+- `src/hooks/session-start.ts` の親 CC 用メッセージを「Monitor + subscribe を必ず張れ」と強い文言に変更。
+- `README-ja.md` に「補完: UserPromptSubmit hook による未読通知」節を追加。peers コマンド行に「name は `/rename` 後も追従しない」注記。
+- `docs/ROADMAP.md` の「諦めた / 別件」に `/rename` `/color` の peers 反映不可を追加 (Claude Code 側に検知 hook / API がないため)。
+
+### Documentation
+
+- `docs/journal/2026-05-09-self-improvement-batch.md` 新設。本リリースで対応した self-improvement の経緯・判断・残課題を集約。
+
 ## [0.22.1] - 2026-05-08
 
 ### Documentation
