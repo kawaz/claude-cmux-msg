@@ -1,6 +1,8 @@
 # claude-cmux-msg
 
-all: test build validate
+# CI とローカルの検査範囲を完全一致させる単一エントリ
+# (旧 `just all` から改名、check-bundle / check-translations を追加)
+ci: test build check-bundle check-translations validate
 
 test:
     bun test
@@ -15,10 +17,12 @@ version:
     @jq -r '.version' .claude-plugin/plugin.json
 
 # バージョン bump (major, minor, patch)
-version-bump level="patch":
-    bump {{level}} -w -f .claude-plugin/plugin.json      -p '"version":\s*"([^"]+)"'
-    bump {{level}} -w -f .claude-plugin/marketplace.json -p '"version":\s*"([^"]+)"'
-    bump {{level}} -w -f package.json                    -p '"version":\s*"([^"]+)"'
+# bump-semver v0.4.0 の multi-file + path-aware で 3 ファイル一括 bump。
+# `.claude-plugin/marketplace.json` の `.metadata.version` も組み込みテーブルで
+# 認識される。3 ファイルの version がずれていれば bump-semver がエラーで止める。
+bump-semver level="patch": ensure-clean check-bundle test
+    bump-semver "{{level}}" .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json --write
+    @echo "Version: -> $(bump-semver get .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json)"
     jj split -m "chore: bump version" .claude-plugin/plugin.json .claude-plugin/marketplace.json package.json
 
 # コンパイル済みバンドルが生成されることを確認

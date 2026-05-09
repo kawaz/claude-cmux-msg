@@ -35,7 +35,7 @@ hooks/              # プラグインフック定義 (hooks.json)
 - `bin/cmux-msg-bin` は gitignore（コンパイル成果物）
 テスト: `bun test`
 検証: `claude plugin validate .`
-全チェック: `just all`
+全チェック: `just ci` (CI とローカルで同じ範囲を検査)
 
 ## push
 
