@@ -1,7 +1,7 @@
 {
   "name": "cmux-msg",
   "owner": { "name": "kawaz" },
-  "metadata": { "description": "Inter-CC messaging system for cmux terminal", "version": "0.25.2", "license": "MIT" },
+  "metadata": { "description": "Inter-CC messaging system for cmux terminal", "version": "0.25.3", "license": "MIT" },
   "plugins": [
     {
       "name": "cmux-msg",
