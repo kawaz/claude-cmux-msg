@@ -9,9 +9,12 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
-      - uses: extractions/setup-just@v3
+      - uses: extractions/setup-just@v4
+        with:
+          # ローカル開発と CI で `just --fmt --check --unstable` の判定を揃えるため version pin
+          just-version: 1.49.0
       - name: Install Claude Code via bun (for `claude plugin validate`)
         run: |
           bun add -g @anthropic-ai/claude-code
