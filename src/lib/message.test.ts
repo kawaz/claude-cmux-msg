@@ -133,6 +133,66 @@ describe("sendMessage", () => {
       sendMessage({ target: "not-a-uuid", body: "x" })
     ).rejects.toThrow();
   });
+
+  test("別 workspace のセッションへ送信 (cross-workspace fallback)", async () => {
+    // 別 workspace に peer を作成し、自 ws には居ない状態を作る
+    const OTHER_WS = "OTHERWSO-WSOT-HERW-SOTH-ERWSOTHERWSO";
+    const REMOTE_PEER = "55555555-5555-5555-5555-555555555555";
+    for (const sub of ["inbox", "accepted", "archive", "sent", "tmp"]) {
+      fs.mkdirSync(path.join(workDir, OTHER_WS, REMOTE_PEER, sub), {
+        recursive: true,
+      });
+    }
+
+    setSelf(SELF);
+    const filename = await sendMessage({ target: REMOTE_PEER, body: "cross" });
+
+    // 別 ws の inbox に届いている
+    const remoteInbox = path.join(
+      workDir,
+      OTHER_WS,
+      REMOTE_PEER,
+      "inbox",
+      filename
+    );
+    expect(fs.existsSync(remoteInbox)).toBe(true);
+    const { meta, body } = parseFrontmatter(fs.readFileSync(remoteInbox, "utf-8"));
+    expect(meta.from).toBe(SELF);
+    expect(meta.to).toBe(REMOTE_PEER);
+    expect(body.trim()).toBe("cross");
+
+    // 自 ws の sent/ にも hardlink で記録される (同一 FS なので成功する想定)
+    const sentFile = path.join(workDir, WS, SELF, "sent", filename);
+    expect(fs.existsSync(sentFile)).toBe(true);
+  });
+
+  test("自 workspace 内の peer が優先される (cross-workspace 走査より先)", async () => {
+    // 同じ session_id を自 ws と別 ws に両方作る (本来は UUID 衝突しないが防御テスト)
+    const COLLISION_SID = "66666666-6666-6666-6666-666666666666";
+    const OTHER_WS = "OTHERWSO-WSOT-HERW-SOTH-ERWSOTHERWSO";
+    for (const sub of ["inbox", "accepted", "archive", "sent", "tmp"]) {
+      fs.mkdirSync(path.join(workDir, WS, COLLISION_SID, sub), {
+        recursive: true,
+      });
+      fs.mkdirSync(path.join(workDir, OTHER_WS, COLLISION_SID, sub), {
+        recursive: true,
+      });
+    }
+
+    setSelf(SELF);
+    const filename = await sendMessage({ target: COLLISION_SID, body: "mine" });
+
+    // 自 ws の inbox に届く
+    expect(
+      fs.existsSync(path.join(workDir, WS, COLLISION_SID, "inbox", filename))
+    ).toBe(true);
+    // 別 ws の inbox には届かない
+    expect(
+      fs.existsSync(
+        path.join(workDir, OTHER_WS, COLLISION_SID, "inbox", filename)
+      )
+    ).toBe(false);
+  });
 });
 
 describe("listInbox / countInbox / readMessage", () => {

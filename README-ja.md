@@ -69,9 +69,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args]` | 新しい split pane に子 CC を spawn |
 | `stop <session_id>` | 子 CC を終了してペインを閉じる |
 | `whoami` | 自分のセッション情報を表示 |
-| `peers [--all]` | 同じワークスペースのピア一覧（既定 alive のみ）。`name` 列は spawn 時の値で、`/rename` 後も追従しない（[制約](./docs/ROADMAP.md#諦めた--別件)） |
-| `send <session_id> <message>` | メッセージ送信 |
-| `broadcast <message>` | 全ピアにブロードキャスト |
+| `peers [--all] [--all-workspaces]` | 同じワークスペースのピア一覧（既定 alive のみ）。`--all-workspaces`（または `--global`）で全 workspace 横断列挙。`name` 列は spawn 時の値で、`/rename` 後も追従しない（[制約](./docs/ROADMAP.md#諦めた--別件)） |
+| `send <session_id> <message>` | メッセージ送信。session_id は workspace 横断で解決される（自 workspace 優先、無ければ全 workspace 走査） |
+| `broadcast <message>` | 同一ワークスペースの alive ピアにブロードキャスト（誤送信防止のため workspace を跨がない） |
 | `list` | inbox のメッセージ一覧 |
 | `read <filename>` | メッセージ内容を表示 |
 | `accept <filename>` | メッセージを受理（→ `accepted/`） |
@@ -80,8 +80,8 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `subscribe` | inbox イベントを JSONL で stdout に流す（Monitor 用） |
 | `history [--peer <session_id>] [--limit N]` | inbox/accepted/archive/sent をマージして時系列表示 |
 | `thread <filename>` | `in_reply_to` を遡る/前方探索して会話を表示 |
-| `tell <session_id> <text>` | ペインに直接テキスト入力（messaging 経由しない） |
-| `screen [session_id]` | ペインの画面内容を読む |
+| `tell <session_id> <text>` | ペインに直接テキスト入力（messaging 経由しない）。session_id は workspace 横断で解決される |
+| `screen [session_id]` | ペインの画面内容を読む。session_id は workspace 横断で解決される |
 | `gc [--force]` | `inbox/` と `accepted/` が両方空の dead session を掃除（既定 dry-run、`--force` で実削除。`archive/` と `sent/` も一緒に消える点に注意） |
 
 `cmux-msg help` で完全なヘルプを表示。

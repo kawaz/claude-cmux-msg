@@ -5,9 +5,9 @@
 # 構造変更は bump-semver 側を先に直してからこちらへ追従する。
 # ---------- settings ----------
 
-set unstable := true
-set guards := true
-set lazy := true
+set unstable
+set guards
+set lazy
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 set script-interpreter := ["bash", "-eu", "-o", "pipefail"]
 

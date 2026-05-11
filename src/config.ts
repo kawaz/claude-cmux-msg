@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import { readBySurfaceIndex } from "./lib/session-index";
 import { getMsgBase } from "./lib/paths";
@@ -55,8 +56,38 @@ export function myDir(): string {
   return path.join(getMsgBase(), getWorkspaceId(), getSessionId());
 }
 
+/**
+ * peer session のディレクトリを解決する。
+ *
+ * 解決順:
+ *   1. 自 workspace 配下 (`<base>/<myWs>/<sid>/`) — 同一 ws 内通信の高速パス
+ *   2. 全 workspace 走査 (`<base>/*​/<sid>/`) — cross-workspace 配送 (UUID 一意性に依存)
+ *   3. 見つからなければ自 ws 配下のパスを返す (呼び出し側が existsSync でエラー判定)
+ *
+ * Design rationale: session_id (UUID v4) は cmux-messages 配下で workspace 横断的に
+ * 一意な前提。`--workspace` 明示指定は UX を悪化させるだけなので採らない。
+ * Phase 1 として走査ベースで実装し、必要なら後から `<base>/by-session/` index を
+ * 上に被せて O(1) 化可能 (現状は workspace 数が高々 N=10〜20 で走査コスト無視できる)。
+ */
 export function peerDir(peerSessionId: string): string {
-  return path.join(getMsgBase(), getWorkspaceId(), peerSessionId);
+  const base = getMsgBase();
+  const myWs = getWorkspaceId();
+
+  const myWsCandidate = path.join(base, myWs, peerSessionId);
+  if (fs.existsSync(myWsCandidate)) return myWsCandidate;
+
+  try {
+    for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name === myWs) continue;
+      const candidate = path.join(base, entry.name, peerSessionId);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  } catch {
+    // base 自体が存在しない等は無視 (呼び出し側で exists チェックされる)
+  }
+
+  return myWsCandidate;
 }
 
 export function wsDir(): string {

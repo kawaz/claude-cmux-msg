@@ -33,7 +33,7 @@ The session_id is resolved at command time:
 1. `$CMUXMSG_SESSION_ID` (kept for the day Claude Code's `CLAUDE_ENV_FILE` mechanism actually works — Issue #15840)
 2. **Working path today**: lookup `<ws>/by-surface/<CMUX_SURFACE_ID>` (written by the SessionStart hook)
 
-Use `cmux-msg peers` to list peers and their session IDs (alive only by default; `--all` shows dead too).
+Use `cmux-msg peers` to list peers and their session IDs (alive only by default; `--all` shows dead too; `--all-workspaces` lists peers across every workspace).
 
 ## Quick start
 
@@ -69,9 +69,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args]` | Spawn a child CC in a new split pane |
 | `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
-| `peers [--all]` | List peers in the same workspace (alive only by default). The `name` column shows the value at `spawn` time and does **not** follow `/rename` updates ([known limitation](./docs/ROADMAP.md#諦めた--別件)). |
-| `send <session_id> <message>` | Send a message |
-| `broadcast <message>` | Broadcast to all peers |
+| `peers [--all] [--all-workspaces]` | List peers in the same workspace (alive only by default). `--all-workspaces` (alias: `--global`) lists peers across every workspace. The `name` column shows the value at `spawn` time and does **not** follow `/rename` updates ([known limitation](./docs/ROADMAP.md#諦めた--別件)). |
+| `send <session_id> <message>` | Send a message. `session_id` is resolved across workspaces (self workspace first, then a scan of every workspace). |
+| `broadcast <message>` | Broadcast to all alive peers in the same workspace (does not cross workspaces, to avoid accidental fan-out). |
 | `list` | List inbox messages |
 | `read <filename>` | Display message content |
 | `accept <filename>` | Accept message → `accepted/` |
@@ -80,8 +80,8 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `subscribe` | Stream inbox events as JSONL to stdout (meant for Monitor tool) |
 | `history [--peer <session_id>] [--limit N]` | Time-merged display of inbox/accepted/archive/sent |
 | `thread <filename>` | Walk `in_reply_to` chains forward and backward to render a conversation |
-| `tell <session_id> <text>` | Send raw text to a pane (bypasses messaging) |
-| `screen [session_id]` | Read pane screen content |
+| `tell <session_id> <text>` | Send raw text to a pane (bypasses messaging). `session_id` is resolved across workspaces. |
+| `screen [session_id]` | Read pane screen content. `session_id` is resolved across workspaces. |
 | `gc [--force]` | Remove dead session directories whose `inbox/` and `accepted/` are both empty (dry-run by default; `--force` actually deletes — note this also removes `archive/` and `sent/` of those sessions) |
 
 Run `cmux-msg help` for the full help.
