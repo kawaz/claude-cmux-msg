@@ -133,9 +133,15 @@ async function main(): Promise<void> {
   } catch {
     // inbox 未初期化なら 0 扱い
   }
+
+  // plugin root の絶対パスを CC に通知して Bash 実行ではこれを使わせる
+  // (PATH 経由は古い cache version に当たる事故がある)
+  const cmuxMsgBin = pluginRoot
+    ? `${pluginRoot}/bin/cmux-msg`
+    : "cmux-msg";
   const unreadLine =
     unreadCount > 0
-      ? `\n未読メッセージ ${unreadCount} 件: \`cmux-msg list\` で確認してください。`
+      ? `\n未読メッセージ ${unreadCount} 件: \`${cmuxMsgBin} list\` で確認してください。`
       : "";
 
   if (parentSessionId) {
@@ -143,12 +149,15 @@ async function main(): Promise<void> {
 parent_session_id: ${parentSessionId}
 worker_name: ${workerName || "unnamed"}
 session_id: ${sessionId}
+cmux_msg_bin: ${cmuxMsgBin}
 
 あなたは cmux-msg spawn で起動されたワーカーCCです。
 このセッションは自動生成されたもので、セッション日誌の作成対象外です。
 
+Bash で cmux-msg を叩くときは上の cmux_msg_bin を使うこと (PATH 経由は不可)。
+
 ## メッセージング手順
-1. セッション開始直後に **Monitor ツールで** \`cmux-msg subscribe\` を張る（persistent: true 推奨）
+1. セッション開始直後に **Monitor ツールで** \`${cmuxMsgBin} subscribe\` を張る（persistent: true 推奨）
    - **重要**: subscribe は long-running で blocking。Bash ツールで直接実行するとハングします。必ず Monitor ツール経由で起動してください
    - stdout は JSONL。1行 = 1件の未読メッセージ通知
 2. 通知が来たら \`cmux-msg read <filename>\` で本文確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
@@ -161,13 +170,14 @@ session_id: ${sessionId}
 ## 補助コマンド
 - \`cmux-msg history [--peer <id>] [--limit N]\`: 自分が関わった全メッセージを時系列マージ表示（送信は sent/, 受信は inbox/accepted/archive/）
 - \`cmux-msg thread <filename>\`: in_reply_to を辿って会話単位で表示
-- \`cmux-msg peers\`: 同一ワークスペースの alive なピア一覧（\`--all\` で dead も含む）${unreadLine}`);
+- \`cmux-msg peers [--all-workspaces]\`: 同一ワークスペースの alive なピア一覧（\`--all\` で dead も含む、\`--all-workspaces\` で全 workspace 横断）${unreadLine}`);
   } else {
     console.log(`[cmux-msg] 初期化済み (session_id: ${sessionId})
+cmux_msg_bin: ${cmuxMsgBin}
 
-cmux-msg コマンドで他のCCとメッセージのやり取りができます。
+cmux-msg コマンドで他のCCとメッセージのやり取りができます。Bash で叩くときは上の \`cmux_msg_bin\` を使うこと (PATH 経由は不可)。
 
-**推奨**: セッション開始直後に **Monitor ツールで** \`cmux-msg subscribe\` を persistent: true で起動してください。
+**推奨**: セッション開始直後に **Monitor ツールで** \`${cmuxMsgBin} subscribe\` を persistent: true で起動してください。
 - subscribe は long-running blocking なので Bash ツールで叩くとハングします。必ず Monitor 経由で。
 - stdout は JSONL。1 行 = 1 件の新着メッセージ通知。
 - これを張らないと親 CC は新着メッセージに能動的に気付けません (補完として UserPromptSubmit hook が次ターン送信時に未読件数を通知しますが、ターン中は発火しません)。${unreadLine}`);

@@ -2,6 +2,10 @@
 
 cmux（libghosttyベースのターミナル）上で複数の Claude Code セッションがファイルベースでメッセージをやり取りするシステム。
 
+## コマンドの呼び方
+
+このドキュメント内の `cmux-msg ...` は実行時に **`{PLUGIN_ROOT}/bin/cmux-msg ...`** で叩く。PATH 上の `cmux-msg` は使わない。
+
 ## 識別子
 
 **全コマンドの宛先指定は claude session UUID（`CMUXMSG_SESSION_ID` の値）を使う**。
@@ -88,11 +92,11 @@ cmux-msg gc [--force]
 **重要**: `cmux-msg subscribe` は long-running blocking command。Bash ツールで直接実行するとハングする。**必ず Monitor ツール経由で起動すること**。
 
 Claude Code の Monitor ツールで `cmux-msg subscribe` を張ると、新着メッセージが
-JSONL 1 行 = 1 イベントとして通知される。
+JSONL 1 行 = 1 イベントとして通知される:
 
 ```
 Monitor({
-  command: "cmux-msg subscribe",
+  command: "{PLUGIN_ROOT}/bin/cmux-msg subscribe",
   description: "cmux-msg inbox",
   persistent: true
 })
