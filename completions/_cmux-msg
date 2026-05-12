@@ -8,10 +8,10 @@ local -a subcommands
 subcommands=(
   'init:メッセージディレクトリを初期化'
   'whoami:自分のID情報を表示'
-  'peers:同一ワークスペースのピア一覧'
+  'peers:peer 一覧 (軸明示必須)'
   'ls-peers:peers のエイリアス'
-  'send:メッセージ送信'
-  'broadcast:全ピアにブロードキャスト'
+  'send:メッセージ送信 (永続)'
+  'broadcast:軸を明示してブロードキャスト'
   'list:inbox のメッセージ一覧'
   'ls:list のエイリアス'
   'read:メッセージ内容を表示'
@@ -23,8 +23,9 @@ subcommands=(
   'thread:in_reply_to を辿って会話単位で表示'
   'spawn:子CCを起動'
   'stop:子CCを終了'
-  'tell:対象に直接テキスト入力'
-  'screen:画面内容を読み取り'
+  'tell:対象に直接テキスト入力 (fg + idle 必須)'
+  'screen:画面内容を読み取り (fg 必須)'
+  'gc:dead セッション dir の掃除'
   'help:ヘルプ表示'
 )
 
@@ -40,18 +41,37 @@ case "$state" in
     case "$words[1]" in
       peers|ls-peers)
         _arguments \
-          '--all[dead セッションも含めて全件表示]'
+          '*--by[グルーピング軸 (home/ws/cwd/repo/tag:NAME)]:axis:(home ws cwd repo)' \
+          '--all[alive な全 peer (軸無視、明示)]' \
+          '--include-dead[dead な peer も表示]'
+        ;;
+      broadcast)
+        _arguments \
+          '*--by[グルーピング軸 (home/ws/cwd/repo/tag:NAME)]:axis:(home ws cwd repo)' \
+          '--all[alive な全 peer (軸無視、明示)]'
         ;;
       spawn)
         _arguments \
           '--name[ワーカー名]:name' \
           '--cwd[作業ディレクトリ]:dir:_path_files -/' \
-          '--args[claude に渡す引数]:args'
+          '--args[claude に渡す引数]:args' \
+          '--tags[meta.tags の初期化 (csv)]:tags' \
+          '--json[構造化出力]'
         ;;
       history)
         _arguments \
           '--peer[相手 session_id でフィルタ]:session_id' \
-          '--limit[件数制限]:N'
+          '--limit[件数制限]:N' \
+          '--json[構造化出力]'
+        ;;
+      thread)
+        _arguments \
+          '--json[構造化出力]'
+        ;;
+      gc)
+        _arguments \
+          '--force[実削除 (default: dry-run)]' \
+          '--verbose[保持理由を全件表示]'
         ;;
     esac
     ;;
