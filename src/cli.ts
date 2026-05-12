@@ -23,22 +23,24 @@ import { cmdThread } from "./commands/thread";
 import { cmdGc } from "./commands/gc";
 import { UsageError } from "./lib/errors";
 
-const HELP = `cmux-msg: cmux CC間メッセージングシステム
+const HELP = `cmux-msg: cmux CC間メッセージングシステム (DR-0004)
 
 識別子: 全コマンドの宛先は <session_id> = claude --session-id の UUID。
 spawn 経由または手動で claude --session-id <uuid> 起動された CC 間で通信。
-cmux-msg peers で peer 一覧を確認可能。
+受信箱は <CMUXMSG_BASE>/<sid>/ に sid 直接化 (workspace 階層なし)。
 
 ライフサイクル管理:
-  cmux-msg spawn [name] [--cwd path] [--args claude-args]   子CC起動 (色は自動ローテーション)
+  cmux-msg spawn [name] [--cwd path] [--args claude-args] [--tags csv]  子CC起動 (色は自動ローテーション)
   cmux-msg stop <session_id>     子CCを終了してペインを閉じる
 
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
-  cmux-msg peers [--all]         同一ワークスペースのピア一覧 (--all で dead 含む)
-  cmux-msg send <session_id> <メッセージ>  メッセージ送信
-  cmux-msg broadcast <メッセージ>      全ピアにブロードキャスト
+  cmux-msg peers (--by <axis>... | --all) [--include-dead]
+                                 軸明示で peer 一覧 (home/ws/cwd/repo/tag:NAME、AND 結合)。--all で全 alive
+  cmux-msg send <session_id> <メッセージ>      永続配送 (state を問わない)
+  cmux-msg broadcast (--by <axis>... | --all) <メッセージ>
+                                 軸明示でブロードキャスト。軸なしは error
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示
   cmux-msg accept <filename>     メッセージを受理 (→ accepted/)
@@ -49,13 +51,15 @@ cmux-msg peers で peer 一覧を確認可能。
   cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示
   cmux-msg gc [--force] [--verbose]  inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
 
-ダイレクト操作:
-  cmux-msg tell <session_id> <テキスト>  対象に直接テキスト入力
-  cmux-msg screen [session_id]           画面内容を読み取り
+ダイレクト操作 (安全境界あり):
+  cmux-msg tell <session_id> <テキスト>  fg + state ∈ {idle, awaiting_permission} 必須
+  cmux-msg screen [session_id]           fg 必須 (引数なしは自分の surface を読む、制約なし)
 
 環境変数:
-  CMUXMSG_SESSION_ID       自分の session_id (SessionStart hook が自動設定)
+  CLAUDE_CODE_SESSION_ID   自セッションの UUID (Claude Code 2.x が提供、最優先)
+  CMUXMSG_SESSION_ID       上記の互換 / 手動指定用
   CMUXMSG_PRIORITY=urgent  緊急メッセージとして送信
+  CMUXMSG_TAGS=<csv>       自セッションのタグ (init 時に meta.tags へ反映)
   CMUXMSG_BASE=<path>      メッセージ保存先 (デフォルト: ~/.local/share/cmux-messages)`;
 
 type CmdHandler = (args: string[]) => void | Promise<void>;
