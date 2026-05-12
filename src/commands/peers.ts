@@ -9,31 +9,34 @@ import { listPeers, type PeerEntry } from "../lib/peer";
 import { extractByArgs, matchAllAxes, describeAxis } from "../lib/peer-filter";
 import { readMetaByDir } from "../lib/meta";
 
-const PEERS_HELP = `使い方: cmux-msg peers (--by <axis>... | --all) [--include-dead]
+const PEERS_HELP = `使い方: cmux-msg peers [--by <axis>...] [--all] [--include-dead]
+
+軸なしのデフォルトは --by home (自 claude_home に閉じる、DR-0005)。
 
 axis (複数指定可、AND 結合):
-  --by home          自分と同じ claude_home の peer
+  --by home          自分と同じ claude_home の peer (デフォルト)
   --by ws            自分と同じ workspace の peer
   --by cwd           自分と同じ cwd の peer
   --by repo          自分と同じ repo_root の peer
   --by tag:<name>    指定タグを持つ peer
 
-明示的に全 alive 列挙:
-  --all              alive な全 peer (軸無視)
+明示的に壁を超える:
+  --all              alive な全 peer (claude_home 壁を超える、軸無視)
 
 その他:
   --include-dead     dead な peer も表示 (デフォルトは alive のみ)
 
 例:
-  cmux-msg peers --by repo            # 同 repo の alive peer
-  cmux-msg peers --by home --by ws    # claude_home AND workspace 一致
-  cmux-msg peers --all                # alive な全 peer`;
+  cmux-msg peers                      # 自 home の alive peer (= --by home)
+  cmux-msg peers --by repo            # 同 repo の alive peer (home は問わない)
+  cmux-msg peers --by home --by ws    # home AND ws 一致 (AND 結合)
+  cmux-msg peers --all                # 全 home 横断 alive peer`;
 
 export function cmdPeers(args: string[] = []): void {
   requireCmux();
 
-  // 引数なし / --help → ヘルプ表示で終了 (DR-0004: デフォルト動作なし)
-  if (args.length === 0 || args.includes("--help")) {
+  // --help → ヘルプ表示で終了
+  if (args.includes("--help")) {
     console.log(PEERS_HELP);
     return;
   }
@@ -46,10 +49,8 @@ export function cmdPeers(args: string[] = []): void {
     process.exit(1);
   }
 
-  if (!all && axes.length === 0) {
-    console.error(`--by <axis> または --all が必要です\n\n${PEERS_HELP}`);
-    process.exit(1);
-  }
+  // DR-0005: 軸なしのデフォルトは --by home (自 claude_home に閉じる)
+  const effectiveAxes = !all && axes.length === 0 ? [{ kind: "home" as const }] : axes;
 
   const mySessionId = getSessionId();
   const myMeta = readMetaByDir(myDir());
@@ -83,7 +84,7 @@ export function cmdPeers(args: string[] = []): void {
         filteredOut++;
         continue;
       }
-      if (!matchAllAxes(myMeta!, peerMeta, axes)) {
+      if (!matchAllAxes(myMeta!, peerMeta, effectiveAxes)) {
         filteredOut++;
         continue;
       }
@@ -104,7 +105,7 @@ export function cmdPeers(args: string[] = []): void {
   if (printed === 0) {
     const cond = all
       ? "alive"
-      : axes.map(describeAxis).join(" AND ");
+      : effectiveAxes.map(describeAxis).join(" AND ");
     console.log(`ピアなし (条件: ${cond})`);
     if (hiddenDead > 0) {
       console.log(`  (dead ${hiddenDead}件 非表示。--include-dead で全件)`);

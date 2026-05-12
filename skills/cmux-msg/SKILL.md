@@ -51,25 +51,28 @@ cmux-msg stop <session_id>
 # 自分のID情報を確認
 cmux-msg whoami
 
-# peer 一覧 (軸明示必須、--all で全 alive 列挙)
-#   --by home       claude_home (CLAUDE_CONFIG_DIR) 一致
+# peer 一覧 (軸なしのデフォルトは --by home。--all で全 home 横断)
+#   --by home       claude_home (CLAUDE_CONFIG_DIR) 一致 (デフォルト)
 #   --by ws         workspace_id 一致
 #   --by cwd        cwd 一致
 #   --by repo       repo_root 一致
 #   --by tag:<name> 指定タグを持つ
 #   --by を複数並べると AND 結合
-#   --all           alive な全 peer
+#   --all           alive な全 peer (claude_home 壁を超える、軸無視)
 #   --include-dead  dead も表示
+cmux-msg peers                  # = --by home (自アカウントに閉じる)
 cmux-msg peers --by repo
 cmux-msg peers --by home --by ws
-cmux-msg peers --all
+cmux-msg peers --all            # 別アカウント peer も含める
 
 # メッセージ送信 (永続。fg/state を問わず常に inbox に届く)
+# peer の claude_home が違う場合は stderr に warning (block しない)
 cmux-msg send <session_id> <メッセージ>
 
-# ブロードキャスト (軸明示必須。alive のみ対象)
+# ブロードキャスト (軸なしは --by home がデフォルト)
+cmux-msg broadcast "build 通った"            # = --by home
 cmux-msg broadcast --by repo "build 通った"
-cmux-msg broadcast --all "全員 stop してください"   # 明示で全送信
+cmux-msg broadcast --all "全員 stop してください"   # 全 home 横断
 
 # inbox のメッセージ一覧
 cmux-msg list

@@ -3,7 +3,7 @@ import { cmuxSend, cmuxSendKey } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
 import { resolvePeerSurfaceRef } from "../lib/peer-refs";
 import { isProcessForeground } from "../lib/peer";
-import { readMetaBySid } from "../lib/meta";
+import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
 
 /**
  * DR-0004: tell の安全境界。
@@ -33,6 +33,9 @@ export async function cmdTell(args: string[]): Promise<void> {
     console.error(`session ${sessionId} の meta.json が見つかりません`);
     process.exit(1);
   }
+
+  // DR-0005: peer が別 claude_home なら warning (block しない)
+  warnIfCrossHome(meta);
 
   // fg 判定 (ps -o stat= の `+` フラグ)
   if (!isProcessForeground(meta.shell_pid)) {

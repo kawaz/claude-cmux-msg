@@ -72,9 +72,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | Spawn a child CC in a new split pane. `--tags csv` initializes the child's `meta.tags`. |
 | `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
-| `peers (--by <axis>... \| --all)` | List peers. Axis is required: `--by home`/`ws`/`cwd`/`repo`/`tag:<name>` combine with AND. `--all` lists every alive peer. |
-| `send <session_id> <message>` | Persistent delivery into the recipient's inbox (state-agnostic) |
-| `broadcast (--by <axis>... \| --all) <message>` | Fan-out to alive peers matching the axis. Calling without an axis errors out (the old default-all behavior is gone). |
+| `peers [--by <axis>...] [--all]` | List peers. Defaults to `--by home` (self `claude_home`). Combine `--by home`/`ws`/`cwd`/`repo`/`tag:<name>` with AND. `--all` crosses the home wall (DR-0005). |
+| `send <session_id> <message>` | Persistent delivery into the recipient's inbox. Emits a stderr warning if the peer is in a different `claude_home` (does not block). |
+| `broadcast [--by <axis>...] [--all] <message>` | Fan-out to alive peers matching the axis. Defaults to `--by home`; `--all` crosses the home wall. |
 | `list` | List inbox messages |
 | `read <filename>` | Display message content |
 | `accept <filename>` | Accept message → `accepted/` |

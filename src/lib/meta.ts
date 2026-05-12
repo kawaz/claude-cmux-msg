@@ -9,7 +9,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { peerDir } from "../config";
+import { peerDir, getClaudeHome } from "../config";
 import type { PeerMeta } from "../types";
 
 /**
@@ -32,4 +32,23 @@ export function readMetaByDir(dir: string): PeerMeta | null {
  */
 export function readMetaBySid(sessionId: string): PeerMeta | null {
   return readMetaByDir(peerDir(sessionId));
+}
+
+/**
+ * DR-0005: peer の claude_home が自分と違う場合に stderr に warning を出す。
+ *
+ * block はしない (send / tell / screen は sid を知ってる前提の意図的操作なので
+ * block すると UX 悪化)。warning だけ出して事故に気づかせる。
+ *
+ * peer の meta が無い場合は何もしない (壊れた peer / 初期化前)。
+ */
+export function warnIfCrossHome(peerMeta: PeerMeta | null): void {
+  if (!peerMeta) return;
+  const selfHome = getClaudeHome();
+  if (peerMeta.claude_home === selfHome) return;
+  process.stderr.write(
+    `[warning] peer ${peerMeta.session_id} は別の claude_home です\n` +
+      `  peer: ${peerMeta.claude_home}\n` +
+      `  self: ${selfHome}\n`
+  );
 }

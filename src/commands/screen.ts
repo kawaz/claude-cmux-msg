@@ -3,7 +3,7 @@ import { cmuxReadScreen } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
 import { resolvePeerSurfaceRef } from "../lib/peer-refs";
 import { isProcessForeground } from "../lib/peer";
-import { readMetaBySid } from "../lib/meta";
+import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
 
 /**
  * DR-0004: screen の安全境界。
@@ -27,6 +27,9 @@ export async function cmdScreen(args: string[]): Promise<void> {
       console.error(`session ${sessionId} の meta.json が見つかりません`);
       process.exit(1);
     }
+
+    // DR-0005: peer が別 claude_home なら warning (block しない)
+    warnIfCrossHome(meta);
 
     if (!isProcessForeground(meta.shell_pid)) {
       console.error(

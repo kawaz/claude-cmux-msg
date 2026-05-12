@@ -12,42 +12,41 @@ import {
 import { readMetaByDir } from "../lib/meta";
 import { UsageError } from "../lib/errors";
 
-const BROADCAST_HELP = `使い方: cmux-msg broadcast (--by <axis>... | --all) <メッセージ>
+const BROADCAST_HELP = `使い方: cmux-msg broadcast [--by <axis>...] [--all] <メッセージ>
+
+軸なしのデフォルトは --by home (自 claude_home に閉じる、DR-0005)。
 
 軸 (複数指定可、AND 結合):
-  --by home          自分と同じ claude_home の alive peer
+  --by home          自分と同じ claude_home の alive peer (デフォルト)
   --by ws            自分と同じ workspace の alive peer
   --by cwd           自分と同じ cwd の alive peer
   --by repo          自分と同じ repo_root の alive peer
   --by tag:<name>    指定タグを持つ alive peer
-  --all              alive な全 peer (軸無視、明示必須)
+
+明示的に壁を超える:
+  --all              alive な全 peer (claude_home 壁を超える、軸無視)
 
 例:
-  cmux-msg broadcast --by repo "build 通った"
-  cmux-msg broadcast --by ws "merge お願い"
-  cmux-msg broadcast --all "全員 stop してください"
-
-軸なし呼び出しは error (旧バージョンのデフォルト全送信動作は廃止)。`;
+  cmux-msg broadcast "build 通った"          # 自 home の alive peer
+  cmux-msg broadcast --by repo "build 通った" # 同 repo の alive peer (home 問わない)
+  cmux-msg broadcast --all "全員 stop"        # 全 home 横断`;
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
   requireCmux();
 
-  if (args.length === 0 || args.includes("--help")) {
+  if (args.includes("--help")) {
     console.log(BROADCAST_HELP);
     return;
   }
 
   const { axes, all, rest } = extractByArgs(args);
 
-  if (!all && axes.length === 0) {
-    throw new UsageError(
-      `--by <axis> または --all が必要です\n\n${BROADCAST_HELP}`
-    );
-  }
-
   if (rest.length === 0) {
     throw new UsageError(`メッセージ本文が空です\n\n${BROADCAST_HELP}`);
   }
+
+  // DR-0005: 軸なしのデフォルトは --by home
+  const effectiveAxes = !all && axes.length === 0 ? [{ kind: "home" as const }] : axes;
 
   const body = rest.join(" ");
   const mySessionId = getSessionId();
@@ -68,7 +67,7 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
     if (!all) {
       const peerMeta = readMetaByDir(p.dir);
       if (!peerMeta) continue;
-      if (!matchAllAxes(myMeta!, peerMeta, axes)) continue;
+      if (!matchAllAxes(myMeta!, peerMeta, effectiveAxes)) continue;
     }
     targets.push(p.sessionId);
   }
@@ -76,7 +75,7 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
   if (targets.length === 0) {
     const cond = all
       ? "alive"
-      : axes.map(describeAxis).join(" AND ");
+      : effectiveAxes.map(describeAxis).join(" AND ");
     console.log(`broadcast 対象なし (条件: ${cond})`);
     return;
   }

@@ -72,9 +72,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | 新しい split pane に子 CC を spawn。`--tags csv` で子の `meta.tags` を初期化 |
 | `stop <session_id>` | 子 CC を終了してペインを閉じる |
 | `whoami` | 自分のセッション情報を表示 |
-| `peers (--by <axis>... \| --all)` | peer 一覧。軸明示必須。`--by home`/`ws`/`cwd`/`repo`/`tag:<name>` を AND 結合、または `--all` で全 alive |
-| `send <session_id> <message>` | メッセージを inbox に永続配送 (state を問わない) |
-| `broadcast (--by <axis>... \| --all) <message>` | 軸で絞り込んだ alive peer にブロードキャスト。軸なしは error (デフォルト全送信は廃止) |
+| `peers [--by <axis>...] [--all]` | peer 一覧。軸なしは `--by home` (自 `claude_home`)。`--by home`/`ws`/`cwd`/`repo`/`tag:<name>` を AND 結合、`--all` で全 home 横断 (DR-0005) |
+| `send <session_id> <message>` | メッセージを inbox に永続配送。peer が別 `claude_home` の場合は stderr に warning (block しない) |
+| `broadcast [--by <axis>...] [--all] <message>` | 軸で絞り込んだ alive peer にブロードキャスト。軸なしは `--by home`、`--all` で全 home 横断 |
 | `list` | inbox のメッセージ一覧 |
 | `read <filename>` | メッセージ内容を表示 |
 | `accept <filename>` | メッセージを受理（→ `accepted/`） |

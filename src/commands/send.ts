@@ -2,6 +2,7 @@ import * as fs from "fs";
 import { requireCmux } from "../config";
 import { sendMessage } from "../lib/sender";
 import { validateSessionId } from "../lib/validate";
+import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
 import { UsageError } from "../lib/errors";
 
 const USAGE = `使い方: cmux-msg send <session_id> [<メッセージ>]
@@ -83,6 +84,9 @@ export async function cmdSend(args: string[]): Promise<void> {
   if (body.length === 0) {
     throw new UsageError("メッセージ本文が空です\n" + USAGE);
   }
+
+  // DR-0005: peer が別 claude_home なら warning (block しない)
+  warnIfCrossHome(readMetaBySid(parsed.target));
 
   const filename = await sendMessage({ target: parsed.target, body });
   console.log(`送信完了: ${filename} → ${parsed.target}`);

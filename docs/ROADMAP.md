@@ -8,7 +8,6 @@
 
 - **`cmux-msg gc --legacy`**: 旧 `<base>/<ws>/<sid>/` 構造の dir を一掃するヘルパ。DR-0004 の migration C 案で「旧構造は読まない」と決めたため不要だが、ディスクを汚すのが気になるユーザ向け
 - **peer 通信のルータプロセス**: 現状ファイル + cmux signal だが、UNIX socket に集約するとモード切替や永続 sub/pub も整理しやすい (DR-0004 で言及した将来構想)
-- **broadcast の pub/sub モデル**: 現状は 1 broadcast = N 件の独立メッセージ。共通 `broadcast_id` を持つが受信側はそれぞれ archive する必要がある。「1 件だけ broadcaster の publishing dir に置いて、受信側が pull」モデルへの再設計 (旧 ROADMAP からの継続課題)
 - **state の冪等性向上**: 現在の transitionState は read-modify-write race を守らない (single-process 前提)。Resume 時の hook 競合シナリオで race の可能性
 
 ### CLI 引数パーサの統一
@@ -30,10 +29,6 @@
 ### peers --all で death since 表示
 
 dead セッションの「いつから dead か」を表示できると gc 対象の判断が早い。ただし pid ファイルには alive 時の起動時刻 (lstart) しか記録していない。dead 検出時の時刻を別途記録する仕組みが要る (例: `<peer>/dead_at` ファイル)。優先度低、要設計。
-
-### broadcast の意味論
-
-現状は 1 broadcast = N 件の独立メッセージで、共通の `broadcast_id` だけ付く (0.19.0)。pub/sub 的に「1 件だけ自分のディレクトリに置いて受信側が pull」モデルの方が筋がいい可能性。要 DR 検討。
 
 ### message.ts 統合テストの拡充
 

@@ -36,11 +36,12 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
   cmux-msg whoami                自分のID情報を表示
-  cmux-msg peers (--by <axis>... | --all) [--include-dead]
-                                 軸明示で peer 一覧 (home/ws/cwd/repo/tag:NAME、AND 結合)。--all で全 alive
-  cmux-msg send <session_id> <メッセージ>      永続配送 (state を問わない)
-  cmux-msg broadcast (--by <axis>... | --all) <メッセージ>
-                                 軸明示でブロードキャスト。軸なしは error
+  cmux-msg peers [--by <axis>...] [--all] [--include-dead]
+                                 軸なしは --by home (自 claude_home に閉じる、DR-0005)
+                                 home/ws/cwd/repo/tag:NAME を AND 結合可、--all で全 home 横断
+  cmux-msg send <session_id> <メッセージ>      永続配送 (cross-home なら warning)
+  cmux-msg broadcast [--by <axis>...] [--all] <メッセージ>
+                                 軸なしは --by home。--all で全 home 横断
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示
   cmux-msg accept <filename>     メッセージを受理 (→ accepted/)
@@ -52,8 +53,8 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg gc [--force] [--verbose]  inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
 
 ダイレクト操作 (安全境界あり):
-  cmux-msg tell <session_id> <テキスト>  fg + state ∈ {idle, awaiting_permission} 必須
-  cmux-msg screen [session_id]           fg 必須 (引数なしは自分の surface を読む、制約なし)
+  cmux-msg tell <session_id> <テキスト>  fg + state ∈ {idle, awaiting_permission} 必須、cross-home なら warning
+  cmux-msg screen [session_id]           fg 必須 (引数なしは自分の surface を読む、制約なし)、cross-home なら warning
 
 環境変数:
   CLAUDE_CODE_SESSION_ID   自セッションの UUID (Claude Code 2.x が提供、最優先)
