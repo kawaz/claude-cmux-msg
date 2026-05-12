@@ -14,17 +14,22 @@ bin/
 src/
   cli.ts                エントリポイント、サブコマンドディスパッチ
   config.ts             env 解決 (getSessionId, requireCmux 等)
-  types.ts              MessageMeta / PeerMeta 型
+  types.ts              MessageMeta / PeerMeta / SessionState 型
   commands/             各サブコマンド実装
-  hooks/                SessionStart hook
+  hooks/                プラグインフック (session-start / user-prompt-submit / stop / stop-failure / permission-request / session-end)
   lib/
     sender.ts           メッセージ送信 (sendMessage)
     inbox.ts            受信読み出し (listInbox / readMessage / countInbox)
-    transition.ts       状態遷移 (accept / dismiss / reply)
+    transition.ts       メッセージ状態遷移 (accept / dismiss / reply)
     history.ts          history / thread の集約処理
     paths.ts            ベースパス解決 (getMsgBase)
-    peer.ts             peer 列挙・生存判定
+    peer.ts             peer 列挙・生存判定 + fg 判定 (isProcessForeground)
     peer-refs.ts        peer の surface_ref 解決
+    peer-filter.ts      DR-0004: --by <axis> / --all のパース + マッチ判定
+    meta.ts             peer の meta.json 読み込み (readMetaByDir / readMetaBySid)
+    state.ts            DR-0004: state トラッキング (transitionState / updateMeta)
+    state-hook.ts       DR-0004: state 遷移系 hook の共通ロジック
+    repo-root.ts        DR-0004: cwd から .git/.jj 親 dir を探す
     layout-docs.ts      各階層 README symlink 配置
     cmux.ts             cmux CLI ラッパー
     frontmatter.ts      YAML frontmatter パース
@@ -54,7 +59,9 @@ CLAUDE.md               リポジトリ固有の AI 向け指示
 
 ## ランタイムデータレイアウト
 
-cmux-msg が起動時に作る `~/.local/share/cmux-messages/` 配下の構造は `docs/design/data-layout-{root,workspace,session}.md` に詳細を記述。これらはランタイムで `.docs/v<version>/` にコピーされ、各階層の `README.md` が symlink で参照する。
+cmux-msg が起動時に作る `~/.local/share/cmux-messages/` 配下の構造は `docs/design/data-layout-{root,session}.md` に詳細を記述。これらはランタイムで `.docs/v<version>/` にコピーされ、各階層の `README.md` が symlink で参照する。
+
+DR-0004 で workspace_id 階層を廃止し、`<base>/<sid>/` 直接構造になった。workspace / surface / cwd / repo / claude_home / tags は `meta.json` の属性として記録される。
 
 ## docs 構成について
 
