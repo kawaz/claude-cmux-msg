@@ -109,6 +109,26 @@ describe("parseSpawnArgs", () => {
     const r = parseSpawnArgs(["worker"]);
     expect(r.json).toBe(false);
   });
+
+  test("--tags csv が配列にパースされる", () => {
+    const r = parseSpawnArgs(["worker", "--tags", "alpha,beta,gamma"]);
+    expect(r.tags).toEqual(["alpha", "beta", "gamma"]);
+  });
+
+  test("--tags 空白は trim される、空要素は除外", () => {
+    const r = parseSpawnArgs(["worker", "--tags", " alpha ,, beta "]);
+    expect(r.tags).toEqual(["alpha", "beta"]);
+  });
+
+  test("--tags=csv 形式", () => {
+    const r = parseSpawnArgs(["worker", "--tags=hot,prod"]);
+    expect(r.tags).toEqual(["hot", "prod"]);
+  });
+
+  test("--tags なしはデフォルト空配列", () => {
+    const r = parseSpawnArgs(["worker"]);
+    expect(r.tags).toEqual([]);
+  });
 });
 
 describe("findRemoteUrl", () => {

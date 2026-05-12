@@ -69,7 +69,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 
 | コマンド | 説明 |
 |---------|-------------|
-| `spawn [name] [--cwd path] [--args claude-args]` | 新しい split pane に子 CC を spawn |
+| `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | 新しい split pane に子 CC を spawn。`--tags csv` で子の `meta.tags` を初期化 |
 | `stop <session_id>` | 子 CC を終了してペインを閉じる |
 | `whoami` | 自分のセッション情報を表示 |
 | `peers (--by <axis>... \| --all)` | peer 一覧。軸明示必須。`--by home`/`ws`/`cwd`/`repo`/`tag:<name>` を AND 結合、または `--all` で全 alive |

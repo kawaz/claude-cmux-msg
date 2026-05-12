@@ -69,7 +69,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 
 | Command | Description |
 |---------|-------------|
-| `spawn [name] [--cwd path] [--args claude-args]` | Spawn a child CC in a new split pane |
+| `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | Spawn a child CC in a new split pane. `--tags csv` initializes the child's `meta.tags`. |
 | `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
 | `peers (--by <axis>... \| --all)` | List peers. Axis is required: `--by home`/`ws`/`cwd`/`repo`/`tag:<name>` combine with AND. `--all` lists every alive peer. |

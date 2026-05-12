@@ -39,7 +39,7 @@ function workspaceStateDir(): string {
   return path.join(getMsgBase(), ".workspace-state", getWorkspaceId());
 }
 
-const SPAWN_HELP = `使い方: cmux-msg spawn <name> [--cwd <path>] [--args <claude-args>] [--json]
+const SPAWN_HELP = `使い方: cmux-msg spawn <name> [--cwd <path>] [--args <claude-args>] [--tags <csv>] [--json]
 
 子CC を起動して inbox 等のメッセージング初期化を行う。
 SessionStart hook が起動完了を signal で親に通知し、親はそれを検知して spawn 完了を出力する。
@@ -50,6 +50,8 @@ SessionStart hook が起動完了を signal で親に通知し、親はそれを
 オプション:
   --cwd <path>     子CC の cwd (claude プロセス起動時の cd 先)
   --args <args>    claude に渡す追加引数 (デフォルト: --dangerously-skip-permissions)
+  --tags <csv>     子CC の meta.tags に書き込むタグ (',' 区切り)。
+                   後で broadcast --by tag:<name> / peers --by tag:<name> で絞り込める。
   --name <name>    子CC の名前 (位置引数の代わり)
   --json           {id, name, color, surface_ref, remote_url} の JSON 1 行で出力
   --help           このヘルプを表示
@@ -107,11 +109,20 @@ export interface ParsedSpawnArgs {
   claudeArgs: string;
   /** --cwd の値 (claude プロセスの cwd) */
   cwd: string;
+  /** --tags の値 (csv をパースしたタグ配列) */
+  tags: string[];
   /** --json で構造化出力 */
   json: boolean;
 }
 
-const KNOWN_VALUE_FLAGS = new Set(["--name", "--args", "--cwd"]);
+const KNOWN_VALUE_FLAGS = new Set(["--name", "--args", "--cwd", "--tags"]);
+
+function parseTags(csv: string): string[] {
+  return csv
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
   // 引数なしは副作用なくヘルプ表示 (案 B、誤発火防止)
@@ -120,6 +131,7 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
       help: true,
       claudeArgs: "--dangerously-skip-permissions",
       cwd: "",
+      tags: [],
       json: false,
     };
   }
@@ -127,6 +139,7 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
   let name: string | undefined;
   let claudeArgs = "--dangerously-skip-permissions";
   let cwd = "";
+  let tags: string[] = [];
   let json = false;
 
   for (let i = 0; i < args.length; i++) {
@@ -134,7 +147,7 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
 
     // ヘルプは最優先で処理
     if (arg === "--help") {
-      return { help: true, claudeArgs, cwd, json };
+      return { help: true, claudeArgs, cwd, tags, json };
     }
 
     // bool フラグ
@@ -158,12 +171,14 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
         claudeArgs = v;
       } else if (arg === "--cwd") {
         cwd = v;
+      } else if (arg === "--tags") {
+        tags = parseTags(v);
       }
       i++;
       continue;
     }
 
-    // --foo=bar 形式 (--name=foo / --args=... / --cwd=...)
+    // --foo=bar 形式
     if (arg.startsWith("--") && arg.includes("=")) {
       const eq = arg.indexOf("=");
       const key = arg.slice(0, eq);
@@ -178,6 +193,8 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
           claudeArgs = val;
         } else if (key === "--cwd") {
           cwd = val;
+        } else if (key === "--tags") {
+          tags = parseTags(val);
         }
         continue;
       }
@@ -199,7 +216,7 @@ export function parseSpawnArgs(args: string[]): ParsedSpawnArgs {
     }
   }
 
-  return { help: false, name, claudeArgs, cwd, json };
+  return { help: false, name, claudeArgs, cwd, tags, json };
 }
 
 /**
@@ -249,6 +266,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   let name = parsed.name ?? "";
   const claudeArgs = parsed.claudeArgs;
   const cwd = parsed.cwd;
+  const tags = parsed.tags;
 
   // 既存ピアの数からカラーインデックスを決定 (alive/dead 含む全 session)
   // DR-0004: dir 構造が sid 直接化したので base 全体を走査する。
@@ -302,12 +320,18 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${shellSingleQuote(cwd)} && ` : "";
   const msgBase = getMsgBase();
+  // tags は子の meta.tags に書き込まれる (init.ts が CMUXMSG_TAGS env から拾う)
+  const tagsEnv =
+    tags.length > 0
+      ? `CMUXMSG_TAGS=${shellSingleQuote(tags.join(","))} `
+      : "";
   const claudeCmd =
     `${cdPrefix}` +
     `CMUX_CLAUDE_HOOKS_DISABLED=1 ` +
     `CMUXMSG_PARENT_SESSION_ID=${shellSingleQuote(parentSessionId)} ` +
     `CMUXMSG_WORKER_NAME=${shellSingleQuote(name)} ` +
     `CMUXMSG_SURFACE_REF=${shellSingleQuote(surfaceRef)} ` +
+    tagsEnv +
     `claude --session-id ${shellSingleQuote(childSessionId)} ${claudeArgs} ` +
     `--add-dir ${shellSingleQuote(msgBase)} ` +
     `--plugin-dir ${shellSingleQuote(root)} ` +
