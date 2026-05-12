@@ -9,8 +9,8 @@ import {
   matchAllAxes,
   describeAxis,
 } from "../lib/peer-filter";
+import { readMetaByDir } from "../lib/meta";
 import { UsageError } from "../lib/errors";
-import type { PeerMeta } from "../types";
 
 const BROADCAST_HELP = `使い方: cmux-msg broadcast (--by <axis>... | --all) <メッセージ>
 
@@ -28,16 +28,6 @@ const BROADCAST_HELP = `使い方: cmux-msg broadcast (--by <axis>... | --all) <
   cmux-msg broadcast --all "全員 stop してください"
 
 軸なし呼び出しは error (旧バージョンのデフォルト全送信動作は廃止)。`;
-
-function readMetaSafe(dir: string): PeerMeta | null {
-  const p = path.join(dir, "meta.json");
-  if (!fs.existsSync(p)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(p, "utf-8")) as PeerMeta;
-  } catch {
-    return null;
-  }
-}
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
   requireCmux();
@@ -61,7 +51,7 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
 
   const body = rest.join(" ");
   const mySessionId = getSessionId();
-  const myMeta = readMetaSafe(myDir());
+  const myMeta = readMetaByDir(myDir());
   if (!myMeta && !all) {
     throw new UsageError(
       "自分の meta.json が見つかりません。SessionStart hook が走っていません。"
@@ -76,7 +66,7 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
     if (!p.alive) continue;
     if (!fs.existsSync(path.join(p.dir, "inbox"))) continue;
     if (!all) {
-      const peerMeta = readMetaSafe(p.dir);
+      const peerMeta = readMetaByDir(p.dir);
       if (!peerMeta) continue;
       if (!matchAllAxes(myMeta!, peerMeta, axes)) continue;
     }

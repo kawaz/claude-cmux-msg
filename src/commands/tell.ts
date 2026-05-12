@@ -1,11 +1,9 @@
-import * as fs from "fs";
-import * as path from "path";
-import { requireCmux, peerDir } from "../config";
+import { requireCmux } from "../config";
 import { cmuxSend, cmuxSendKey } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
 import { resolvePeerSurfaceRef } from "../lib/peer-refs";
 import { isProcessForeground } from "../lib/peer";
-import type { PeerMeta } from "../types";
+import { readMetaBySid } from "../lib/meta";
 
 /**
  * DR-0004: tell の安全境界。
@@ -18,16 +16,6 @@ import type { PeerMeta } from "../types";
  * `--force` フラグは設けない (kawaz 指示: 「そこにいないとわかってる場所への
  * 読み書きは意味なし問題のみ」)。
  */
-function readPeerMeta(sessionId: string): PeerMeta | null {
-  const metaPath = path.join(peerDir(sessionId), "meta.json");
-  if (!fs.existsSync(metaPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(metaPath, "utf-8")) as PeerMeta;
-  } catch {
-    return null;
-  }
-}
-
 export async function cmdTell(args: string[]): Promise<void> {
   requireCmux();
 
@@ -40,7 +28,7 @@ export async function cmdTell(args: string[]): Promise<void> {
   validateSessionId(sessionId);
   const text = args.slice(1).join(" ");
 
-  const meta = readPeerMeta(sessionId);
+  const meta = readMetaBySid(sessionId);
   if (!meta) {
     console.error(`session ${sessionId} の meta.json が見つかりません`);
     process.exit(1);

@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import * as path from "path";
 import {
   requireCmux,
@@ -8,7 +7,7 @@ import {
 } from "../config";
 import { listPeers, type PeerEntry } from "../lib/peer";
 import { extractByArgs, matchAllAxes, describeAxis } from "../lib/peer-filter";
-import type { PeerMeta } from "../types";
+import { readMetaByDir } from "../lib/meta";
 
 const PEERS_HELP = `使い方: cmux-msg peers (--by <axis>... | --all) [--include-dead]
 
@@ -29,16 +28,6 @@ axis (複数指定可、AND 結合):
   cmux-msg peers --by repo            # 同 repo の alive peer
   cmux-msg peers --by home --by ws    # claude_home AND workspace 一致
   cmux-msg peers --all                # alive な全 peer`;
-
-function readMetaSafe(dir: string): PeerMeta | null {
-  const p = path.join(dir, "meta.json");
-  if (!fs.existsSync(p)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(p, "utf-8")) as PeerMeta;
-  } catch {
-    return null;
-  }
-}
 
 export function cmdPeers(args: string[] = []): void {
   requireCmux();
@@ -63,7 +52,7 @@ export function cmdPeers(args: string[] = []): void {
   }
 
   const mySessionId = getSessionId();
-  const myMeta = readMetaSafe(myDir());
+  const myMeta = readMetaByDir(myDir());
   if (!myMeta && !all) {
     console.error(
       "自分の meta.json が見つかりません。SessionStart hook が走っていません。"
@@ -85,7 +74,7 @@ export function cmdPeers(args: string[] = []): void {
       continue;
     }
 
-    const peerMeta = readMetaSafe(peer.dir);
+    const peerMeta = readMetaByDir(peer.dir);
 
     // --all 未指定なら axis フィルタを適用 (self は素通り)
     if (!all && !isSelf) {

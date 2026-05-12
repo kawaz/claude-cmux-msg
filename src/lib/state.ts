@@ -12,6 +12,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
 import { getMsgBase, nowIso } from "../config";
+import { readMetaBySid } from "./meta";
 import type { PeerMeta, SessionState } from "../types";
 
 function metaPath(sessionId: string): string {
@@ -19,18 +20,10 @@ function metaPath(sessionId: string): string {
 }
 
 /**
- * 指定セッションの meta.json を読む。存在しなければ null。
- * パース失敗時は破損として null を返す (state 操作は best-effort)。
+ * 指定セッションの meta.json を読む。
+ * (src/lib/meta.ts の readMetaBySid に委譲。state 関連の op で使うため re-export)
  */
-export function readMeta(sessionId: string): PeerMeta | null {
-  const p = metaPath(sessionId);
-  if (!fs.existsSync(p)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(p, "utf-8")) as PeerMeta;
-  } catch {
-    return null;
-  }
-}
+export const readMeta = readMetaBySid;
 
 /**
  * meta.json を原子的に書き換える。

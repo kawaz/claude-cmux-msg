@@ -1,11 +1,9 @@
-import * as fs from "fs";
-import * as path from "path";
-import { requireCmux, peerDir } from "../config";
+import { requireCmux } from "../config";
 import { cmuxReadScreen } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
 import { resolvePeerSurfaceRef } from "../lib/peer-refs";
 import { isProcessForeground } from "../lib/peer";
-import type { PeerMeta } from "../types";
+import { readMetaBySid } from "../lib/meta";
 
 /**
  * DR-0004: screen の安全境界。
@@ -16,16 +14,6 @@ import type { PeerMeta } from "../types";
  *
  * 引数なし (`screen` 単独) の場合は自分の surface を読むだけなので制約なし。
  */
-function readPeerMeta(sessionId: string): PeerMeta | null {
-  const metaPath = path.join(peerDir(sessionId), "meta.json");
-  if (!fs.existsSync(metaPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(metaPath, "utf-8")) as PeerMeta;
-  } catch {
-    return null;
-  }
-}
-
 export async function cmdScreen(args: string[]): Promise<void> {
   requireCmux();
 
@@ -34,7 +22,7 @@ export async function cmdScreen(args: string[]): Promise<void> {
   if (sessionId) {
     validateSessionId(sessionId);
 
-    const meta = readPeerMeta(sessionId);
+    const meta = readMetaBySid(sessionId);
     if (!meta) {
       console.error(`session ${sessionId} の meta.json が見つかりません`);
       process.exit(1);
