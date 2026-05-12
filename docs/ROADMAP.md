@@ -4,6 +4,13 @@
 
 ## 検討中の改善
 
+### Phase 2 候補 (DR-0004 以降)
+
+- **`cmux-msg gc --legacy`**: 旧 `<base>/<ws>/<sid>/` 構造の dir を一掃するヘルパ。DR-0004 の migration C 案で「旧構造は読まない」と決めたため不要だが、ディスクを汚すのが気になるユーザ向け
+- **peer 通信のルータプロセス**: 現状ファイル + cmux signal だが、UNIX socket に集約するとモード切替や永続 sub/pub も整理しやすい (DR-0004 で言及した将来構想)
+- **broadcast の pub/sub モデル**: 現状は 1 broadcast = N 件の独立メッセージ。共通 `broadcast_id` を持つが受信側はそれぞれ archive する必要がある。「1 件だけ broadcaster の publishing dir に置いて、受信側が pull」モデルへの再設計 (旧 ROADMAP からの継続課題)
+- **state の冪等性向上**: 現在の transitionState は read-modify-write race を守らない (single-process 前提)。Resume 時の hook 競合シナリオで race の可能性
+
 ### CLI 引数パーサの統一
 
 各サブコマンドが独自に `args.includes("--xxx")` 等で引数を解釈しており、`spawn` の `--name X`、`history` の `--peer X`、`thread` の `--json` など実装が分散。`=` 形式 (`--name=X`) は通らない、空文字値の検証も雑。
