@@ -15,7 +15,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { requireCmux, wsDir, getSessionId } from "../config";
+import { requireCmux, getMsgBase, getSessionId } from "../config";
 import { listPeers, type PeerEntry } from "../lib/peer";
 
 function isDirEmpty(dir: string): boolean {
@@ -56,7 +56,7 @@ export function cmdGc(args: string[]): void {
   const verbose = args.includes("--verbose");
   const mySessionId = getSessionId();
 
-  const peers = listPeers(wsDir());
+  const peers = listPeers(getMsgBase());
 
   // verbose 時は保持理由を全 peer 分表示する (なぜ消えなかったかの診断)
   const candidates: PeerEntry[] = [];

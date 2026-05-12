@@ -8,7 +8,6 @@ import {
   getMsgBase,
   SPAWN_COLORS,
   pluginRoot,
-  wsDir,
 } from "../config";
 import {
   cmuxNewSplit,
@@ -28,7 +27,17 @@ const SPAWN_READY_TIMEOUT_SEC = 30;
 // claude 側に完了 signal が無いため経験則で 1 秒。
 const SLASH_COMMAND_SETTLE_MS = 1000;
 
-const LAST_WORKER_FILE = ".last-worker-surface";
+const LAST_WORKER_FILE = "last-worker-surface";
+
+/**
+ * DR-0004: workspace-scoped 状態の置き場所。
+ * `<base>/.workspace-state/<ws_id>/` に集約することで、UUID パターンで弾かれる
+ * listPeers 走査と衝突しない (旧 wsDir() 直下に `.last-worker-surface` を置く
+ * 設計は workspace_id 階層廃止で行き場を失った)。
+ */
+function workspaceStateDir(): string {
+  return path.join(getMsgBase(), ".workspace-state", getWorkspaceId());
+}
 
 const SPAWN_HELP = `使い方: cmux-msg spawn <name> [--cwd <path>] [--args <claude-args>] [--json]
 
@@ -54,7 +63,7 @@ URL は spawn 後に画面サンプリングで取得する (取れなければ 
   - 不明なフラグはエラーになります。`;
 
 async function createWorkerSurface(): Promise<string> {
-  const lastWorkerFile = path.join(wsDir(), LAST_WORKER_FILE);
+  const lastWorkerFile = path.join(workspaceStateDir(), LAST_WORKER_FILE);
 
   // 前回の子CCのsurface refを読む
   let lastSurface = "";
@@ -242,8 +251,9 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   const cwd = parsed.cwd;
 
   // 既存ピアの数からカラーインデックスを決定 (alive/dead 含む全 session)
-  const wsDirPath = path.join(getMsgBase(), getWorkspaceId());
-  const peerCount = listPeers(wsDirPath).length;
+  // DR-0004: dir 構造が sid 直接化したので base 全体を走査する。
+  // 色の循環には他 workspace の peer も加算されるが、見た目のローテに使うだけなので問題なし。
+  const peerCount = listPeers(getMsgBase()).length;
 
   // 名前未指定なら連番 (--cwd / --args のみ指定時の補完)
   if (!name) {
@@ -284,12 +294,14 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   // **quote しない**。`--args 'foo; rm'` のような任意コードはユーザの責任で
   // 渡すこと (個人プロジェクトの自分用ツールという脅威モデル)。
   //
-  // --add-dir で MSG_BASE/<workspace> を子CCのサンドボックスに明示的に許可
+  // --add-dir で MSG_BASE 全体を子CCのサンドボックスに明示的に許可
   // (子CCの cwd 配下外への書き込みは Claude Code のサンドボックスで拒否されるため、
   //  cmux-msg 用ディレクトリを明示しないと reply / accept / send が EPERM になる)
+  // DR-0004: dir 構造が sid 直接化したので base 全体を許可する。peer 全体への
+  // 配送が必要なため。
   const root = pluginRoot();
   const cdPrefix = cwd ? `cd ${shellSingleQuote(cwd)} && ` : "";
-  const msgWsDir = path.join(getMsgBase(), getWorkspaceId());
+  const msgBase = getMsgBase();
   const claudeCmd =
     `${cdPrefix}` +
     `CMUX_CLAUDE_HOOKS_DISABLED=1 ` +
@@ -297,7 +309,7 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     `CMUXMSG_WORKER_NAME=${shellSingleQuote(name)} ` +
     `CMUXMSG_SURFACE_REF=${shellSingleQuote(surfaceRef)} ` +
     `claude --session-id ${shellSingleQuote(childSessionId)} ${claudeArgs} ` +
-    `--add-dir ${shellSingleQuote(msgWsDir)} ` +
+    `--add-dir ${shellSingleQuote(msgBase)} ` +
     `--plugin-dir ${shellSingleQuote(root)} ` +
     `--name ${shellSingleQuote(name)}`;
   await cmuxSend(surfaceRef, claudeCmd);

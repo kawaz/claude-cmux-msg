@@ -15,6 +15,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { UUID_PATTERN } from "../lib/validate";
 import { getMsgBase } from "../lib/paths";
+import { transitionState } from "../lib/state";
 
 interface Input {
   session_id: string;
@@ -47,7 +48,15 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const inboxDir = path.join(getMsgBase(), workspaceId, sessionId, "inbox");
+  // DR-0004: ユーザ入力 → state を running に遷移
+  try {
+    transitionState(sessionId, "running");
+  } catch {
+    // 遷移失敗は致命的ではない (meta 未存在等)
+  }
+
+  // DR-0004: dir 構造が `<base>/<sid>/` に変更された
+  const inboxDir = path.join(getMsgBase(), sessionId, "inbox");
   const count = countUnread(inboxDir);
   if (count === 0) {
     process.exit(0);

@@ -48,22 +48,15 @@ describe("by-surface index", () => {
   test("書き込みファイルは by-surface/<surface_id> パス", async () => {
     const { writeBySurfaceIndex } = await import("./session-index");
     writeBySurfaceIndex(SURFACE_A, SESSION_A);
-    const expected = path.join(
-      tmpBase,
-      TEST_WORKSPACE,
-      "by-surface",
-      SURFACE_A
-    );
+    const expected = path.join(tmpBase, "by-surface", SURFACE_A);
     expect(fs.existsSync(expected)).toBe(true);
     expect(fs.readFileSync(expected, "utf-8").trim()).toBe(SESSION_A);
   });
 
   test("壊れた内容（UUID 形式でない）は null 扱い", async () => {
-    fs.mkdirSync(path.join(tmpBase, TEST_WORKSPACE, "by-surface"), {
-      recursive: true,
-    });
+    fs.mkdirSync(path.join(tmpBase, "by-surface"), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpBase, TEST_WORKSPACE, "by-surface", SURFACE_A),
+      path.join(tmpBase, "by-surface", SURFACE_A),
       "not-a-uuid\n"
     );
     const { readBySurfaceIndex } = await import("./session-index");
@@ -71,13 +64,8 @@ describe("by-surface index", () => {
   });
 
   test("空ファイルは null", async () => {
-    fs.mkdirSync(path.join(tmpBase, TEST_WORKSPACE, "by-surface"), {
-      recursive: true,
-    });
-    fs.writeFileSync(
-      path.join(tmpBase, TEST_WORKSPACE, "by-surface", SURFACE_A),
-      ""
-    );
+    fs.mkdirSync(path.join(tmpBase, "by-surface"), { recursive: true });
+    fs.writeFileSync(path.join(tmpBase, "by-surface", SURFACE_A), "");
     const { readBySurfaceIndex } = await import("./session-index");
     expect(readBySurfaceIndex(SURFACE_A)).toBeNull();
   });

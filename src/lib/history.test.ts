@@ -16,13 +16,19 @@ beforeEach(() => {
   workDir = fs.mkdtempSync(path.join(os.tmpdir(), "history-test-"));
   // self の dir を準備
   for (const sub of ["inbox", "accepted", "archive", "sent"]) {
-    fs.mkdirSync(path.join(workDir, WS, SELF, sub), { recursive: true });
+    fs.mkdirSync(path.join(workDir, SELF, sub), { recursive: true });
   }
   originalEnv = {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
     CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
     CMUXMSG_SESSION_ID: process.env.CMUXMSG_SESSION_ID,
+    CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
+    CMUX_SURFACE_ID: process.env.CMUX_SURFACE_ID,
   };
+  // 親プロセスが持つ CLAUDE_CODE_SESSION_ID が優先されてしまうので
+  // テスト中は明示クリアして CMUXMSG_SESSION_ID で制御する
+  delete process.env.CLAUDE_CODE_SESSION_ID;
+  delete process.env.CMUX_SURFACE_ID;
   process.env.CMUXMSG_BASE = workDir;
   process.env.CMUX_WORKSPACE_ID = WS;
   process.env.CMUXMSG_SESSION_ID = SELF;
@@ -46,7 +52,7 @@ function writeMsg(
   for (const [k, v] of Object.entries(meta)) lines.push(`${k}: ${v}`);
   lines.push("---", "", body);
   fs.writeFileSync(
-    path.join(workDir, WS, SELF, sub, filename),
+    path.join(workDir, SELF, sub, filename),
     lines.join("\n")
   );
 }

@@ -24,16 +24,19 @@ claude plugin marketplace update cmux-msg
 claude plugin update cmux-msg@cmux-msg
 ```
 
-## Identifiers
+## Identifier model (DR-0004)
 
-All commands address peers by **claude session UUID** — the value of `--session-id` passed to `claude`. `spawn` generates the child's UUID up front and starts `claude --session-id <uuid>`, so the parent knows the child's id immediately (no polling).
+The primary key for messaging is **session_id (sid)** — the UUID v4 minted by `claude --session-id <uuid>`. Every inbox, sent log and state live keyed on sid.
 
-The session_id is resolved at command time:
+- workspace / surface / cwd / repo / claude_home / tags are stored as sid-attached metadata in `meta.json`, not as directory hierarchy.
+- Inboxes live under `~/.local/share/cmux-messages/<sid>/inbox/` (sid-direct, no workspace tier).
+- "Same group" means different things in different contexts, so `peers` / `broadcast` require an explicit `--by <axis>`.
 
-1. `$CMUXMSG_SESSION_ID` (kept for the day Claude Code's `CLAUDE_ENV_FILE` mechanism actually works — Issue #15840)
-2. **Working path today**: lookup `<ws>/by-surface/<CMUX_SURFACE_ID>` (written by the SessionStart hook)
+Session id is resolved at command time in this order:
 
-Use `cmux-msg peers` to list peers and their session IDs (alive only by default; `--all` shows dead too; `--all-workspaces` lists peers across every workspace).
+1. `$CLAUDE_CODE_SESSION_ID` (Claude Code 2.x exposes this to Bash subprocesses)
+2. `$CMUXMSG_SESSION_ID` (compat / manual override)
+3. Lookup of `<base>/by-surface/<CMUX_SURFACE_ID>` (written by the SessionStart hook; works around Claude Code `CLAUDE_ENV_FILE` bug — Issue #15840)
 
 ## Quick start
 
@@ -42,21 +45,21 @@ Use `cmux-msg peers` to list peers and their session IDs (alive only by default;
 $ cmux-msg spawn worker-a --cwd /path/to/project
 spawn完了: id=1d033978-acf7-479b-b355-160ec85217b1 name=worker-a color=red
 
-# Send a task to the worker
+# Send a task to the worker (persistent)
 $ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 "Refactor src/foo.ts"
 
-# Receive the reply via Monitor + cmux-msg subscribe (see below)
+# Receive replies via Monitor + cmux-msg subscribe (see below).
 # Once a notification arrives:
 $ cmux-msg list
 $ cmux-msg read <filename>
+
+# Broadcast to every peer in the same repo
+$ cmux-msg broadcast --by repo "build green"
 
 # After several round-trips, see what you and the worker actually said:
 $ cmux-msg history
 2026-05-07T12:11:05 → 1d033978  [request]   Refactor src/foo.ts ...           (sent/...)
 2026-05-07T12:12:30 ← 1d033978  [response]  Done. Extracted helper into ...   (inbox/...)
-
-# Or focus on a single thread (parent + replies)
-$ cmux-msg thread 20260507T121105-...md
 
 # Stop the worker when done
 $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
@@ -69,9 +72,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `spawn [name] [--cwd path] [--args claude-args]` | Spawn a child CC in a new split pane |
 | `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
-| `peers [--all] [--all-workspaces]` | List peers in the same workspace (alive only by default). `--all-workspaces` (alias: `--global`) lists peers across every workspace. The `name` column shows the value at `spawn` time and does **not** follow `/rename` updates ([known limitation](./docs/ROADMAP.md#諦めた--別件)). |
-| `send <session_id> <message>` | Send a message. `session_id` is resolved across workspaces (self workspace first, then a scan of every workspace). |
-| `broadcast <message>` | Broadcast to all alive peers in the same workspace (does not cross workspaces, to avoid accidental fan-out). |
+| `peers (--by <axis>... \| --all)` | List peers. Axis is required: `--by home`/`ws`/`cwd`/`repo`/`tag:<name>` combine with AND. `--all` lists every alive peer. |
+| `send <session_id> <message>` | Persistent delivery into the recipient's inbox (state-agnostic) |
+| `broadcast (--by <axis>... \| --all) <message>` | Fan-out to alive peers matching the axis. Calling without an axis errors out (the old default-all behavior is gone). |
 | `list` | List inbox messages |
 | `read <filename>` | Display message content |
 | `accept <filename>` | Accept message → `accepted/` |
@@ -80,22 +83,22 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `subscribe` | Stream inbox events as JSONL to stdout (meant for Monitor tool) |
 | `history [--peer <session_id>] [--limit N]` | Time-merged display of inbox/accepted/archive/sent |
 | `thread <filename>` | Walk `in_reply_to` chains forward and backward to render a conversation |
-| `tell <session_id> <text>` | Send raw text to a pane (bypasses messaging). `session_id` is resolved across workspaces. |
-| `screen [session_id]` | Read pane screen content. `session_id` is resolved across workspaces. |
-| `gc [--force]` | Remove dead session directories whose `inbox/` and `accepted/` are both empty (dry-run by default; `--force` actually deletes — note this also removes `archive/` and `sent/` of those sessions) |
+| `tell <session_id> <text>` | Send raw text to a pane. Requires the peer to be foreground AND state ∈ {idle, awaiting_permission} (DR-0004). |
+| `screen [session_id]` | Read pane screen content. Requires the peer to be foreground. |
+| `gc [--force]` | Remove dead session directories whose `inbox/` and `accepted/` are both empty (dry-run by default) |
 
 Run `cmux-msg help` for the full help.
 
 ## How it works
 
-- Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<workspace>/<session_id>/inbox/`.
+- Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<session_id>/inbox/`.
 - Atomic delivery: write to `tmp/`, then rename into the recipient's `inbox/`.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - **Sender's own copy**: `send` also creates a hardlink under the sender's `sent/` directory, so the sender can later inspect what they sent (and see the recipient's `read_at` / `response_at` updates from the same inode).
-- **Per-directory README.md**: each layer (`~/.local/share/cmux-messages/`, `<workspace>/`, `<session>/`) gets a README.md symlink pointing at `.docs/latest/data-layout-*.md`. When you cd into a UUID-named directory and `ls`, you can `cat README.md` to remind yourself what that layer is.
+- **State tracking**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hooks update `state` (`idle` / `running` / `awaiting_permission` / `stopped`). `tell` consults this so it only injects input when it is safe.
 - Spawned workers are auto-initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg-bin` (compiled binary) on first run. The shell wrapper at `bin/cmux-msg` falls back to `bun run src/cli.ts` if the compiled binary is unavailable.
-- The SessionStart hook writes `<ws>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can look up its session_id without env propagation. (`$CLAUDE_ENV_FILE` is also written for forward compatibility but is not relied upon — Issue #15840.)
-- Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>/<workspace>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model.
+- The SessionStart hook writes `<base>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can resolve its session_id without env propagation.
+- Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model.
 
 ## Receiving messages (recommended pattern)
 
@@ -111,17 +114,13 @@ Monitor({
 
 > **Important**: `cmux-msg subscribe` is a long-running blocking command. Do not call it from the Bash tool directly — it will hang. Always start it via Monitor.
 
-- Each stdout line is a JSON object describing one unread message (`filename`, `from`, `priority`, `type`, `created_at`, `in_reply_to`).
+- Each stdout line is a JSON object describing one unread message.
 - Existing unread messages are re-emitted every time `subscribe` starts, so resume-after-exit does not lose messages.
 - The file itself stays in `inbox/` until you `accept`, `dismiss`, or `reply` it — the JSONL event is only a notification.
 
 ### Fallback: Unread notification via the UserPromptSubmit hook
 
-As a safety net for when Monitor was not started, the `UserPromptSubmit` hook (auto-registered by this plugin) reports unread messages on the next turn.
-
-- When the user submits a prompt, the hook peeks at `inbox/` and, if there are unread messages, injects `[cmux-msg] 未読 N 件` into the Claude context.
-- The hook does **not** fire mid-turn, so for real-time delivery `Monitor + subscribe` is still the recommended approach.
-- Spawned worker CCs are strongly told to start Monitor in the SessionStart hook output, but the parent CC has to do it explicitly.
+As a safety net for when Monitor was not started, the `UserPromptSubmit` hook (auto-registered by this plugin) reports unread messages on the next turn. It does **not** fire mid-turn — for real-time delivery use `Monitor + subscribe`.
 
 ## Reading conversations after the fact
 
@@ -137,8 +136,6 @@ $ cmux-msg history --peer 1d033978-acf7-479b-b355-160ec85217b1
 # A single in_reply_to chain
 $ cmux-msg thread 20260507T121105-653b5fba.md
 ```
-
-`history` walks `inbox/`, `accepted/`, `archive/`, and `sent/` together and sorts by `created_at`, marking each line with `→` (sent) or `←` (received). `thread` follows the `in_reply_to` field both backward (parents) and forward (children).
 
 ## Parallel spawning
 
@@ -165,8 +162,6 @@ echo 'kawaz/claude-cmux-msg' >> ~/.zsh_plugins.txt
 # manual
 source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
 ```
-
-The plugin sets up an alias to the bundled `bin/cmux-msg` wrapper (which exec's the compiled `bin/cmux-msg-bin` when present, otherwise falls back to `bun run src/cli.ts`). It also adds `completions/` to `fpath` for tab completion of subcommands and options.
 
 ## License
 

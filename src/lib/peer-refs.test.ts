@@ -21,7 +21,7 @@ afterEach(() => {
 const SID_A = "1d033978-acf7-479b-b355-160ec85217b1";
 
 function writePeerMeta(sid: string, meta: Record<string, unknown>): void {
-  const dir = path.join(tmpBase, TEST_WORKSPACE, sid);
+  const dir = path.join(tmpBase, sid);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta));
 }
@@ -50,7 +50,7 @@ describe("resolvePeerSurfaceRef", () => {
   });
 
   test("壊れた meta.json はエラー", async () => {
-    const dir = path.join(tmpBase, TEST_WORKSPACE, SID_A);
+    const dir = path.join(tmpBase, SID_A);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "meta.json"), "not json");
     const { resolvePeerSurfaceRef } = await import("./peer-refs");

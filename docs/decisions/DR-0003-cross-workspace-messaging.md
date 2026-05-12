@@ -1,8 +1,13 @@
 # DR-0003: workspace 横断のメッセージング
 
-- Status: Accepted
+- Status: Superseded by [DR-0004](DR-0004-session-as-primary-key.md)
 - Date: 2026-05-11
 - Related: [docs/issue/2026-05-11-cross-workspace-messaging.md] (起票元、解決後 delete)
+
+> **Note**: 本 DR は「session_id は workspace 横断的に一意」という前提のもと alive 走査で
+> ws 跨ぎ配送を実現する暫定対応だったが、実運用で同一 sid が複数 ws 配下にゾンビ dir を
+> 残すことが判明。**DR-0004** で「sid を主キーにした sid-unique inbox 構造」に再設計し、
+> ゾンビ問題を構造的に解消する形へ移行した。
 
 ## 背景
 

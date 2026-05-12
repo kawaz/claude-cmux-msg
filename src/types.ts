@@ -23,19 +23,52 @@ export interface MessageMeta {
 }
 
 /**
- * セッションディレクトリの meta.json 形式。
+ * セッションの遷移状態 (DR-0004)。
  *
- * `init.ts:initWorkspace` が書き込む。`undefined` のフィールドは
- * `JSON.stringify` で省かれるため optional。
+ * - `idle`: SessionStart 直後 / Stop / StopFailure 後 (ユーザ入力待ち)
+ * - `running`: UserPromptSubmit 後 (推論中・ツール実行中)
+ * - `awaiting_permission`: PermissionRequest (ユーザの許可待ち)
+ * - `stopped`: SessionEnd (プロセス終了)
+ */
+export type SessionState =
+  | "idle"
+  | "running"
+  | "awaiting_permission"
+  | "stopped";
+
+/**
+ * セッションディレクトリの meta.json 形式 (DR-0004)。
+ *
+ * - `init_at` は dir 初回作成時点で固定。resume では維持する
+ * - `last_started_at` は SessionStart hook で毎回更新 (resume 含む)
+ * - `state` / `state_changed_at` は各 hook で transitionState() を呼んで更新する
+ * - `tags` は spawn 時の CMUXMSG_TAGS env から渡される (`,` 区切り)。未指定なら `[]`
+ *
+ * `undefined` のフィールドは `JSON.stringify` で省かれるため optional。
  */
 export interface PeerMeta {
   session_id: string;
-  workspace_id: string;
-  tab_id: string;
-  surface_id?: string;
-  init_at: string;
-  shell_pid: number;
-  worker_name?: string;
   parent_session_id?: string;
+  worker_name?: string;
+  /** Claude アカウントの ~/.claude (CLAUDE_CONFIG_DIR 解決後の絶対パス) */
+  claude_home: string;
+  workspace_id: string;
+  tab_id?: string;
+  surface_id?: string;
   surface_ref?: string;
+  /** SessionStart hook 時点の cwd (claude プロセスの cwd) */
+  cwd: string;
+  /** cwd から walk up して見つけた .git or .jj の親 dir。なければ未設定 */
+  repo_root?: string;
+  /** spawn 時 CMUXMSG_TAGS env で渡されたタグの配列 (空配列を含む) */
+  tags: string[];
+  state: SessionState;
+  state_changed_at: string;
+  /** 不変。初回 init 時の時刻 */
+  init_at: string;
+  /** SessionStart で毎回更新 (resume 含む) */
+  last_started_at: string;
+  /** SessionEnd で書く。resume されると次の SessionStart で更新せず維持 */
+  last_ended_at?: string;
+  shell_pid: number;
 }

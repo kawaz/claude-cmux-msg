@@ -1,31 +1,95 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { requireCmux, wsDir, getSessionId } from "../config";
+import { requireCmux, getMsgBase, getSessionId, myDir } from "../config";
 import { sendMessage } from "../lib/sender";
 import { listPeers } from "../lib/peer";
+import {
+  extractByArgs,
+  matchAllAxes,
+  describeAxis,
+} from "../lib/peer-filter";
 import { UsageError } from "../lib/errors";
+import type { PeerMeta } from "../types";
+
+const BROADCAST_HELP = `使い方: cmux-msg broadcast (--by <axis>... | --all) <メッセージ>
+
+軸 (複数指定可、AND 結合):
+  --by home          自分と同じ claude_home の alive peer
+  --by ws            自分と同じ workspace の alive peer
+  --by cwd           自分と同じ cwd の alive peer
+  --by repo          自分と同じ repo_root の alive peer
+  --by tag:<name>    指定タグを持つ alive peer
+  --all              alive な全 peer (軸無視、明示必須)
+
+例:
+  cmux-msg broadcast --by repo "build 通った"
+  cmux-msg broadcast --by ws "merge お願い"
+  cmux-msg broadcast --all "全員 stop してください"
+
+軸なし呼び出しは error (旧バージョンのデフォルト全送信動作は廃止)。`;
+
+function readMetaSafe(dir: string): PeerMeta | null {
+  const p = path.join(dir, "meta.json");
+  if (!fs.existsSync(p)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(p, "utf-8")) as PeerMeta;
+  } catch {
+    return null;
+  }
+}
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
   requireCmux();
 
-  if (args.length < 1) {
-    throw new UsageError("使い方: cmux-msg broadcast <メッセージ>");
+  if (args.length === 0 || args.includes("--help")) {
+    console.log(BROADCAST_HELP);
+    return;
   }
 
-  const body = args.join(" ");
+  const { axes, all, rest } = extractByArgs(args);
+
+  if (!all && axes.length === 0) {
+    throw new UsageError(
+      `--by <axis> または --all が必要です\n\n${BROADCAST_HELP}`
+    );
+  }
+
+  if (rest.length === 0) {
+    throw new UsageError(`メッセージ本文が空です\n\n${BROADCAST_HELP}`);
+  }
+
+  const body = rest.join(" ");
   const mySessionId = getSessionId();
+  const myMeta = readMetaSafe(myDir());
+  if (!myMeta && !all) {
+    throw new UsageError(
+      "自分の meta.json が見つかりません。SessionStart hook が走っていません。"
+    );
+  }
 
   // alive な peer のみを対象。dead に送ると死蔵されるだけ。
-  // by-surface 等のインデックスは listPeers が UUID パターンで弾く。
-  const targets = listPeers(wsDir())
-    .filter(
-      (p) =>
-        p.sessionId !== mySessionId &&
-        p.alive &&
-        fs.existsSync(path.join(p.dir, "inbox"))
-    )
-    .map((p) => p.sessionId);
+  const peers = listPeers(getMsgBase());
+  const targets: string[] = [];
+  for (const p of peers) {
+    if (p.sessionId === mySessionId) continue;
+    if (!p.alive) continue;
+    if (!fs.existsSync(path.join(p.dir, "inbox"))) continue;
+    if (!all) {
+      const peerMeta = readMetaSafe(p.dir);
+      if (!peerMeta) continue;
+      if (!matchAllAxes(myMeta!, peerMeta, axes)) continue;
+    }
+    targets.push(p.sessionId);
+  }
+
+  if (targets.length === 0) {
+    const cond = all
+      ? "alive"
+      : axes.map(describeAxis).join(" AND ");
+    console.log(`broadcast 対象なし (条件: ${cond})`);
+    return;
+  }
 
   // この 1 broadcast で送る N 件のメッセージに共通の ID を付ける。
   // 受信側 / 送信側どちらからでも broadcast_id でグルーピングできる。

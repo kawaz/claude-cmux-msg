@@ -2,14 +2,19 @@
 
 cmux（libghosttyベースのターミナル）上で複数の Claude Code セッション間のファイルベースメッセージングを提供する Claude Code プラグイン。
 
-## 識別子モデル
+## 識別子モデル (DR-0004)
 
-- **通信単位 = claude session UUID**。`claude --session-id <uuid>` で採番
-- **画面操作 = cmux surface_ref** (`surface:N`)。tell / screen / stop の内部で使う
+- **メッセージングの主体 = session_id (sid)**。`claude --session-id <uuid>` で採番された UUID v4
+- 受信箱は `<CMUXMSG_BASE>/<sid>/{inbox,...,meta.json,pid}` (sid 直接、workspace 階層なし)
+- workspace / surface / cwd / repo / claude_home / tags は sid に紐付くメタ情報として `meta.json` に記録
+- **画面操作 = cmux surface_ref** (`surface:N`)。tell / screen / stop の内部で使う。peer の surface_ref は peer 自身の `meta.json` から引く
 - spawn は親が UUID を先行生成して `claude --session-id <uuid>` で起動。逆引きや polling は不要
-- peer の surface_ref は peer 自身の `meta.json` に書かれる
-- session_id の解決順: env `CMUXMSG_SESSION_ID` → `<ws>/by-surface/<CMUX_SURFACE_ID>` の lookup file。
-  CLAUDE_ENV_FILE 経由の env 伝播が claude-code 側で機能しない (Issue #15840) ため file lookup を主経路とする
+- session_id の解決順:
+  1. `$CLAUDE_CODE_SESSION_ID` env (Claude Code 2.x で Bash 子プロセスに渡される)
+  2. `$CMUXMSG_SESSION_ID` env (互換)
+  3. `<base>/by-surface/<CMUX_SURFACE_ID>` lookup file (CLAUDE_ENV_FILE バグ Issue #15840 回避)
+- **state トラッキング**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hook が `state` (`idle` / `running` / `awaiting_permission` / `stopped`) を更新。`tell` の安全境界に使う
+- **グルーピング軸**: `peers --by home|ws|cwd|repo|tag:<name>`。複数 `--by` は AND。軸なしは help (peers) / error (broadcast)
 
 ## 構造
 

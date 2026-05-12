@@ -34,6 +34,33 @@ export function isProcessAlive(pid: number): boolean {
 }
 
 /**
+ * DR-0004: 指定 PID がプロセスグループの foreground にあるかを判定する。
+ *
+ * `ps -o stat= -p <pid>` の出力に `+` フラグが含まれていれば foreground。
+ * 例: `S+`, `Ss+`, `R+` → fg、`S`, `Ss`, `T` → bg/suspended。
+ *
+ * tell / screen の安全境界に使う。bg / suspended なセッションに tell すると、
+ * 同じ surface に居る別 sid のプロセスに誤入力する事故が起きるため。
+ *
+ * プロセスが消えている場合は false (alive 判定の責務は別関数)。
+ */
+export function isProcessForeground(pid: number): boolean {
+  try {
+    const proc = Bun.spawnSync({
+      cmd: ["ps", "-o", "stat=", "-p", String(pid)],
+      stdout: "pipe",
+      stderr: "ignore",
+      env: { ...process.env, LC_ALL: "C", LANG: "C" },
+    });
+    const stat = new TextDecoder().decode(proc.stdout).trim();
+    if (!stat) return false;
+    return stat.includes("+");
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 指定 PID の起動時刻 (ps -o lstart= 出力) を取得する。
  * mac/Linux 両対応。プロセスが存在しない場合は null。
  *

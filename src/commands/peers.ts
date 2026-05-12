@@ -2,81 +2,128 @@ import * as fs from "fs";
 import * as path from "path";
 import {
   requireCmux,
-  wsDir,
   getSessionId,
-  getWorkspaceId,
   getMsgBase,
+  myDir,
 } from "../config";
 import { listPeers, type PeerEntry } from "../lib/peer";
+import { extractByArgs, matchAllAxes, describeAxis } from "../lib/peer-filter";
+import type { PeerMeta } from "../types";
 
-interface PeerWithWs extends PeerEntry {
-  workspaceId: string;
-}
+const PEERS_HELP = `使い方: cmux-msg peers (--by <axis>... | --all) [--include-dead]
 
-function collectAllWorkspaces(): PeerWithWs[] {
-  const base = getMsgBase();
-  const result: PeerWithWs[] = [];
-  let entries: fs.Dirent[];
+axis (複数指定可、AND 結合):
+  --by home          自分と同じ claude_home の peer
+  --by ws            自分と同じ workspace の peer
+  --by cwd           自分と同じ cwd の peer
+  --by repo          自分と同じ repo_root の peer
+  --by tag:<name>    指定タグを持つ peer
+
+明示的に全 alive 列挙:
+  --all              alive な全 peer (軸無視)
+
+その他:
+  --include-dead     dead な peer も表示 (デフォルトは alive のみ)
+
+例:
+  cmux-msg peers --by repo            # 同 repo の alive peer
+  cmux-msg peers --by home --by ws    # claude_home AND workspace 一致
+  cmux-msg peers --all                # alive な全 peer`;
+
+function readMetaSafe(dir: string): PeerMeta | null {
+  const p = path.join(dir, "meta.json");
+  if (!fs.existsSync(p)) return null;
   try {
-    entries = fs.readdirSync(base, { withFileTypes: true });
+    return JSON.parse(fs.readFileSync(p, "utf-8")) as PeerMeta;
   } catch {
-    return result;
+    return null;
   }
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const peers = listPeers(path.join(base, entry.name));
-    for (const p of peers) result.push({ ...p, workspaceId: entry.name });
-  }
-  return result;
 }
 
 export function cmdPeers(args: string[] = []): void {
   requireCmux();
 
-  const showAll = args.includes("--all");
-  const allWorkspaces =
-    args.includes("--all-workspaces") || args.includes("--global");
+  // 引数なし / --help → ヘルプ表示で終了 (DR-0004: デフォルト動作なし)
+  if (args.length === 0 || args.includes("--help")) {
+    console.log(PEERS_HELP);
+    return;
+  }
+
+  const { axes, all, rest } = extractByArgs(args);
+  const includeDead = rest.includes("--include-dead");
+  const unknown = rest.filter((a) => a !== "--include-dead");
+  if (unknown.length > 0) {
+    console.error(`不明な引数: ${unknown.join(" ")}\n\n${PEERS_HELP}`);
+    process.exit(1);
+  }
+
+  if (!all && axes.length === 0) {
+    console.error(`--by <axis> または --all が必要です\n\n${PEERS_HELP}`);
+    process.exit(1);
+  }
 
   const mySessionId = getSessionId();
-  const myWs = getWorkspaceId();
+  const myMeta = readMetaSafe(myDir());
+  if (!myMeta && !all) {
+    console.error(
+      "自分の meta.json が見つかりません。SessionStart hook が走っていません。"
+    );
+    process.exit(1);
+  }
 
-  const peers: PeerWithWs[] = allWorkspaces
-    ? collectAllWorkspaces()
-    : listPeers(wsDir()).map((p) => ({ ...p, workspaceId: myWs }));
+  const peers: PeerEntry[] = listPeers(getMsgBase());
 
   let printed = 0;
   let hiddenDead = 0;
+  let filteredOut = 0;
 
   for (const peer of peers) {
     const isSelf = peer.sessionId === mySessionId;
-    const marker = isSelf ? " (self)" : "";
-    const aliveLabel = peer.alive ? "alive" : "dead";
 
-    if (!peer.alive && !showAll && !isSelf) {
+    if (!peer.alive && !includeDead && !isSelf) {
       hiddenDead++;
       continue;
     }
 
-    let nameLabel = "";
-    const metaFile = path.join(peer.dir, "meta.json");
-    if (fs.existsSync(metaFile)) {
-      try {
-        const meta = JSON.parse(fs.readFileSync(metaFile, "utf-8"));
-        if (meta.worker_name) nameLabel = `  name=${meta.worker_name}`;
-      } catch {}
+    const peerMeta = readMetaSafe(peer.dir);
+
+    // --all 未指定なら axis フィルタを適用 (self は素通り)
+    if (!all && !isSelf) {
+      if (!peerMeta) {
+        // meta 無しは axis 評価不能 → 弾く
+        filteredOut++;
+        continue;
+      }
+      if (!matchAllAxes(myMeta!, peerMeta, axes)) {
+        filteredOut++;
+        continue;
+      }
     }
 
-    // --all-workspaces 時のみ workspace_id を表示 (普段は冗長)
-    const wsLabel = allWorkspaces ? `  ws=${peer.workspaceId}` : "";
+    const marker = isSelf ? " (self)" : "";
+    const aliveLabel = peer.alive ? "alive" : "dead";
+    const state = peerMeta?.state ?? "?";
+    const name = peerMeta?.worker_name ? `  name=${peerMeta.worker_name}` : "";
+    const ws = peerMeta?.workspace_id ? `  ws=${peerMeta.workspace_id}` : "";
+
     console.log(
-      `${peer.sessionId}  ${aliveLabel}${marker}${wsLabel}${nameLabel}`
+      `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}${ws}${name}`
     );
     printed++;
   }
 
-  if (printed === 0 && hiddenDead === 0) {
-    console.log("ピアなし");
+  if (printed === 0) {
+    const cond = all
+      ? "alive"
+      : axes.map(describeAxis).join(" AND ");
+    console.log(`ピアなし (条件: ${cond})`);
+    if (hiddenDead > 0) {
+      console.log(`  (dead ${hiddenDead}件 非表示。--include-dead で全件)`);
+    }
+    if (filteredOut > 0) {
+      console.log(`  (filter で除外 ${filteredOut}件)`);
+    }
   } else if (hiddenDead > 0) {
-    console.log(`(dead ${hiddenDead}件 非表示。--all で全件表示)`);
+    console.log(`(dead ${hiddenDead}件 非表示。--include-dead で全件表示)`);
   }
 }

@@ -1,5 +1,5 @@
-import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { readBySurfaceIndex } from "./lib/session-index";
 import { getMsgBase } from "./lib/paths";
 
@@ -15,14 +15,17 @@ export function getWorkspaceId(): string {
 /**
  * claude の session UUID。cmux-msg の通信単位。
  *
- * 解決順序:
- *   1. env CMUXMSG_SESSION_ID (将来 CLAUDE_ENV_FILE が機能した時 / 手動設定用)
- *   2. CMUX_SURFACE_ID 起点で by-surface index から逆引き
+ * 解決順序 (DR-0004):
+ *   1. env CLAUDE_CODE_SESSION_ID (Claude Code 2.x で Bash 子プロセスに提供される)
+ *   2. env CMUXMSG_SESSION_ID (CLAUDE_ENV_FILE 機能時の互換 / 手動設定用)
+ *   3. CMUX_SURFACE_ID 起点で by-surface index から逆引き
  *      (SessionStart hook が CLAUDE_ENV_FILE バグ Issue #15840 を回避するため
- *       <ws>/by-surface/<surface_id> に session_id を書いている)
- *   3. 解決不可なら ""
+ *       <base>/by-surface/<surface_id> に session_id を書いている)
+ *   4. 解決不可なら ""
  */
 export function getSessionId(): string {
+  const fromClaudeEnv = process.env.CLAUDE_CODE_SESSION_ID;
+  if (fromClaudeEnv) return fromClaudeEnv;
   const fromEnv = process.env.CMUXMSG_SESSION_ID;
   if (fromEnv) return fromEnv;
   const surfaceId = process.env.CMUX_SURFACE_ID;
@@ -37,6 +40,14 @@ export function getTabId(): string {
   return process.env.CMUX_TAB_ID || "";
 }
 
+/**
+ * Claude アカウントの ~/.claude (CLAUDE_CONFIG_DIR で切替可能)。
+ * DR-0004 のグルーピング軸 `--by home` で使う。
+ */
+export function getClaudeHome(): string {
+  return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
+}
+
 export function requireCmux(): void {
   if (!getWorkspaceId()) {
     console.error(
@@ -46,52 +57,28 @@ export function requireCmux(): void {
   }
   if (!getSessionId()) {
     console.error(
-      "エラー: session_id を解決できません (env CMUXMSG_SESSION_ID も by-surface index も無い。SessionStart hook が未実行？)"
+      "エラー: session_id を解決できません (env CLAUDE_CODE_SESSION_ID / CMUXMSG_SESSION_ID も by-surface index も無い。SessionStart hook が未実行？)"
     );
     process.exit(1);
   }
 }
 
+/**
+ * 自セッションの dir (`<base>/<sid>/`)。DR-0004 で workspace_id 階層を廃止。
+ */
 export function myDir(): string {
-  return path.join(getMsgBase(), getWorkspaceId(), getSessionId());
+  return path.join(getMsgBase(), getSessionId());
 }
 
 /**
- * peer session のディレクトリを解決する。
+ * peer session の dir (`<base>/<peerSid>/`)。
  *
- * 解決順:
- *   1. 自 workspace 配下 (`<base>/<myWs>/<sid>/`) — 同一 ws 内通信の高速パス
- *   2. 全 workspace 走査 (`<base>/*​/<sid>/`) — cross-workspace 配送 (UUID 一意性に依存)
- *   3. 見つからなければ自 ws 配下のパスを返す (呼び出し側が existsSync でエラー判定)
- *
- * Design rationale: session_id (UUID v4) は cmux-messages 配下で workspace 横断的に
- * 一意な前提。`--workspace` 明示指定は UX を悪化させるだけなので採らない。
- * Phase 1 として走査ベースで実装し、必要なら後から `<base>/by-session/` index を
- * 上に被せて O(1) 化可能 (現状は workspace 数が高々 N=10〜20 で走査コスト無視できる)。
+ * DR-0004: session_id 一意の sid-unique inbox 構造により、workspace を跨いだ
+ * 走査 fallback は不要になった。同じ sid が複数 workspace 配下に dir を持つ
+ * 旧構造の問題 (resume で dead dir が残置) も発生しない。
  */
 export function peerDir(peerSessionId: string): string {
-  const base = getMsgBase();
-  const myWs = getWorkspaceId();
-
-  const myWsCandidate = path.join(base, myWs, peerSessionId);
-  if (fs.existsSync(myWsCandidate)) return myWsCandidate;
-
-  try {
-    for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      if (entry.name === myWs) continue;
-      const candidate = path.join(base, entry.name, peerSessionId);
-      if (fs.existsSync(candidate)) return candidate;
-    }
-  } catch {
-    // base 自体が存在しない等は無視 (呼び出し側で exists チェックされる)
-  }
-
-  return myWsCandidate;
-}
-
-export function wsDir(): string {
-  return path.join(getMsgBase(), getWorkspaceId());
+  return path.join(getMsgBase(), peerSessionId);
 }
 
 export function timestamp(): string {

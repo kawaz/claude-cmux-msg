@@ -5,6 +5,9 @@
  * (Issue #15840) ため、SessionStart hook がこの index を書き、
  * cmux-msg コマンドが CMUX_SURFACE_ID を起点に session_id を逆引きする。
  *
+ * DR-0004: workspace_id 階層を廃止し `<base>/by-surface/<surface_id>` 直下に置く。
+ * surface_id は cmux 全体で一意なので workspace で分ける必要がない。
+ *
  * config.ts への循環依存を避けるため、ここではパスを env から直接組み立てる。
  */
 
@@ -20,8 +23,7 @@ function indexBaseDir(): string {
   const base =
     process.env.CMUXMSG_BASE ||
     path.join(os.homedir(), ".local/share/cmux-messages");
-  const ws = process.env.CMUX_WORKSPACE_ID || "";
-  return path.join(base, ws, INDEX_DIR);
+  return path.join(base, INDEX_DIR);
 }
 
 function indexPath(surfaceId: string): string {

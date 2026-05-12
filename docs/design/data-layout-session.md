@@ -18,8 +18,12 @@
 ├── sent/                            ← 自分が送信したメッセージ (相手の inbox とは hardlink で同じ実体)
 ├── tmp/                             ← 配送中の一時ファイル (rename で原子的配送)
 ├── pid                              ← セッションのシェル PID (生存確認用)
-└── meta.json                        ← session_id, workspace_id, surface_id 等
+└── meta.json                        ← session_id, workspace_id, claude_home,
+                                       cwd, repo_root, tags, state 等
 ```
+
+`meta.json` は DR-0004 で拡張されたメタ情報を持つ。`cmux-msg peers --by <axis>`
+での絞り込み (home / ws / cwd / repo / tag) はこのフィールドを参照する。
 
 ## メッセージファイル
 
