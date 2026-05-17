@@ -154,3 +154,63 @@ export async function cmuxWaitFor(
 export async function cmuxSignal(signal: string): Promise<void> {
   await cmuxExec(["wait-for", "-S", signal]);
 }
+
+/**
+ * surface のシェルが入力受付可能 (= 出力が落ち着いた) かを判定する純粋関数。
+ *
+ * 連続する 2 つの read-screen サンプル (prev / curr) を比較し、
+ * 「画面が非空」かつ「prev と curr が一致 (出力が静止した)」を満たすと settled とみなす。
+ *
+ * Design rationale: cmux 側に「surface のシェルが ready になった」を通知する API が
+ * 無いため、画面サンプリングの heuristic で代替する。プロンプト記号 (`❯` 等) は
+ * ユーザ環境・シェル設定で千差万別なので、記号への依存を避け「出力が静止したか」だけで
+ * 判定する。これにより new-split 直後の遅延起動シェルでも環境非依存で ready 検出できる。
+ *
+ * @param prev 直前のサンプル。初回サンプル時は null。
+ * @param curr 今回のサンプル。
+ */
+export function isSurfaceSettled(prev: string | null, curr: string): boolean {
+  // 初回サンプルは比較相手が無いので未確定
+  if (prev === null) return false;
+  // 画面がまだ何も描画されていない (空白のみ含む) なら未確定
+  if (curr.trim() === "") return false;
+  // 非空かつ前回と一致 = 出力が静止 = シェル ready とみなす
+  return prev === curr;
+}
+
+export type SurfaceReadyResult =
+  | { kind: "ready"; elapsedMs: number }
+  | { kind: "timeout"; elapsedMs: number };
+
+/**
+ * surface のシェルが ready になるまで read-screen をポーリングする。
+ *
+ * new-split で作った直後の terminal surface は zsh 等のシェルが遅延起動する
+ * (数秒かかる) ため、ここで起動完了を待ってから claude 起動コマンドを送る必要がある。
+ *
+ * `cmuxReadScreen` が一時的に失敗 (surface not found 等) しても catch して
+ * 次サンプルへ進む。タイムアウトに達したら ready 扱いせず timeout で返す
+ * (呼び出し側が best-effort で送信を続けられるよう、ready/timeout を区別する)。
+ */
+export async function cmuxWaitSurfaceReady(
+  surfaceRef: string,
+  options: { timeoutMs: number; intervalMs: number }
+): Promise<SurfaceReadyResult> {
+  const start = performance.now();
+  let prev: string | null = null;
+  while (performance.now() - start < options.timeoutMs) {
+    let curr = "";
+    try {
+      curr = await cmuxReadScreen(surfaceRef);
+    } catch {
+      // read 失敗 (surface 未生成等) は無視して次サンプルへ
+      curr = "";
+    }
+    if (isSurfaceSettled(prev, curr)) {
+      return { kind: "ready", elapsedMs: performance.now() - start };
+    }
+    prev = curr;
+    await new Promise((r) => setTimeout(r, options.intervalMs));
+  }
+  return { kind: "timeout", elapsedMs: performance.now() - start };
+}
