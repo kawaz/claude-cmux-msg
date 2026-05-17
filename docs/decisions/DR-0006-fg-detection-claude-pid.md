@@ -1,8 +1,12 @@
 # DR-0006: fg 判定の対象 pid を CMUX_CLAUDE_PID に切り替える
 
-- Status: Accepted
+- Status: Superseded by [DR-0007](DR-0007-resume-resilient-session-identity.md)
 - Date: 2026-05-17
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (§7 fg/bg 判定の対象 pid を変更)
+
+> **注記 (2026-05-17)**: 本 DR の「`CMUX_CLAUDE_PID` 起点で claude_pid を固定記録」
+> 方式は、spawn 子に `CMUX_CLAUDE_PID` が無いこと・resume で pid が陳腐化すること
+> が判明したため DR-0007 で全面的に置き換えられた。経緯は DR-0007 を参照。
 - Related: docs/issue/2026-05-14-fg-detection-from-ai-subprocess.md (起票元、解決後 delete)
 
 ## 背景
