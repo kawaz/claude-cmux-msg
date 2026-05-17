@@ -70,5 +70,6 @@ export interface PeerMeta {
   last_started_at: string;
   /** SessionEnd で書く。resume されると次の SessionStart で更新せず維持 */
   last_ended_at?: string;
-  shell_pid: number;
+  /** cmux が CMUX_CLAUDE_PID env で渡す claude プロセス本体の pid。fg/alive 判定に使う */
+  claude_pid: number;
 }

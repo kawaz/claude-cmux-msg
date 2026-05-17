@@ -22,6 +22,23 @@ export interface InitOptions {
 }
 
 /**
+ * claude プロセス本体の pid を解決する。
+ *
+ * cmux は claude プロセス本体の pid を `CMUX_CLAUDE_PID` env で明示提供する。
+ * これは pane の foreground process group に属する pid なので fg/alive 判定に使える。
+ * フックのシェル exec 最適化が効かない環境では `process.ppid` が bash サブプロセスの
+ * pid になり、pane の fg pgrp に属さず誤判定するため、CMUX_CLAUDE_PID を最優先する。
+ * env が無い/非数値の場合のみ process.ppid (なければ process.pid) にフォールバックする。
+ */
+export function resolveClaudePid(): number {
+  return (
+    parseInt(process.env.CMUX_CLAUDE_PID ?? "", 10) ||
+    process.ppid ||
+    process.pid
+  );
+}
+
+/**
  * ワークスペース初期化（共通処理）
  *
  * session-start.ts からも呼ばれる。再 init (resume / 二度目以降の hook) でも
@@ -32,13 +49,13 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
     fs.mkdirSync(path.join(dir, sub), { recursive: true });
   }
 
-  // シェルの PID + 起動時刻を記録して生存確認に使う。
+  // claude プロセス本体の PID + 起動時刻を記録して生存確認・fg 判定に使う。
   // PID 単独だと再利用で誤判定するため lstart も併記する (formatPidFile)
   // tmp + rename で原子化。中途半端な内容を他プロセスに読まれない。
-  const shellPid = process.ppid || process.pid;
+  const claudePid = resolveClaudePid();
   const pidFile = path.join(dir, "pid");
   const pidTmp = `${pidFile}.tmp.${process.pid}.${Date.now()}`;
-  fs.writeFileSync(pidTmp, formatPidFile(shellPid));
+  fs.writeFileSync(pidTmp, formatPidFile(claudePid));
   fs.renameSync(pidTmp, pidFile);
 
   const now = nowIso();
@@ -85,7 +102,7 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
     init_at: existing.init_at ?? now,
     last_started_at: now,
     last_ended_at: undefined, // 新セッション開始では未終了にリセット
-    shell_pid: shellPid,
+    claude_pid: claudePid,
   };
   fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
 

@@ -13,3 +13,4 @@
 | [DR-0003](DR-0003-cross-workspace-messaging.md) | workspace 横断のメッセージング (peerDir 2 段解決) | Superseded by DR-0004 | 2026-05-11 |
 | [DR-0004](DR-0004-session-as-primary-key.md) | メッセージングの主体を session_id 一意に整理 (sid-unique inbox / meta 拡張 / state トラッキング) | Accepted | 2026-05-12 |
 | [DR-0005](DR-0005-claude-home-default-wall.md) | claude_home 壁を実装に落とす (デフォルト軸 = home、cross-home warning) | Accepted | 2026-05-12 |
+| [DR-0006](DR-0006-fg-detection-claude-pid.md) | fg 判定の対象 pid を CMUX_CLAUDE_PID に切り替える (shell_pid → claude_pid) | Accepted | 2026-05-17 |

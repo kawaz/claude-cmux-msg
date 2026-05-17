@@ -38,7 +38,11 @@ export async function cmdTell(args: string[]): Promise<void> {
   warnIfCrossHome(meta);
 
   // fg 判定 (ps -o stat= の `+` フラグ)
-  if (!isProcessForeground(meta.shell_pid)) {
+  // Design rationale: 外部永続データ meta.json の旧形式互換のため、
+  // 旧フィールド shell_pid をフォールバックで読む (正式フィールドは claude_pid)。
+  const claudePid =
+    meta.claude_pid ?? (meta as { shell_pid?: number }).shell_pid;
+  if (claudePid === undefined || !isProcessForeground(claudePid)) {
     console.error(
       `session ${sessionId} は foreground にないため tell を拒否しました ` +
         `(別 sid のプロセスに誤入力する事故を避けるため)。\n` +

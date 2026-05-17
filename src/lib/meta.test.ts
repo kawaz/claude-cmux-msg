@@ -22,7 +22,7 @@ function makeMeta(overrides: Partial<PeerMeta> = {}): PeerMeta {
     state_changed_at: "2026-05-12T00:00:00+09:00",
     init_at: "2026-05-12T00:00:00+09:00",
     last_started_at: "2026-05-12T00:00:00+09:00",
-    shell_pid: 1234,
+    claude_pid: 1234,
     ...overrides,
   };
 }
