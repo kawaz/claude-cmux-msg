@@ -70,6 +70,13 @@ export interface PeerMeta {
   last_started_at: string;
   /** SessionEnd で書く。resume されると次の SessionStart で更新せず維持 */
   last_ended_at?: string;
-  /** cmux が CMUX_CLAUDE_PID env で渡す claude プロセス本体の pid。fg/alive 判定に使う */
-  claude_pid: number;
+  /**
+   * 最後に観測した自分の claude プロセスの pid と起動時刻 (DR-0007 決定7)。
+   *
+   * 連続性検出専用 (resume によるプロセス入れ替わりを検出するため)。
+   * tell の許可判定には使わない — 真実源は `ps` 照合 (src/lib/session-proc.ts)。
+   * pid 単独は OS の pid 再利用で誤判定するため start_time とのペアで持つ。
+   * 自分の sid を `ps` 照合して取得できなかった場合は未設定 (undefined)。
+   */
+  last_observed_pid?: { pid: number; start_time: string };
 }

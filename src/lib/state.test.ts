@@ -2,8 +2,14 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { transitionState, readMeta, updateMeta } from "./state";
+import {
+  transitionState,
+  readMeta,
+  updateMeta,
+  mergeLastObservedPid,
+} from "./state";
 import type { PeerMeta } from "../types";
+import type { SidProcessLookup } from "./session-proc";
 
 const SID = "abcdef12-3456-7890-abcd-ef1234567890";
 let workDir: string;
@@ -89,6 +95,67 @@ describe("transitionState", () => {
   test("meta が無いときは何もしない (例外も投げない)", () => {
     expect(() => transitionState(SID, "running")).not.toThrow();
     expect(fs.existsSync(path.join(workDir, SID, "meta.json"))).toBe(false);
+  });
+});
+
+describe("mergeLastObservedPid", () => {
+  const found: SidProcessLookup = {
+    kind: "found",
+    pid: 999,
+    tty: "ttys001",
+    pgid: 999,
+    tpgid: 999,
+    startTime: "Sun May 18 12:00:00 2026",
+    isForeground: true,
+    runState: "running",
+  };
+
+  test("found なら新しい (pid, start_time) を返す", () => {
+    expect(mergeLastObservedPid(undefined, found)).toEqual({
+      pid: 999,
+      start_time: "Sun May 18 12:00:00 2026",
+    });
+  });
+
+  test("not_found なら既存値を据え置く", () => {
+    const cur = { pid: 1, start_time: "old" };
+    expect(mergeLastObservedPid(cur, { kind: "not_found" })).toEqual(cur);
+  });
+
+  test("ambiguous なら既存値を据え置く", () => {
+    const cur = { pid: 1, start_time: "old" };
+    expect(
+      mergeLastObservedPid(cur, { kind: "ambiguous", procs: [] })
+    ).toEqual(cur);
+  });
+
+  test("check_failed なら既存値を据え置く", () => {
+    const cur = { pid: 1, start_time: "old" };
+    expect(
+      mergeLastObservedPid(cur, { kind: "check_failed", error: "x" })
+    ).toEqual(cur);
+  });
+
+  test("found 以外で既存値が undefined ならそのまま undefined", () => {
+    expect(mergeLastObservedPid(undefined, { kind: "not_found" })).toBeUndefined();
+  });
+});
+
+describe("transitionState last_observed_pid", () => {
+  test("ps 照合できない環境では既存の last_observed_pid を維持する", () => {
+    // テストランナー (bun) は SID の claude プロセスではないため not_found。
+    // not_found では last_observed_pid を上書きしない。
+    writeMeta({
+      session_id: SID,
+      state: "idle",
+      last_observed_pid: { pid: 7, start_time: "Sun May 18 08:00:00 2026" },
+    });
+    transitionState(SID, "running");
+    const m = readRaw();
+    expect(m.last_observed_pid).toEqual({
+      pid: 7,
+      start_time: "Sun May 18 08:00:00 2026",
+    });
   });
 });
 

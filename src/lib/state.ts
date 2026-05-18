@@ -13,6 +13,8 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import { getMsgBase, nowIso } from "../config";
 import { readMetaBySid } from "./meta";
+import { lookupSidProcess } from "./session-proc";
+import type { SidProcessLookup } from "./session-proc";
 import type { PeerMeta, SessionState } from "../types";
 
 function metaPath(sessionId: string): string {
@@ -46,17 +48,41 @@ export function updateMeta(
 }
 
 /**
+ * `lookupSidProcess` の結果を既存の `last_observed_pid` にマージする (DR-0007 決定7)。
+ *
+ * - `found` なら新しい `(pid, start_time)` を返す
+ * - `found` 以外 (not_found / ambiguous / check_failed) は既存値を据え置く
+ *   (上書きしない。誤って連続性情報を失わないため)
+ *
+ * 純粋関数として切り出してテスト可能にしている。
+ */
+export function mergeLastObservedPid(
+  current: PeerMeta["last_observed_pid"],
+  lookup: SidProcessLookup
+): PeerMeta["last_observed_pid"] {
+  if (lookup.kind === "found") {
+    return { pid: lookup.pid, start_time: lookup.startTime };
+  }
+  return current;
+}
+
+/**
  * state を遷移させて state_changed_at を更新する。
  *
  * `stopped` への遷移時は last_ended_at も埋める。SessionStart で `idle` に
  * 戻す時は last_started_at を更新する (呼び出し側の責務として明示)。
+ *
+ * 併せて DR-0007 決定7 に従い `last_observed_pid` を更新する。自分の sid を
+ * `ps` 照合し、`found` なら現在の claude pid / 起動時刻を記録、それ以外は据え置く。
  */
 export function transitionState(sessionId: string, next: SessionState): void {
   const now = nowIso();
+  const lookup = lookupSidProcess(sessionId);
   updateMeta(sessionId, (m) => ({
     ...m,
     state: next,
     state_changed_at: now,
+    last_observed_pid: mergeLastObservedPid(m.last_observed_pid, lookup),
     ...(next === "stopped" ? { last_ended_at: now } : {}),
   }));
 }

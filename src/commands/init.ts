@@ -14,28 +14,12 @@ import {
 import { setupLayoutDocs } from "../lib/layout-docs";
 import { formatPidFile } from "../lib/peer";
 import { detectRepoRoot } from "../lib/repo-root";
+import { lookupSidProcess } from "../lib/session-proc";
 import type { PeerMeta, SessionState } from "../types";
 
 export interface InitOptions {
   /** SessionStart hook の input.cwd。未指定なら process.cwd()。meta.json の cwd / repo_root 算出に使う */
   cwd?: string;
-}
-
-/**
- * claude プロセス本体の pid を解決する。
- *
- * cmux は claude プロセス本体の pid を `CMUX_CLAUDE_PID` env で明示提供する。
- * これは pane の foreground process group に属する pid なので fg/alive 判定に使える。
- * フックのシェル exec 最適化が効かない環境では `process.ppid` が bash サブプロセスの
- * pid になり、pane の fg pgrp に属さず誤判定するため、CMUX_CLAUDE_PID を最優先する。
- * env が無い/非数値の場合のみ process.ppid (なければ process.pid) にフォールバックする。
- */
-export function resolveClaudePid(): number {
-  return (
-    parseInt(process.env.CMUX_CLAUDE_PID ?? "", 10) ||
-    process.ppid ||
-    process.pid
-  );
 }
 
 /**
@@ -49,14 +33,24 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
     fs.mkdirSync(path.join(dir, sub), { recursive: true });
   }
 
-  // claude プロセス本体の PID + 起動時刻を記録して生存確認・fg 判定に使う。
-  // PID 単独だと再利用で誤判定するため lstart も併記する (formatPidFile)
-  // tmp + rename で原子化。中途半端な内容を他プロセスに読まれない。
-  const claudePid = resolveClaudePid();
-  const pidFile = path.join(dir, "pid");
-  const pidTmp = `${pidFile}.tmp.${process.pid}.${Date.now()}`;
-  fs.writeFileSync(pidTmp, formatPidFile(claudePid));
-  fs.renameSync(pidTmp, pidFile);
+  // DR-0007 決定7: 自分の claude プロセスを sid 照合 (ps) で引き、
+  // (pid, start_time) を last_observed_pid として記録する (連続性検出専用)。
+  // found 以外 (not_found / ambiguous / check_failed) なら未設定のままにする。
+  const sessionId = getSessionId();
+  const selfLookup = lookupSidProcess(sessionId);
+  const lastObservedPid =
+    selfLookup.kind === "found"
+      ? { pid: selfLookup.pid, start_time: selfLookup.startTime }
+      : undefined;
+
+  // pid ファイルにも last_observed_pid 由来の pid を記録 (生存確認用)。
+  // pid 不明 (照合失敗) のときは pid ファイルを書かない。
+  if (lastObservedPid) {
+    const pidFile = path.join(dir, "pid");
+    const pidTmp = `${pidFile}.tmp.${process.pid}.${Date.now()}`;
+    fs.writeFileSync(pidTmp, formatPidFile(lastObservedPid.pid));
+    fs.renameSync(pidTmp, pidFile);
+  }
 
   const now = nowIso();
   const cwd = opts.cwd ?? process.cwd();
@@ -85,7 +79,7 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
   const initialState: SessionState = "idle";
 
   const meta: PeerMeta = {
-    session_id: getSessionId(),
+    session_id: sessionId,
     parent_session_id:
       process.env.CMUXMSG_PARENT_SESSION_ID || existing.parent_session_id,
     worker_name: process.env.CMUXMSG_WORKER_NAME || existing.worker_name,
@@ -102,7 +96,8 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
     init_at: existing.init_at ?? now,
     last_started_at: now,
     last_ended_at: undefined, // 新セッション開始では未終了にリセット
-    claude_pid: claudePid,
+    // 照合失敗時は既存値があれば維持 (連続性情報を不用意に失わない)
+    last_observed_pid: lastObservedPid ?? existing.last_observed_pid,
   };
   fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
 
