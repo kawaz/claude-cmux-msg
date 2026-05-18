@@ -3,7 +3,13 @@ import { cmuxReadScreen } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
 import { lookupSidProcess } from "../lib/session-proc";
 import { resolveSurfaceByTty } from "../lib/cmux-surface";
-import { evaluateScreenGuard, type DenyReason } from "../lib/tell-guard";
+import {
+  evaluateScreenGuard,
+  type DenyReason,
+  type ConflictProc,
+} from "../lib/tell-guard";
+import { logDenyEvent } from "../lib/deny-log";
+import { nowIso } from "../config";
 
 /**
  * DR-0007: screen の安全境界 (決定2/5)。
@@ -37,7 +43,12 @@ export async function cmdScreen(args: string[]): Promise<void> {
 
     const decision = evaluateScreenGuard({ proc, surface });
     if (!decision.allow) {
-      reportDeny(sessionId, decision.reason, decision.detail);
+      // 関連 pid: ambiguous なら衝突 pid 群、それ以外で proc が found なら単一 pid。
+      const pids = denyPids(
+        decision.conflicts,
+        proc.kind === "found" ? proc.pid : undefined
+      );
+      reportDeny(sessionId, decision.reason, decision.detail, pids);
       process.exit(1);
     }
     ref = decision.surfaceRef;
@@ -46,14 +57,37 @@ export async function cmdScreen(args: string[]): Promise<void> {
   console.log(content);
 }
 
-/** 拒否理由コードと補足を stderr に出す。 */
+/**
+ * 拒否理由に関連する pid 群を組み立てる。
+ * ambiguous の衝突 pid 群があればそれを、なければ found な proc の単一 pid を返す。
+ */
+function denyPids(
+  conflicts: ConflictProc[] | undefined,
+  foundPid: number | undefined
+): number[] | undefined {
+  if (conflicts && conflicts.length > 0) return conflicts.map((c) => c.pid);
+  if (foundPid !== undefined) return [foundPid];
+  return undefined;
+}
+
+/** 拒否理由コードと補足を stderr に出し、観測ログにも記録する。 */
 function reportDeny(
   sessionId: string,
   reason: DenyReason,
-  detail?: string
+  detail?: string,
+  pids?: number[]
 ): void {
   process.stderr.write(
     `screen を拒否しました: session ${sessionId} [${reason}]\n`
   );
   if (detail) process.stderr.write(`  ${detail}\n`);
+  // 拒否イベントを観測ログに記録 (失敗は握り潰される)。
+  logDenyEvent({
+    timestamp: nowIso(),
+    operation: "screen",
+    sessionId,
+    reason,
+    pids,
+    detail,
+  });
 }

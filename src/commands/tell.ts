@@ -9,7 +9,10 @@ import {
   evaluateTellGuard,
   evaluateRecheck,
   type DenyReason,
+  type ConflictProc,
 } from "../lib/tell-guard";
+import { logDenyEvent } from "../lib/deny-log";
+import { nowIso } from "../config";
 
 /**
  * DR-0007: tell の安全境界 (決定2/5/6/8/9)。
@@ -86,7 +89,9 @@ export async function cmdTell(args: string[]): Promise<void> {
   });
 
   if (!decision.allow) {
-    reportDeny(sessionId, decision.reason, decision.detail);
+    // 関連 pid: ambiguous なら衝突 pid 群、それ以外で proc が found なら単一 pid。
+    const pids = denyPids(decision.conflicts, proc.kind === "found" ? proc.pid : undefined);
+    reportDeny(sessionId, decision.reason, decision.detail, pids);
     process.exit(1);
   }
 
@@ -105,7 +110,10 @@ export async function cmdTell(args: string[]): Promise<void> {
     process.stderr.write(
       `送信直前の再照合に失敗したため tell を中止しました (fail-closed)。\n`
     );
-    reportDeny(sessionId, recheckDecision.reason, recheckDecision.detail);
+    // 再照合は確定 pid (decision.pid) 指定の照会なので関連 pid はそれ。
+    reportDeny(sessionId, recheckDecision.reason, recheckDecision.detail, [
+      decision.pid,
+    ]);
     process.exit(1);
   }
 
@@ -115,16 +123,42 @@ export async function cmdTell(args: string[]): Promise<void> {
   console.log(`送信完了: ${sessionId} (${decision.surfaceRef})`);
 }
 
-/** 拒否理由コードと補足を stderr に出す。代替手段の案内も付ける。 */
+/**
+ * 拒否理由に関連する pid 群を組み立てる。
+ * ambiguous の衝突 pid 群があればそれを、なければ found な proc の単一 pid を返す。
+ */
+function denyPids(
+  conflicts: ConflictProc[] | undefined,
+  foundPid: number | undefined
+): number[] | undefined {
+  if (conflicts && conflicts.length > 0) return conflicts.map((c) => c.pid);
+  if (foundPid !== undefined) return [foundPid];
+  return undefined;
+}
+
+/**
+ * 拒否理由コードと補足を stderr に出し、観測ログにも記録する。
+ * 代替手段の案内も付ける (DR-0007 観測性節)。
+ */
 function reportDeny(
   sessionId: string,
   reason: DenyReason,
-  detail?: string
+  detail?: string,
+  pids?: number[]
 ): void {
   process.stderr.write(
     `tell を拒否しました: session ${sessionId} [${reason}]\n`
   );
   if (detail) process.stderr.write(`  ${detail}\n`);
+  // 拒否イベントを観測ログに記録 (失敗は握り潰される)。
+  logDenyEvent({
+    timestamp: nowIso(),
+    operation: "tell",
+    sessionId,
+    reason,
+    pids,
+    detail,
+  });
   // busy / not_found 等は send (inbox 配送) が代替になる。
   if (reason !== "multiline") {
     process.stderr.write(
