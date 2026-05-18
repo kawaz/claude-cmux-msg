@@ -61,7 +61,7 @@ describe("initWorkspace", () => {
     initWorkspace(dir, { cwd: workDir });
     const meta = readMeta(dir);
     expect(meta.last_observed_pid).toBeUndefined();
-    // pid 不明時は pid ファイルも書かない
+    // DR-0007 決定1: alive 判定は ps の sid 照合で行うため pid ファイルは書かない
     expect(fs.existsSync(path.join(dir, "pid"))).toBe(false);
   });
 

@@ -16,6 +16,10 @@ import { UUID_PATTERN } from "../lib/validate";
 import { writeBySurfaceIndex } from "../lib/session-index";
 import { cmuxIdentify, cmuxSignal } from "../lib/cmux";
 import { getMsgBase } from "../lib/paths";
+import {
+  detectSubscribeForSid,
+  decideSubscribeMessage,
+} from "../lib/subscribe-watch";
 
 interface SessionStartInput {
   session_id: string;
@@ -133,6 +137,12 @@ async function main(): Promise<void> {
       ? `\n未読メッセージ ${unreadCount} 件: \`${cmuxMsgBin} list\` で確認してください。`
       : "";
 
+  // DR-0007 決定10: 自分の claude の子孫プロセスツリーに subscribe が居るか実検出し、
+  // source (startup/resume/clear/compact) と組み合わせて張り直し要否の文言を出す。
+  // 実検出を source より優先する (誤検知回避)。
+  const subscribeDetected = detectSubscribeForSid(sessionId);
+  const subscribeMsg = decideSubscribeMessage(input.source, subscribeDetected);
+
   if (parentSessionId) {
     console.log(`[cmux-msg:spawned-worker]
 parent_session_id: ${parentSessionId}
@@ -145,16 +155,17 @@ cmux_msg_bin: ${cmuxMsgBin}
 
 Bash で cmux-msg を叩くときは上の cmux_msg_bin を使うこと (PATH 経由は不可)。
 
+## subscribe (新着通知購読) の状態
+${subscribeMsg.text}
+subscribe コマンド: \`${cmuxMsgBin} subscribe\` (stdout は JSONL、1 行 = 1 件の新着通知)。
+subscribe 起動時は既存未読を全件再通知するため取りこぼし無し。
+
 ## メッセージング手順
-1. セッション開始直後に **Monitor ツールで** \`${cmuxMsgBin} subscribe\` を張る（persistent: true 推奨）
-   - **重要**: subscribe は long-running で blocking。Bash ツールで直接実行するとハングします。必ず Monitor ツール経由で起動してください
-   - stdout は JSONL。1行 = 1件の未読メッセージ通知
+1. 上記「subscribe の状態」に従い、必要なら **Monitor ツールで** subscribe を起動/張り直す
 2. 通知が来たら \`cmux-msg read <filename>\` で本文確認 → 作業実施 → \`cmux-msg reply <file> "結果"\` で返信
    - reply は内部で accept してから archive に移すので、別途 \`cmux-msg accept\` は不要
    - 受け取ったが返信不要なメッセージは \`cmux-msg dismiss <filename>\` で archive へ
-3. セッションが resume された場合も同じく Monitor を張り直す
-   - subscribe 起動時に既存未読を全件再通知するため取りこぼし無し
-4. ユーザから停止指示があるまで 2 を繰り返す
+3. ユーザから停止指示があるまで 2 を繰り返す
 
 ## 補助コマンド
 - \`cmux-msg history [--peer <id>] [--limit N]\`: 自分が関わった全メッセージを時系列マージ表示（送信は sent/, 受信は inbox/accepted/archive/）
@@ -166,10 +177,10 @@ cmux_msg_bin: ${cmuxMsgBin}
 
 cmux-msg コマンドで他のCCとメッセージのやり取りができます。Bash で叩くときは上の \`cmux_msg_bin\` を使うこと (PATH 経由は不可)。
 
-**推奨**: セッション開始直後に **Monitor ツールで** \`${cmuxMsgBin} subscribe\` を persistent: true で起動してください。
-- subscribe は long-running blocking なので Bash ツールで叩くとハングします。必ず Monitor 経由で。
-- stdout は JSONL。1 行 = 1 件の新着メッセージ通知。
-- これを張らないと親 CC は新着メッセージに能動的に気付けません (補完として UserPromptSubmit hook が次ターン送信時に未読件数を通知しますが、ターン中は発火しません)。${unreadLine}`);
+## subscribe (新着通知購読) の状態
+${subscribeMsg.text}
+subscribe コマンド: \`${cmuxMsgBin} subscribe\` (stdout は JSONL、1 行 = 1 件の新着通知)。
+これを張らないと新着メッセージに能動的に気付けません (補完として UserPromptSubmit hook が次ターン送信時に未読件数を通知しますが、ターン中は発火しません)。${unreadLine}`);
   }
 }
 

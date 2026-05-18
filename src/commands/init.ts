@@ -12,7 +12,6 @@ import {
   getMsgBase,
 } from "../config";
 import { setupLayoutDocs } from "../lib/layout-docs";
-import { formatPidFile } from "../lib/peer";
 import { detectRepoRoot } from "../lib/repo-root";
 import { lookupSidProcess } from "../lib/session-proc";
 import type { PeerMeta, SessionState } from "../types";
@@ -36,21 +35,14 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
   // DR-0007 決定7: 自分の claude プロセスを sid 照合 (ps) で引き、
   // (pid, start_time) を last_observed_pid として記録する (連続性検出専用)。
   // found 以外 (not_found / ambiguous / check_failed) なら未設定のままにする。
+  // peer の alive 判定は `ps` の sid 照合 (DR-0007 決定1) で行うため pid ファイルは
+  // 書かない。連続性検出は meta.json の last_observed_pid が担う。
   const sessionId = getSessionId();
   const selfLookup = lookupSidProcess(sessionId);
   const lastObservedPid =
     selfLookup.kind === "found"
       ? { pid: selfLookup.pid, start_time: selfLookup.startTime }
       : undefined;
-
-  // pid ファイルにも last_observed_pid 由来の pid を記録 (生存確認用)。
-  // pid 不明 (照合失敗) のときは pid ファイルを書かない。
-  if (lastObservedPid) {
-    const pidFile = path.join(dir, "pid");
-    const pidTmp = `${pidFile}.tmp.${process.pid}.${Date.now()}`;
-    fs.writeFileSync(pidTmp, formatPidFile(lastObservedPid.pid));
-    fs.renameSync(pidTmp, pidFile);
-  }
 
   const now = nowIso();
   const cwd = opts.cwd ?? process.cwd();

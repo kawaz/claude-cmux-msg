@@ -2,7 +2,8 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { isProcessAlive, isPeerAlive, listPeers, formatPidFile } from "./peer";
+import { isProcessAlive, aliveFromLookup, listPeers } from "./peer";
+import type { SidProcessLookup } from "./session-proc";
 
 let workDir: string;
 
@@ -17,19 +18,8 @@ afterEach(() => {
 const SID_A = "11111111-1111-1111-1111-111111111111";
 const SID_B = "22222222-2222-2222-2222-222222222222";
 
-function makePeer(sid: string, pid: number | null): void {
-  const dir = path.join(workDir, sid);
-  fs.mkdirSync(dir, { recursive: true });
-  if (pid !== null) {
-    fs.writeFileSync(path.join(dir, "pid"), formatPidFile(pid));
-  }
-}
-
-/** 旧形式 (PID 1 行のみ) の pid ファイルを書く */
-function makePeerLegacy(sid: string, pid: number): void {
-  const dir = path.join(workDir, sid);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "pid"), String(pid));
+function makePeerDir(sid: string): void {
+  fs.mkdirSync(path.join(workDir, sid), { recursive: true });
 }
 
 describe("isProcessAlive", () => {
@@ -42,39 +32,52 @@ describe("isProcessAlive", () => {
   });
 
   test("存在しない PID は dead", () => {
-    // 大きな PID は存在しないことが多い (max は OS 依存だが 2^31 級)
     expect(isProcessAlive(2147483646)).toBe(false);
   });
 });
 
-describe("isPeerAlive", () => {
-  test("自分の PID 入りは alive", () => {
-    makePeer(SID_A, process.pid);
-    expect(isPeerAlive(path.join(workDir, SID_A))).toBe(true);
+describe("aliveFromLookup", () => {
+  test("found は alive", () => {
+    const l: SidProcessLookup = {
+      kind: "found",
+      pid: 100,
+      tty: "ttys000",
+      pgid: 100,
+      tpgid: 100,
+      startTime: "Sun May 18 10:00:00 2026",
+      isForeground: true,
+      runState: "running",
+    };
+    expect(aliveFromLookup(l)).toBe(true);
   });
 
-  test("pid ファイルが無いと dead", () => {
-    makePeer(SID_A, null);
-    expect(isPeerAlive(path.join(workDir, SID_A))).toBe(false);
+  test("not_found は dead", () => {
+    expect(aliveFromLookup({ kind: "not_found" })).toBe(false);
   });
 
-  test("不正な PID 文字列は dead", () => {
-    fs.mkdirSync(path.join(workDir, SID_A), { recursive: true });
-    fs.writeFileSync(path.join(workDir, SID_A, "pid"), "not-a-number");
-    expect(isPeerAlive(path.join(workDir, SID_A))).toBe(false);
+  test("ambiguous は alive 扱い (並行 resume でプロセスは生きている)", () => {
+    expect(
+      aliveFromLookup({
+        kind: "ambiguous",
+        procs: [
+          { pid: 100, startTime: "a" },
+          { pid: 200, startTime: "b" },
+        ],
+      })
+    ).toBe(true);
   });
 
-  test("旧形式 (PID 1 行のみ) は厳密性のため dead 扱い", () => {
-    // 旧形式は PID 再利用で誤判定するため新形式必須にした
-    makePeerLegacy(SID_A, process.pid);
-    expect(isPeerAlive(path.join(workDir, SID_A))).toBe(false);
+  test("check_failed は安全側で alive 扱い (生存を否定しきれない)", () => {
+    expect(
+      aliveFromLookup({ kind: "check_failed", error: "ps timeout" })
+    ).toBe(true);
   });
 });
 
 describe("listPeers", () => {
   test("UUID 形式のディレクトリのみ列挙", () => {
-    makePeer(SID_A, process.pid);
-    makePeer(SID_B, 1); // dead
+    makePeerDir(SID_A);
+    makePeerDir(SID_B);
     fs.mkdirSync(path.join(workDir, "by-surface"), { recursive: true });
     fs.mkdirSync(path.join(workDir, "broadcast"), { recursive: true });
     fs.writeFileSync(path.join(workDir, ".last-worker-surface"), "x");
@@ -83,15 +86,12 @@ describe("listPeers", () => {
     expect(peers.map((p) => p.sessionId).sort()).toEqual([SID_A, SID_B]);
   });
 
-  test("alive/dead が反映される", () => {
-    makePeer(SID_A, process.pid);
-    makePeer(SID_B, 1); // PID 1 は dead 扱い
-
+  test("alive 判定は sid の ps 照合で行う (検出されないテスト用 sid は dead)", () => {
+    // テスト用 UUID は実プロセスに存在しないので not_found → dead
+    makePeerDir(SID_A);
     const peers = listPeers(workDir);
     const a = peers.find((p) => p.sessionId === SID_A);
-    const b = peers.find((p) => p.sessionId === SID_B);
-    expect(a?.alive).toBe(true);
-    expect(b?.alive).toBe(false);
+    expect(a?.alive).toBe(false);
   });
 
   test("存在しないディレクトリでは空配列", () => {

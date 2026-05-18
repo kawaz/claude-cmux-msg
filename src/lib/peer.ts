@@ -1,27 +1,27 @@
 /**
  * peer (他セッション) の生存確認・列挙ヘルパ。
  *
- * `peers` / `broadcast` 等で重複していた pid チェックを集約する。
+ * `peers` / `broadcast` / `gc` 等で使う alive 判定を集約する。
  *
- * pid ファイル形式 (新):
- *   1 行目: PID
- *   2 行目: ps -o lstart= の出力 (プロセス起動時刻)
+ * alive 判定は DR-0007 決定1 に従い `ps` の `--session-id <sid>` 照合を真実源と
+ * する。peer ディレクトリ名がそのまま session_id (UUID) なので、ディレクトリ名を
+ * `lookupSidProcess` に渡してプロセスの存在を確認する。
  *
- * PID 単独だと PID 再利用で誤って alive 判定される (実機で alice2 dead に
- * broadcast が届いてしまった事例あり)。lstart 併記で「同一プロセスである」
- * ことを保証する。
- *
- * 旧形式 (PID 1 行のみ) は厳密性のため dead 扱いとする。一度 init すれば
- * 新形式に書き換わる。
+ * 旧方式 (pid ファイル + lstart 一致) は廃止した。pid ファイルは alive 判定の
+ * 唯一の読み手だったため不要になり、init.ts での書き込みも削除済み。プロセス
+ * 連続性の検出は `meta.json` の `last_observed_pid` が担う (DR-0007 決定7)。
  */
 
 import * as fs from "fs";
 import * as path from "path";
 import { isSessionId } from "./validate";
+import { lookupSidProcess, type SidProcessLookup } from "./session-proc";
 
 /**
  * 指定 PID のプロセスが alive か (シグナル 0 で生存確認)。
  * PID 1 (init) は親プロセス死亡時の orphan 扱いを避けるため dead 扱い。
+ *
+ * 補助関数。peer の alive 判定は `lookupSidProcess` ベース (sid 照合) を使う。
  */
 export function isProcessAlive(pid: number): boolean {
   if (pid === 1) return false;
@@ -34,88 +34,32 @@ export function isProcessAlive(pid: number): boolean {
 }
 
 /**
- * DR-0004: 指定 PID がプロセスグループの foreground にあるかを判定する。
+ * `lookupSidProcess` の結果から alive/dead を決める純粋関数 (DR-0007 決定1)。
  *
- * `ps -o stat= -p <pid>` の出力に `+` フラグが含まれていれば foreground。
- * 例: `S+`, `Ss+`, `R+` → fg、`S`, `Ss`, `T` → bg/suspended。
- *
- * tell / screen の安全境界に使う。bg / suspended なセッションに tell すると、
- * 同じ surface に居る別 sid のプロセスに誤入力する事故が起きるため。
- *
- * プロセスが消えている場合は false (alive 判定の責務は別関数)。
+ * - `found`        → alive
+ * - `not_found`    → dead (プロセス不在)
+ * - `ambiguous`    → alive (並行 resume 等。プロセスは複数生きている)
+ * - `check_failed` → alive (安全側。`ps` 失敗で生存を否定しきれないため、
+ *                    dead と誤判定して broadcast 等から外すより alive 扱いが安全)
  */
-export function isProcessForeground(pid: number): boolean {
-  try {
-    const proc = Bun.spawnSync({
-      cmd: ["ps", "-o", "stat=", "-p", String(pid)],
-      stdout: "pipe",
-      stderr: "ignore",
-      env: { ...process.env, LC_ALL: "C", LANG: "C" },
-    });
-    const stat = new TextDecoder().decode(proc.stdout).trim();
-    if (!stat) return false;
-    return stat.includes("+");
-  } catch {
-    return false;
+export function aliveFromLookup(lookup: SidProcessLookup): boolean {
+  switch (lookup.kind) {
+    case "found":
+      return true;
+    case "not_found":
+      return false;
+    case "ambiguous":
+      return true;
+    case "check_failed":
+      return true;
   }
 }
 
 /**
- * 指定 PID の起動時刻 (ps -o lstart= 出力) を取得する。
- * mac/Linux 両対応。プロセスが存在しない場合は null。
- *
- * `LC_ALL=C` を強制してロケール非依存にする。日本語ロケール下では
- * `日 5/ 7 12:34:56 2026` のような曜日名が混じり、書き込み時と読み込み時で
- * ロケールが違うと永遠に不一致になる事故を防ぐ。
+ * 指定 session_id の peer が alive か (`ps` の sid 照合、DR-0007 決定1)。
  */
-function getProcessStartTime(pid: number): string | null {
-  try {
-    const proc = Bun.spawnSync({
-      cmd: ["ps", "-o", "lstart=", "-p", String(pid)],
-      stdout: "pipe",
-      stderr: "ignore",
-      env: { ...process.env, LC_ALL: "C", LANG: "C" },
-    });
-    const out = new TextDecoder().decode(proc.stdout).trim();
-    return out || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * pid ファイル用の書き込み内容を生成する。
- * 形式: `<pid>\n<lstart>` (lstart 取得失敗時は PID 1 行のみ → 旧形式扱い)
- */
-export function formatPidFile(pid: number): string {
-  const lstart = getProcessStartTime(pid);
-  return lstart ? `${pid}\n${lstart}` : `${pid}`;
-}
-
-/**
- * peer ディレクトリ (`<wsDir>/<sid>/`) の pid ファイルを読んで alive 判定。
- *
- * - 新形式 (PID + lstart 2 行): PID alive かつ lstart 一致で alive
- * - 旧形式 (PID 1 行のみ): 厳密性のため dead 扱い
- */
-export function isPeerAlive(peerDir: string): boolean {
-  const pidFile = path.join(peerDir, "pid");
-  if (!fs.existsSync(pidFile)) return false;
-  let content: string;
-  try {
-    content = fs.readFileSync(pidFile, "utf-8");
-  } catch {
-    return false;
-  }
-  const lines = content.split("\n").map((l) => l.trim()).filter((l) => l);
-  if (lines.length < 2) return false; // 旧形式は dead 扱い
-  const pid = parseInt(lines[0]!, 10);
-  const recordedLstart = lines[1]!;
-  if (isNaN(pid)) return false;
-  if (!isProcessAlive(pid)) return false;
-  const currentLstart = getProcessStartTime(pid);
-  if (!currentLstart) return false;
-  return currentLstart === recordedLstart;
+export function isPeerAlive(sessionId: string): boolean {
+  return aliveFromLookup(lookupSidProcess(sessionId));
 }
 
 export interface PeerEntry {
@@ -127,6 +71,8 @@ export interface PeerEntry {
 /**
  * workspace 配下の peer (UUID 形式のセッションディレクトリ) を列挙する。
  * `by-surface` などのインデックスや内部状態ファイルは除外される。
+ *
+ * alive 判定はディレクトリ名 (= session_id) で `ps` を照合する。
  */
 export function listPeers(wsDir: string): PeerEntry[] {
   if (!fs.existsSync(wsDir)) return [];
@@ -139,7 +85,7 @@ export function listPeers(wsDir: string): PeerEntry[] {
     result.push({
       sessionId: entry.name,
       dir,
-      alive: isPeerAlive(dir),
+      alive: isPeerAlive(entry.name),
     });
   }
   return result;
