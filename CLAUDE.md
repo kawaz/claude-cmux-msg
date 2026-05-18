@@ -27,25 +27,25 @@ src/                # TypeScript ソースコード
   lib/              # 共通ライブラリ
   config.ts         # 設定管理
   types.ts          # 型定義
-bin/                # ビルド成果物 (git管理外)
-  cmux-msg          # bun compile バイナリ
+bin/
+  cmux-msg          # bash ラッパー (bun で src/cli.ts を直接実行、git 管理対象)
 skills/cmux-msg/    # スキル定義 (SKILL.md)
 hooks/              # プラグインフック定義 (hooks.json)
 ```
 
 ## 開発
 
-ビルド: `bun run build` (src/cli.ts → bin/cmux-msg-bin にコンパイル)
-- `bin/cmux-msg` は bash ラッパー（git 管理対象）。ラッパーが bin/cmux-msg-bin があれば exec、なければ bun run にフォールバックする
-- `bin/cmux-msg-bin` は gitignore（コンパイル成果物）
-テスト: `bun test`
-検証: `claude plugin validate .`
-全チェック: `just ci` (CI とローカルで同じ範囲を検査)
+cmux-msg は `bun` を必須要件とし、TypeScript (`src/cli.ts`) を常に直接実行する。コンパイル工程は無い。
+- `bin/cmux-msg` は bash ラッパー（git 管理対象）。常に `bun run src/cli.ts` を exec する
+- 型チェック: `bun run typecheck` (`tsc --noEmit`)
+- テスト: `bun test`
+- 検証: `claude plugin validate .`
+- 全チェック: `just ci` (lint→typecheck→test→validate、CI とローカルで同じ範囲)
 
 ## push
 
 `just push` を使う。以下を自動チェック:
-- コンパイル済みバンドル (bin/cmux-msg-bin) が生成可能か
+- lint / typecheck / test
 - plugin.json と marketplace.json のバージョン一致
 - main@origin からの変更に対するバージョン bump 必要性
 

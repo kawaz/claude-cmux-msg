@@ -1,7 +1,7 @@
 # claude-cmux-msg
 #
 # kawaz/* リポの共通テンプレ (kawaz/bump-semver justfile が canonical) に揃えてある。
-# 言語依存箇所 (lint/test/build) と claude-plugin 固有 (validate/check-bundle) のみカスタム。
+# 言語依存箇所 (lint/typecheck/test) と claude-plugin 固有 (validate) のみカスタム。
 # 構造変更は bump-semver 側を先に直してからこちらへ追従する。
 # ---------- settings ----------
 
@@ -46,22 +46,22 @@ push: ensure-clean test check-translations check-version-bumped
 bump-version bump="patch": ensure-clean
     new_version=$(bump-semver {{ bump }} {{ version-files }} --write --no-hint) && jj commit -m "Release v${new_version}"
 
-# CI 単一エントリ (lint→test→build→validate→check-bundle を依存重複排除で1回ずつ保証)
-ci: lint test build validate check-bundle
+# CI 単一エントリ (lint→typecheck→test→validate を依存重複排除で1回ずつ保証)
+ci: lint typecheck test validate
 
 # ---------- dev recipes (push/ci の依存、利用者が直接叩くこともある) ----------
 
-# lint (justfile フォーマット確認のみ。TS の型チェックは bun build/test 側で行う)
+# lint (justfile フォーマット確認のみ。TS の型チェックは typecheck recipe で行う)
 lint:
     just --fmt --check --unstable
 
-# テスト
-test: lint
-    bun test
+# 型チェック (cmux-msg は bun で src/cli.ts を直接実行するためコンパイル工程は無い)
+typecheck: lint
+    bun run typecheck
 
-# ビルド (TypeScript → bin/cmux-msg-bin)
-build: lint
-    bun run build
+# テスト
+test: lint typecheck
+    bun test
 
 # Claude Plugin の構造検証
 validate: lint
@@ -72,10 +72,6 @@ version:
     @bump-semver get {{ version-files }} --no-hint
 
 # ---------- check recipes (push の sanity 検証、基本は push 経由でしか叩かない) ----------
-
-# bin/cmux-msg-bin が生成されること (build の事後検証)
-check-bundle: build
-    test -x bin/cmux-msg-bin || { echo "ERROR: bin/cmux-msg-bin が生成されませんでした。" >&2; exit 1; }
 
 # ワーキングコピーがクリーン (jj は @ が empty、git は porcelain 空)
 ensure-clean: lint

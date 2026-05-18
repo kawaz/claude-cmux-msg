@@ -8,8 +8,7 @@ completions/_cmux-msg   zsh 補完
 cmux-msg.plugin.zsh     zsh プラグインエントリ (alias で bin/cmux-msg を指す)
 
 bin/
-  cmux-msg              bash ラッパースクリプト (git 管理)
-  cmux-msg-bin          bun build --compile の成果物 (gitignore)
+  cmux-msg              bash ラッパースクリプト (git 管理、bun で src/cli.ts を直接実行)
 
 src/
   cli.ts                エントリポイント、サブコマンドディスパッチ

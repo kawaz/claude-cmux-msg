@@ -9,6 +9,10 @@ Two main use cases:
 1. **AI ↔ AI communication** — a parent CC spawns worker CCs in new panes and exchanges messages with them via the file system.
 2. **Reading AI conversations as a human** — every send/reply leaves an audit trail under `~/.local/share/cmux-messages/`, and `cmux-msg history` / `cmux-msg thread` reconstruct the conversation timeline. The bundled `cmux-msg.plugin.zsh` lets you drive these from your regular shell.
 
+## Requirements
+
+- [`bun`](https://bun.sh/) — `cmux-msg` runs its TypeScript source directly with `bun` (no compile step).
+
 ## Installation
 
 ```bash
@@ -96,7 +100,7 @@ Run `cmux-msg help` for the full help.
 - Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
 - **Sender's own copy**: `send` also creates a hardlink under the sender's `sent/` directory, so the sender can later inspect what they sent (and see the recipient's `read_at` / `response_at` updates from the same inode).
 - **State tracking**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hooks update `state` (`idle` / `running` / `awaiting_permission` / `stopped`). `tell` consults this so it only injects input when it is safe.
-- Spawned workers are auto-initialized via the SessionStart hook, which also auto-builds `bin/cmux-msg-bin` (compiled binary) on first run. The shell wrapper at `bin/cmux-msg` falls back to `bun run src/cli.ts` if the compiled binary is unavailable.
+- Spawned workers are auto-initialized via the SessionStart hook. `cmux-msg` requires `bun`: the shell wrapper at `bin/cmux-msg` always runs `src/cli.ts` directly with `bun` (there is no compile step).
 - The SessionStart hook writes `<base>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can resolve its session_id without env propagation.
 - Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model.
 

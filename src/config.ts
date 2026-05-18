@@ -113,13 +113,13 @@ export function pluginRoot(): string {
   if (argv1.endsWith(`${path.sep}src${path.sep}cli.ts`)) {
     return path.dirname(path.dirname(argv1));
   }
-  // bin/cmux-msg-bin (コンパイル済み) から実行されている場合、bin/ の親がプラグインルート
+  // bin/ 配下のバイナリから実行されている場合、bin/ の親がプラグインルート
   const binDir = path.dirname(process.execPath || process.argv[0] || "");
   if (path.basename(binDir) === "bin") return path.dirname(binDir);
   // 最終フォールバック: cwd は確実に違う場所のことが多いので警告を出す
   process.stderr.write(
     `[warning] cmux-msg pluginRoot を解決できず cwd (${process.cwd()}) を使います。` +
-      `CLAUDE_PLUGIN_ROOT または bin/cmux-msg-bin 経由の起動を推奨。\n`
+      `CLAUDE_PLUGIN_ROOT 経由の起動を推奨。\n`
   );
   return process.cwd();
 }

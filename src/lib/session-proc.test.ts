@@ -101,7 +101,7 @@ describe("commandMatchesSid", () => {
   });
 
   test("argv[0] が claude でない (subscribe 等) はマッチしない", () => {
-    const cmd = `/Users/kawaz/.../cmux-msg-bin subscribe --session-id ${SID_A}`;
+    const cmd = `/Users/kawaz/.../bin/cmux-msg subscribe --session-id ${SID_A}`;
     expect(commandMatchesSid(cmd, SID_A)).toBe(false);
   });
 
@@ -299,7 +299,7 @@ describe("resolveSidFromPsRows", () => {
     const rows = [
       row({
         pid: 14898,
-        command: `/Users/kawaz/.../cmux-msg-bin subscribe --session-id ${SID_A}`,
+        command: `/Users/kawaz/.../bin/cmux-msg subscribe --session-id ${SID_A}`,
       }),
       row({ pid: 24792 }),
     ];
@@ -336,7 +336,7 @@ describe("parsePsOutput + resolveSidFromPsRows (結合)", () => {
         stat: "S",
         tty: "??",
         command:
-          "/Users/kawaz/.claude/plugins/cache/cmux-msg/bin/cmux-msg-bin subscribe",
+          "/Users/kawaz/.claude/plugins/cache/cmux-msg/bin/cmux-msg subscribe",
       }),
     ].join("\n");
     const rows = parsePsOutput(raw);

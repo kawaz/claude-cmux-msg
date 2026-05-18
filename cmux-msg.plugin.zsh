@@ -10,8 +10,7 @@
 #   source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
 #
 # 実装: 同梱の bin/cmux-msg (bash ラッパースクリプト) を alias で指す。
-# ラッパー側でコンパイル済み bin/cmux-msg-bin があれば exec、
-# なければ bun run src/cli.ts にフォールバックする。
+# ラッパーは bun で src/cli.ts を直接実行する (bun が必須要件)。
 
 [[ -o interactive ]] || return 0
 

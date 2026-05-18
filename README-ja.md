@@ -9,6 +9,10 @@
 1. **AI ↔ AI 間の通信** — 親 CC が新しいペインにワーカー CC を spawn し、ファイルシステム経由でメッセージを交換する
 2. **AI 同士の会話を後から人間が読む** — 全ての送受信は `~/.local/share/cmux-messages/` に監査ログとして残り、`cmux-msg history` / `cmux-msg thread` で会話の時系列を再構築できる。同梱の `cmux-msg.plugin.zsh` を使えば普段のシェルからも操作可能
 
+## 必要要件
+
+- [`bun`](https://bun.sh/) — `cmux-msg` は TypeScript ソースを `bun` で直接実行する（コンパイル工程なし）。
+
 ## インストール
 
 ```bash
@@ -96,7 +100,7 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 - 通知は `cmux wait-for` シグナル（`cmux-msg:<session_id>`）
 - **送信側のコピー**: `send` は送信側の `sent/` ディレクトリにも hardlink を作るため、後から自分が何を送ったかを確認できる（受信側の `read_at` / `response_at` 更新も同じ inode を共有して見える）
 - **状態トラッキング**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hook が `state` (`idle` / `running` / `awaiting_permission` / `stopped`) を更新する。`tell` はこれを参照して安全な時のみ入力を流す
-- spawn されたワーカーは SessionStart hook で自動初期化される。`bin/cmux-msg-bin`（コンパイル成果物）も初回起動時に自動ビルド。シェルラッパーの `bin/cmux-msg` はコンパイル成果物がない時 `bun run src/cli.ts` にフォールバック
+- spawn されたワーカーは SessionStart hook で自動初期化される。`cmux-msg` は `bun` を必須要件とし、シェルラッパー `bin/cmux-msg` は常に `bun` で `src/cli.ts` を直接実行する（コンパイル工程なし）
 - SessionStart hook は `<base>/by-surface/<CMUX_SURFACE_ID>` に session_id を書き込む。env 伝播なしで session_id を逆引きできる
 - 同じ workspace 内のピアは互いに信頼するモデル: `spawn` は `--add-dir <MSG_BASE>` を渡すため、子 CC は互いの inbox/sent 等を読み書きでき、サンドボックスの EPERM が起きない。脅威モデルは `docs/decisions/DR-0002-sandbox-and-peer-listing.md` を参照
 

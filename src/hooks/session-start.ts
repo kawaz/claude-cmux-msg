@@ -50,22 +50,9 @@ async function main(): Promise<void> {
 
   const msgBase = getMsgBase();
 
-  // bin/cmux-msg-bin (コンパイル済み) が無ければ自動ビルド。
-  // bin/cmux-msg はラッパースクリプトでコミット済み。
+  // cmux-msg は bun で src/cli.ts を直接実行する方式に一本化済み。
+  // bin/cmux-msg ラッパーが常に bun 実行するため、コンパイル工程は不要。
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
-  if (pluginRoot) {
-    const binPath = path.join(pluginRoot, "bin", "cmux-msg-bin");
-    if (!fs.existsSync(binPath)) {
-      try {
-        Bun.spawnSync(["bun", "run", "build"], {
-          cwd: pluginRoot,
-          stdio: ["ignore", "ignore", "ignore"],
-        });
-      } catch {
-        // ビルド失敗は無視（bun run で動作可能）
-      }
-    }
-  }
 
   // initWorkspace/countInbox が getSessionId() 経由で env を読むので先に設定
   process.env.CMUXMSG_SESSION_ID = sessionId;
