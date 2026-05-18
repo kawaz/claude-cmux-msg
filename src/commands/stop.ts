@@ -13,7 +13,17 @@ export async function cmdStop(args: string[]): Promise<void> {
 
   const sessionId = args[0]!;
   validateSessionId(sessionId);
-  const ref = resolvePeerSurfaceRef(sessionId);
+
+  // DR-0007 決定2: surface は claude の tty から動的に逆引きする。
+  // resolvePeerSurfaceRef が tty 逆引きを内包するので stop は追従するだけ。
+  let ref: string;
+  try {
+    ref = await resolvePeerSurfaceRef(sessionId);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`停止対象の surface を解決できません: ${msg}`);
+    process.exit(1);
+  }
 
   try {
     await cmuxCloseSurface(ref);

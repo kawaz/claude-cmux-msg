@@ -195,6 +195,99 @@ export function resolveSidFromPsRows(
 const PS_TIMEOUT_MS = 5000;
 
 /**
+ * 確定済み pid に対する軽量な再照合結果 (DR-0007 決定6 send 直前再照合)。
+ *
+ * - `found`: そのプロセスが今も生きており fg / runState / startTime を取得できた
+ * - `not_found`: pid 指定の ps が 0 件 (プロセスが終了した)
+ * - `check_failed`: ps の異常終了・タイムアウト・パース不能 (fail-closed)
+ */
+export type PidRecheck =
+  | {
+      kind: "found";
+      pid: number;
+      tty: string;
+      pgid: number;
+      tpgid: number;
+      startTime: string;
+      isForeground: boolean;
+      runState: RunState;
+    }
+  | { kind: "not_found" }
+  | { kind: "check_failed"; error: string };
+
+/**
+ * 確定済み pid を `ps -p <pid> -o pgid,tpgid,tty,stat,lstart` で再照会する
+ * (DR-0007 決定6)。argv パース不要・軽量。send 直前に「同一プロセスがまだ
+ * 条件を保ち続けているか (lstart 一致・fg 維持)」を確認するために使う。
+ *
+ * `LC_ALL=C` を強制し lstart をロケール非依存表記で得る。
+ * ps の異常終了・タイムアウト・パース不能は check_failed (fail-closed)。
+ */
+export function recheckPidProcess(pid: number): PidRecheck {
+  let raw: string;
+  try {
+    const proc = Bun.spawnSync({
+      cmd: ["ps", "-p", String(pid), "-o", "pid,pgid,tpgid,tty,stat,lstart"],
+      stdout: "pipe",
+      stderr: "pipe",
+      timeout: PS_TIMEOUT_MS,
+      env: { ...process.env, LC_ALL: "C", LANG: "C" },
+    });
+    // `ps -p <pid>` はプロセス不在のとき exitCode 1 (stdout はヘッダのみ or 空)。
+    // これは「プロセスが終了した」= not_found であって check_failed ではない。
+    if (proc.exitCode !== 0) {
+      const out = new TextDecoder().decode(proc.stdout);
+      const dataLines = out
+        .split("\n")
+        .filter((l) => l.trim() !== "")
+        .filter((l) => Number.isInteger(Number(l.trimStart().split(/\s+/)[0])));
+      if (dataLines.length === 0) return { kind: "not_found" };
+      // exitCode≠0 だがデータ行がある = 想定外。fail-closed。
+      const err = new TextDecoder().decode(proc.stderr).trim();
+      return {
+        kind: "check_failed",
+        error: `ps -p exited with code ${proc.exitCode}${err ? `: ${err}` : ""}`,
+      };
+    }
+    raw = new TextDecoder().decode(proc.stdout);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { kind: "check_failed", error: `ps -p execution failed: ${msg}` };
+  }
+  // データ行 (ヘッダを除く) を 1 行抽出する。
+  // 列順: pid pgid tpgid tty stat lstart(5 トークン)
+  for (const line of raw.split("\n")) {
+    if (line.trim() === "") continue;
+    const tokens = line.trimStart().split(/\s+/);
+    const linePid = Number(tokens[0]);
+    if (!Number.isInteger(linePid)) continue; // ヘッダ行
+    if (tokens.length < 10) {
+      return { kind: "check_failed", error: `ps -p output malformed` };
+    }
+    const pgid = Number(tokens[1]);
+    const tpgid = Number(tokens[2]);
+    const tty = tokens[3]!;
+    const stat = tokens[4]!;
+    const startTime = tokens.slice(5, 10).join(" ");
+    if (!Number.isInteger(pgid) || !Number.isInteger(tpgid)) {
+      return { kind: "check_failed", error: `ps -p numeric parse failed` };
+    }
+    return {
+      kind: "found",
+      pid: linePid,
+      tty,
+      pgid,
+      tpgid,
+      startTime,
+      isForeground: pgid === tpgid,
+      runState: parseRunState(stat),
+    };
+  }
+  // exitCode 0 だがデータ行が無い = プロセスは消えた。
+  return { kind: "not_found" };
+}
+
+/**
  * sid → claude プロセス情報を引く (DR-0007 決定1/3/4/11 の集約関数)。
  *
  * `ps -axww` を実行し parsePsOutput → resolveSidFromPsRows で判定する。

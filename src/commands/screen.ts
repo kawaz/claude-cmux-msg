@@ -1,16 +1,23 @@
 import { requireCmux } from "../config";
 import { cmuxReadScreen } from "../lib/cmux";
 import { validateSessionId } from "../lib/validate";
-import { resolvePeerSurfaceRef } from "../lib/peer-refs";
 import { lookupSidProcess } from "../lib/session-proc";
-import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
+import { resolveSurfaceByTty } from "../lib/cmux-surface";
+import { evaluateScreenGuard, type DenyReason } from "../lib/tell-guard";
 
 /**
- * DR-0004: screen の安全境界。
+ * DR-0007: screen の安全境界 (決定2/5)。
  *
- * fg 必須: bg / suspended な session の surface を読むと、同 surface に居る
- * 別 sid のプロセス画面を誤読する事故が起きる。state は問わない (running 中の
- * 画面を見るのは正当なユースケース)。
+ * `screen <sid>` は対象 claude の cmux surface 画面を読む。誤った surface の
+ * 誤読を防ぐため、次を全て満たすときのみ読む:
+ *
+ *   - sid 照合がちょうど 1 件 (`lookupSidProcess`)
+ *   - claude の tty → cmux surface 逆引きが成功 (`resolveSurfaceByTty`)
+ *   - claude が foreground process group にいる (pgid==tpgid)
+ *   - claude の runState が running (suspended / zombie / unresponsive は拒否)
+ *
+ * tell と違い `meta.state` は**問わない** (running 中の画面読み取りこそ有用、
+ * DR-0007 決定5)。state を読まないので cross-home でも block しない。
  *
  * 引数なし (`screen` 単独) の場合は自分の surface を読むだけなので制約なし。
  */
@@ -22,29 +29,31 @@ export async function cmdScreen(args: string[]): Promise<void> {
   if (sessionId) {
     validateSessionId(sessionId);
 
-    const meta = readMetaBySid(sessionId);
-    if (!meta) {
-      console.error(`session ${sessionId} の meta.json が見つかりません`);
+    const proc = lookupSidProcess(sessionId);
+    const surface =
+      proc.kind === "found"
+        ? await resolveSurfaceByTty(proc.tty)
+        : ({ kind: "no_surface" } as const);
+
+    const decision = evaluateScreenGuard({ proc, surface });
+    if (!decision.allow) {
+      reportDeny(sessionId, decision.reason, decision.detail);
       process.exit(1);
     }
-
-    // DR-0005: peer が別 claude_home なら warning (block しない)
-    warnIfCrossHome(meta);
-
-    // fg 判定: DR-0007 決定1/3 に従い meta の pid は使わず、sid を ps 照合して
-    // 得た claude プロセスの pgid==tpgid で判定する (真実源は ps)。
-    // NOTE: screen の安全境界の本格的な作り直しは別タスク。
-    const lookup = lookupSidProcess(sessionId);
-    if (lookup.kind !== "found" || !lookup.isForeground) {
-      console.error(
-        `session ${sessionId} は foreground にないため screen を拒否しました ` +
-          `(別 sid の画面を誤読する事故を避けるため)。`
-      );
-      process.exit(1);
-    }
-
-    ref = resolvePeerSurfaceRef(sessionId);
+    ref = decision.surfaceRef;
   }
   const content = await cmuxReadScreen(ref, true);
   console.log(content);
+}
+
+/** 拒否理由コードと補足を stderr に出す。 */
+function reportDeny(
+  sessionId: string,
+  reason: DenyReason,
+  detail?: string
+): void {
+  process.stderr.write(
+    `screen を拒否しました: session ${sessionId} [${reason}]\n`
+  );
+  if (detail) process.stderr.write(`  ${detail}\n`);
 }
