@@ -1,7 +1,7 @@
 # DR-0007: resume 耐性のあるセッション同定 (tty を不変の鍵にした tell 安全境界)
 
-- Status: Proposed
-- Date: 2026-05-17 (改訂: 2026-05-18 マルチペルソナレビュー 2 巡 + codex レビュー + 実機検証を反映)
+- Status: Accepted
+- Date: 2026-05-17 (改訂: 2026-05-18 マルチペルソナレビュー 2 巡 + codex レビュー + 実機検証を反映、同日 Accepted)
 - Supersedes: [DR-0006](DR-0006-fg-detection-claude-pid.md) (fg 判定方式を全面的に置き換え)
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (§7 fg/bg 判定 / §5 tell・screen の安全境界)
 - Related: [DR-0005](DR-0005-claude-home-default-wall.md) (cross-home 方針), docs/issue/2026-05-17-process-info-tool.md, docs/issue/2026-05-17-spawn-cleanup-design.md
