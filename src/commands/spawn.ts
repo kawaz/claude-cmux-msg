@@ -100,6 +100,49 @@ async function createWorkerSurface(): Promise<string> {
   return surfaceRef;
 }
 
+/**
+ * 親プロセスから子 claude へ明示的に継承する必要がある cmux 環境変数。
+ *
+ * Design rationale: cmux pane シェル経由の env 継承が cmux app 側の挙動変化で
+ * 壊れるケースがあり、子 SessionStart hook が `CMUX_WORKSPACE_ID` 不在で
+ * 早期 exit してしまう (signal タイムアウトの真因)。
+ * pane シェルの継承に依存せず、親の env を明示的に export 行で渡す。
+ *
+ * - CMUX_WORKSPACE_ID: 子 hook の cmux 環境チェック (必須)
+ * - CMUX_SURFACE_ID: writeBySurfaceIndex / cmuxIdentify
+ * - CMUX_TAB_ID: meta.json の tab_id
+ * - CMUX_BUNDLE_ID: cmux 識別
+ * - CMUX_CLAUDE_HOOK_CMUX_BIN: cmux CLI のパス
+ *
+ * 参照: docs/issue/2026-05-20-spawn-env-inheritance.md
+ */
+export const INHERITED_CMUX_ENV_KEYS = [
+  "CMUX_WORKSPACE_ID",
+  "CMUX_SURFACE_ID",
+  "CMUX_TAB_ID",
+  "CMUX_BUNDLE_ID",
+  "CMUX_CLAUDE_HOOK_CMUX_BIN",
+] as const;
+
+/**
+ * 親 env から `INHERITED_CMUX_ENV_KEYS` に該当する変数を取り出し、
+ * `KEY='value' KEY2='value2' ` の形にして返す (末尾にスペース付き、未設定キーは出力しない)。
+ *
+ * 未設定 / 空文字のキーは export 行を出力しない。誤って空値で上書きしてしまうと
+ * cmux pane シェルが本来継承しているはずの値を消してしまうため (シェル側継承に任せる)。
+ */
+export function buildInheritedCmuxEnvPrefix(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  const parts: string[] = [];
+  for (const key of INHERITED_CMUX_ENV_KEYS) {
+    const v = env[key];
+    if (v === undefined || v === "") continue;
+    parts.push(`${key}=${shellSingleQuote(v)}`);
+  }
+  return parts.length > 0 ? parts.join(" ") + " " : "";
+}
+
 export interface ParsedSpawnArgs {
   /** ヘルプ表示モードなら true (起動はしない) */
   help: boolean;
@@ -325,9 +368,13 @@ export async function cmdSpawn(args: string[]): Promise<void> {
     tags.length > 0
       ? `CMUXMSG_TAGS=${shellSingleQuote(tags.join(","))} `
       : "";
+  // cmux pane シェル経由の env 継承が壊れるケースに備え、親プロセスから
+  // CMUX_* を明示的に export する (docs/issue/2026-05-20-spawn-env-inheritance.md)。
+  const cmuxEnvPrefix = buildInheritedCmuxEnvPrefix();
   const claudeCmd =
     `${cdPrefix}` +
     `CMUX_CLAUDE_HOOKS_DISABLED=1 ` +
+    cmuxEnvPrefix +
     `CMUXMSG_PARENT_SESSION_ID=${shellSingleQuote(parentSessionId)} ` +
     `CMUXMSG_WORKER_NAME=${shellSingleQuote(name)} ` +
     `CMUXMSG_SURFACE_REF=${shellSingleQuote(surfaceRef)} ` +

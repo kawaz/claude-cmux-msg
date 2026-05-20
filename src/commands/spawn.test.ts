@@ -1,5 +1,10 @@
 import { describe, test, expect } from "bun:test";
-import { parseSpawnArgs, findRemoteUrl } from "./spawn";
+import {
+  parseSpawnArgs,
+  findRemoteUrl,
+  buildInheritedCmuxEnvPrefix,
+  INHERITED_CMUX_ENV_KEYS,
+} from "./spawn";
 import { UsageError } from "../lib/errors";
 
 describe("parseSpawnArgs", () => {
@@ -128,6 +133,72 @@ describe("parseSpawnArgs", () => {
   test("--tags なしはデフォルト空配列", () => {
     const r = parseSpawnArgs(["worker"]);
     expect(r.tags).toEqual([]);
+  });
+});
+
+describe("buildInheritedCmuxEnvPrefix", () => {
+  test("CMUX_WORKSPACE_ID が設定されていれば export 行が含まれる", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({
+      CMUX_WORKSPACE_ID: "4A9E0D17-XXXX",
+    });
+    expect(prefix).toContain("CMUX_WORKSPACE_ID='4A9E0D17-XXXX'");
+    // 末尾はスペースで終わり、後続トークンと連結可能
+    expect(prefix.endsWith(" ")).toBe(true);
+  });
+
+  test("複数キーが設定されていれば全部 export 行が出る", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({
+      CMUX_WORKSPACE_ID: "ws-1",
+      CMUX_SURFACE_ID: "surf-2",
+      CMUX_TAB_ID: "tab-3",
+      CMUX_BUNDLE_ID: "bundle-4",
+      CMUX_CLAUDE_HOOK_CMUX_BIN: "/usr/local/bin/cmux",
+    });
+    expect(prefix).toContain("CMUX_WORKSPACE_ID='ws-1'");
+    expect(prefix).toContain("CMUX_SURFACE_ID='surf-2'");
+    expect(prefix).toContain("CMUX_TAB_ID='tab-3'");
+    expect(prefix).toContain("CMUX_BUNDLE_ID='bundle-4'");
+    expect(prefix).toContain(
+      "CMUX_CLAUDE_HOOK_CMUX_BIN='/usr/local/bin/cmux'"
+    );
+  });
+
+  test("未設定のキーは export 行が出ない (シェル側継承に任せる)", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({
+      CMUX_WORKSPACE_ID: "ws-1",
+      // 他は未設定
+    });
+    expect(prefix).toContain("CMUX_WORKSPACE_ID='ws-1'");
+    expect(prefix).not.toContain("CMUX_SURFACE_ID=");
+    expect(prefix).not.toContain("CMUX_TAB_ID=");
+    expect(prefix).not.toContain("CMUX_BUNDLE_ID=");
+    expect(prefix).not.toContain("CMUX_CLAUDE_HOOK_CMUX_BIN=");
+  });
+
+  test("空文字のキーも export 行が出ない (誤って空値上書きしない)", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({
+      CMUX_WORKSPACE_ID: "",
+      CMUX_SURFACE_ID: "surf-2",
+    });
+    expect(prefix).not.toContain("CMUX_WORKSPACE_ID=");
+    expect(prefix).toContain("CMUX_SURFACE_ID='surf-2'");
+  });
+
+  test("全部未設定なら空文字を返す", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({});
+    expect(prefix).toBe("");
+  });
+
+  test("値内のシングルクォートが shellSingleQuote でエスケープされる", () => {
+    const prefix = buildInheritedCmuxEnvPrefix({
+      CMUX_WORKSPACE_ID: "it's",
+    });
+    // shellSingleQuote は ' を '\'' に置換する
+    expect(prefix).toContain(`CMUX_WORKSPACE_ID='it'\\''s'`);
+  });
+
+  test("INHERITED_CMUX_ENV_KEYS に CMUX_WORKSPACE_ID が含まれる (必須)", () => {
+    expect(INHERITED_CMUX_ENV_KEYS).toContain("CMUX_WORKSPACE_ID");
   });
 });
 
