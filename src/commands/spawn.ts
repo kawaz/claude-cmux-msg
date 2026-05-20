@@ -16,6 +16,7 @@ import {
   cmuxRenameTab,
   cmuxReadScreen,
   cmuxWaitFor,
+  cmuxWaitSurfaceReady,
 } from "../lib/cmux";
 import { validateName, isSessionId, shellSingleQuote } from "../lib/validate";
 import { listPeers } from "../lib/peer";
@@ -337,6 +338,22 @@ export async function cmdSpawn(args: string[]): Promise<void> {
   if (!surfaceRef) {
     console.error(`エラー: surface ref が取得できませんでした`);
     process.exit(1);
+  }
+
+  // new-split で作った直後の terminal surface はシェルの起動が遅延し、
+  // 起動前に cmuxSend で claude コマンドを送ると空打ちされて claude が
+  // 起動しない (子の hook も走らず signal タイムアウトになる)。
+  // シェルが ready になるまで待ってからコマンドを送る。
+  // best-effort: timeout になっても警告だけ出して送信は試みる。
+  const surfaceReady = await cmuxWaitSurfaceReady(surfaceRef, {
+    timeoutMs: 10000,
+    intervalMs: 400,
+  });
+  if (surfaceReady.kind === "timeout") {
+    console.error(
+      `警告: 子 pane のシェルが ${surfaceReady.elapsedMs}ms 以内に ready に` +
+        ` なりませんでした (best-effort で送信を続行)`
+    );
   }
 
   // 子 session の UUID を親が先行生成（claude --session-id で採番）
