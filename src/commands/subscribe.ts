@@ -2,6 +2,7 @@ import { requireCmux, getSessionId } from "../config";
 import { listInbox, type InboxMessage } from "../lib/inbox";
 import { cmuxWaitFor } from "../lib/cmux";
 import { diffInbox } from "../lib/subscribe";
+import { pickStableCwd } from "../lib/paths";
 
 // cmux wait-for のタイムアウト。タイムアウト後は inbox を再スキャンして次の wait に入る。
 // 環境変数 CMUXMSG_SUBSCRIBE_TIMEOUT (秒) で上書き可能。
@@ -24,6 +25,17 @@ function emit(msg: InboxMessage): void {
 
 export async function cmdSubscribe(_args: string[]): Promise<void> {
   requireCmux();
+
+  // cwd (worktree 等) がセッション中に削除されても subscribe が落ちないよう、
+  // 起動時に安定 dir へ移動する。cwd が残っていると、子プロセス `cmux wait-for`
+  // の spawn 時に getcwd() が ENOENT で失敗し subscribe ごと exit 1 になる。
+  // subscribe は Monitor 経由の専用プロセスなので、この chdir は Claude Code
+  // 本体の cwd には影響しない。
+  try {
+    process.chdir(pickStableCwd());
+  } catch {
+    // chdir 失敗は致命ではない (元 cwd が生きていればそのまま続行可能)
+  }
 
   // フォアグラウンド (TTY) 起動の警告。Monitor / pipe 経由なら isTTY=false。
   // subscribe は long-running blocking なので、CC の Bash ツールから叩くとハングする。

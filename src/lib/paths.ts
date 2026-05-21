@@ -10,6 +10,7 @@
  * すべての利用箇所に正しく反映されるよう、関数経由 (`getMsgBase()`) に統一。
  */
 
+import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
@@ -22,4 +23,25 @@ export function getMsgBase(): string {
     process.env.CMUXMSG_BASE ||
     path.join(os.homedir(), ".local/share/cmux-messages")
   );
+}
+
+/**
+ * セッション中に削除されにくい安定したディレクトリを返す。
+ *
+ * subscribe のような long-running プロセスは、起動時の cwd (worktree 等) が
+ * セッション中に削除されると、子プロセス spawn 時の `getcwd()` が ENOENT で
+ * 失敗して落ちる。これを防ぐため、起動時にここへ chdir しておく。
+ *
+ * 優先順: メッセージ保管庫ベース → home → ルート。保管庫ベースはセッション
+ * 存続中は必ず存在する (受信箱の親) ため最優先。
+ */
+export function pickStableCwd(): string {
+  for (const dir of [getMsgBase(), os.homedir()]) {
+    try {
+      if (fs.statSync(dir).isDirectory()) return dir;
+    } catch {
+      // 存在しない / アクセス不可 → 次の候補へ
+    }
+  }
+  return "/";
 }
