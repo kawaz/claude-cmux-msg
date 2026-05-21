@@ -55,8 +55,14 @@ ci: lint typecheck test validate
 lint:
     just --fmt --check --unstable
 
+# 依存パッケージを install
+# CI は node_modules 未 populate の状態から始まる。bun の auto-install は CLI (tsc) を
+# 取得するだけで devDependencies (@types/bun 等) は入れないため、typecheck の前に必須。
+install:
+    bun install --frozen-lockfile
+
 # 型チェック (cmux-msg は bun で src/cli.ts を直接実行するためコンパイル工程は無い)
-typecheck: lint
+typecheck: lint install
     bun run typecheck
 
 # テスト
