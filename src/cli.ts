@@ -73,7 +73,7 @@ type CmdHandler = (args: string[]) => void | Promise<void>;
  */
 const COMMANDS: Record<string, CmdHandler> = {
   init: () => cmdInit(),
-  whoami: () => cmdWhoami(),
+  whoami: cmdWhoami,
   peers: cmdPeers,
   "ls-peers": cmdPeers, // alias
   send: cmdSend,
