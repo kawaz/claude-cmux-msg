@@ -1,5 +1,5 @@
 ---
-name: thread
+name: cmux-msg-thread
 description: メッセージファイルを起点に in_reply_to を辿って会話単位で時系列表示する。
 argument-hint: <filename> [--json]
 disable-model-invocation: true

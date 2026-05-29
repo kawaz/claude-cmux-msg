@@ -1,5 +1,5 @@
 ---
-name: read
+name: cmux-msg-read
 description: inbox のメッセージ本文を表示する。引数に `cmux-msg list` で見えるファイル名を渡す。
 argument-hint: <filename>
 disable-model-invocation: true
