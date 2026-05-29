@@ -45,3 +45,20 @@ export function pickStableCwd(): string {
   }
   return "/";
 }
+
+/**
+ * 絶対パス先頭の `$HOME` を `~` に短縮する (表示用)。
+ * HOME 配下でない、または HOME 完全一致でないパスはそのまま返す。
+ *
+ * 例:
+ *   /Users/kawaz/.local/share/repos/github.com/kawaz/hyoui/main
+ *     → ~/.local/share/repos/github.com/kawaz/hyoui/main
+ *   /Users/kawaz → ~
+ *   /tmp/foo     → /tmp/foo
+ */
+export function abbreviateHome(p: string): string {
+  const home = os.homedir();
+  if (p === home) return "~";
+  if (p.startsWith(home + path.sep)) return "~" + p.slice(home.length);
+  return p;
+}

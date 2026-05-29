@@ -1,4 +1,3 @@
-import * as path from "path";
 import {
   requireCmux,
   getSessionId,
@@ -8,16 +7,19 @@ import {
 import { listPeers, type PeerEntry } from "../lib/peer";
 import { extractByArgs, matchAllAxes, describeAxis } from "../lib/peer-filter";
 import { readMetaByDir } from "../lib/meta";
+import { abbreviateHome } from "../lib/paths";
 
-const PEERS_HELP = `使い方: cmux-msg peers [--by <axis>...] [--all] [--include-dead]
+const PEERS_HELP = `使い方: cmux-msg peers [--by <axis>...] [--all] [--include-dead] [-v|--verbose]
 
 軸なしのデフォルトは --by home (自 claude_home に閉じる、DR-0005)。
 
 axis (複数指定可、AND 結合):
   --by home          自分と同じ claude_home の peer (デフォルト)
   --by ws            自分と同じ workspace の peer
-  --by cwd           自分と同じ cwd の peer
+  --by cwd           自分と同じ cwd の peer (完全一致)
+  --by cwd:<pat>     cwd に <pat> を含む peer (substring grep)
   --by repo          自分と同じ repo_root の peer
+  --by repo:<pat>    repo_root に <pat> を含む peer (substring grep)
   --by tag:<name>    指定タグを持つ peer
 
 明示的に壁を超える:
@@ -25,12 +27,15 @@ axis (複数指定可、AND 結合):
 
 その他:
   --include-dead     dead な peer も表示 (デフォルトは alive のみ)
+  -v, --verbose      ws / tags / home / repo_root 等の補助情報も出力
 
 例:
   cmux-msg peers                      # 自 home の alive peer (= --by home)
   cmux-msg peers --by repo            # 同 repo の alive peer (home は問わない)
+  cmux-msg peers --by cwd:cmux-msg    # cwd に cmux-msg を含む peer (prefix 違い吸収)
   cmux-msg peers --by home --by ws    # home AND ws 一致 (AND 結合)
-  cmux-msg peers --all                # 全 home 横断 alive peer`;
+  cmux-msg peers --all                # 全 home 横断 alive peer
+  cmux-msg peers --all -v             # 上記 + ws/tags/home 詳細`;
 
 export function cmdPeers(args: string[] = []): void {
   requireCmux();
@@ -42,8 +47,11 @@ export function cmdPeers(args: string[] = []): void {
   }
 
   const { axes, all, rest } = extractByArgs(args);
+  const verbose = rest.includes("--verbose") || rest.includes("-v");
   const includeDead = rest.includes("--include-dead");
-  const unknown = rest.filter((a) => a !== "--include-dead");
+  const unknown = rest.filter(
+    (a) => a !== "--include-dead" && a !== "--verbose" && a !== "-v"
+  );
   if (unknown.length > 0) {
     console.error(`不明な引数: ${unknown.join(" ")}\n\n${PEERS_HELP}`);
     process.exit(1);
@@ -93,12 +101,23 @@ export function cmdPeers(args: string[] = []): void {
     const marker = isSelf ? " (self)" : "";
     const aliveLabel = peer.alive ? "alive" : "dead";
     const state = peerMeta?.state ?? "?";
+    const cwd = peerMeta?.cwd ? abbreviateHome(peerMeta.cwd) : "(no meta)";
     const name = peerMeta?.worker_name ? `  name=${peerMeta.worker_name}` : "";
-    const ws = peerMeta?.workspace_id ? `  ws=${peerMeta.workspace_id}` : "";
 
-    console.log(
-      `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}${ws}${name}`
-    );
+    if (verbose) {
+      // 補助情報も並べる (= UUID 完全長は既に出てる)
+      const ws = peerMeta?.workspace_id ? `  ws=${peerMeta.workspace_id}` : "";
+      const home = peerMeta?.claude_home ? `  home=${abbreviateHome(peerMeta.claude_home)}` : "";
+      const repo = peerMeta?.repo_root ? `  repo=${abbreviateHome(peerMeta.repo_root)}` : "";
+      const tags = peerMeta?.tags && peerMeta.tags.length > 0 ? `  tags=${peerMeta.tags.join(",")}` : "";
+      console.log(
+        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  cwd=${cwd}${repo}${ws}${home}${tags}${name}`
+      );
+    } else {
+      console.log(
+        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  ${cwd}${name}`
+      );
+    }
     printed++;
   }
 

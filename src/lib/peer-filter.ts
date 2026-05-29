@@ -1,15 +1,21 @@
 /**
  * DR-0004: peer のグルーピング軸 filter。
  *
- * `--by <axis>` で「自分と同じ何かを持つ peer」を抽出する。
- * 複数 --by 指定は AND (全条件一致のみ通過)。
+ * `--by <axis>` で「自分と同じ何かを持つ peer」を抽出、または
+ * `--by <axis>:<pattern>` で「<axis> の値に <pattern> を含む peer」を抽出する
+ * (cwd / repo の substring grep モード)。複数 --by 指定は AND。
  *
  * 軸:
- *   - home: claude_home 一致
- *   - ws:   workspace_id 一致
- *   - cwd:  cwd 一致
- *   - repo: repo_root 一致 (どちらかが null なら不一致)
- *   - tag:<name>: 指定タグを peer の tags 配列が含む
+ *   - home:         claude_home 一致 (自分基準)
+ *   - ws:           workspace_id 一致 (自分基準)
+ *   - cwd:          cwd 完全一致 (自分基準)
+ *   - cwd:<pat>:    cwd に <pat> を含む (substring、絶対パターン)
+ *   - repo:         repo_root 完全一致 (自分基準、両方 repo_root を持つ場合のみ)
+ *   - repo:<pat>:   repo_root に <pat> を含む (substring、絶対パターン)
+ *   - tag:<name>:   指定タグを peer の tags 配列が含む
+ *
+ * substring grep は人間が雑に「cmux-msg」と呼ぶ実 repo が `claude-cmux-msg`
+ * のような prefix 違いを吸収するための実用配慮 (= 完全一致 / regex は overkill)。
  */
 
 import type { PeerMeta } from "../types";
@@ -18,8 +24,8 @@ import { UsageError } from "./errors";
 export type ByAxis =
   | { kind: "home" }
   | { kind: "ws" }
-  | { kind: "cwd" }
-  | { kind: "repo" }
+  | { kind: "cwd"; pattern?: string }
+  | { kind: "repo"; pattern?: string }
   | { kind: "tag"; name: string };
 
 export function parseByAxis(spec: string): ByAxis {
@@ -27,6 +33,16 @@ export function parseByAxis(spec: string): ByAxis {
   if (spec === "ws") return { kind: "ws" };
   if (spec === "cwd") return { kind: "cwd" };
   if (spec === "repo") return { kind: "repo" };
+  if (spec.startsWith("cwd:")) {
+    const pattern = spec.slice("cwd:".length);
+    if (!pattern) throw new UsageError(`--by cwd:<pattern> の pattern が空です`);
+    return { kind: "cwd", pattern };
+  }
+  if (spec.startsWith("repo:")) {
+    const pattern = spec.slice("repo:".length);
+    if (!pattern) throw new UsageError(`--by repo:<pattern> の pattern が空です`);
+    return { kind: "repo", pattern };
+  }
   if (spec.startsWith("tag:")) {
     const name = spec.slice("tag:".length);
     if (!name) {
@@ -35,7 +51,7 @@ export function parseByAxis(spec: string): ByAxis {
     return { kind: "tag", name };
   }
   throw new UsageError(
-    `--by の不明な軸: ${spec}\n  有効な軸: home, ws, cwd, repo, tag:<name>`
+    `--by の不明な軸: ${spec}\n  有効な軸: home, ws, cwd[:<pat>], repo[:<pat>], tag:<name>`
   );
 }
 
@@ -83,6 +99,8 @@ export function extractByArgs(args: string[]): ParsedByArgs {
 
 /**
  * `me` (自分の meta) と `peer` (相手 meta) が axis で一致するかを判定。
+ * cwd / repo に pattern がある場合は substring grep モード (= peer 側の値に
+ * pattern が含まれるかどうか、自分基準ではない絶対パターン)。
  */
 export function matchAxis(
   me: PeerMeta,
@@ -95,8 +113,16 @@ export function matchAxis(
     case "ws":
       return me.workspace_id === peer.workspace_id;
     case "cwd":
+      if (axis.pattern !== undefined) {
+        // substring grep モード
+        return peer.cwd.includes(axis.pattern);
+      }
       return me.cwd === peer.cwd;
     case "repo":
+      if (axis.pattern !== undefined) {
+        // substring grep モード (= peer が repo_root を持つ前提)
+        return !!peer.repo_root && peer.repo_root.includes(axis.pattern);
+      }
       // 両方とも repo_root を持ち、かつ一致した時のみ true
       return !!me.repo_root && me.repo_root === peer.repo_root;
     case "tag":
@@ -126,9 +152,9 @@ export function describeAxis(axis: ByAxis): string {
     case "ws":
       return "ws";
     case "cwd":
-      return "cwd";
+      return axis.pattern !== undefined ? `cwd:${axis.pattern}` : "cwd";
     case "repo":
-      return "repo";
+      return axis.pattern !== undefined ? `repo:${axis.pattern}` : "repo";
     case "tag":
       return `tag:${axis.name}`;
   }
