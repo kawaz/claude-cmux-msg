@@ -142,3 +142,42 @@ export function buildThread(
   thread.sort((a, b) => a.created_at.localeCompare(b.created_at));
   return thread;
 }
+
+/**
+ * 各 record の thread root filename を計算する Map を返す。
+ * - 親 (in_reply_to) が records 内に存在すれば再帰的に遡る
+ * - 親が無い / 親が records に無ければ自分自身が root
+ * - 同 thread のメッセージは同じ root filename を共有する
+ *
+ * 表示 (= history) で「どれが同 thread か」を視認するための識別子用途。
+ * 計算は records 数に対して線形 (cache 付き memoize)、無限ループは
+ * `visiting` Set で防止 (= 不正な循環参照に対する安全網)。
+ */
+export function computeThreadRoots(
+  records: MessageRecord[]
+): Map<string, string> {
+  const byFilename = new Map(records.map((r) => [r.filename, r]));
+  const cache = new Map<string, string>();
+
+  function root(filename: string, visiting: Set<string>): string {
+    const cached = cache.get(filename);
+    if (cached) return cached;
+    if (visiting.has(filename)) return filename; // 循環防止: 自分を root 扱い
+    const rec = byFilename.get(filename);
+    if (!rec || !rec.in_reply_to || !byFilename.has(rec.in_reply_to)) {
+      cache.set(filename, filename);
+      return filename;
+    }
+    visiting.add(filename);
+    const r = root(rec.in_reply_to, visiting);
+    visiting.delete(filename);
+    cache.set(filename, r);
+    return r;
+  }
+
+  const result = new Map<string, string>();
+  for (const rec of records) {
+    result.set(rec.filename, root(rec.filename, new Set()));
+  }
+  return result;
+}

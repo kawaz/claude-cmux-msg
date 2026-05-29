@@ -2,7 +2,12 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { listAllMessages, buildThread } from "./history";
+import {
+  listAllMessages,
+  buildThread,
+  computeThreadRoots,
+  type MessageRecord,
+} from "./history";
 
 const SELF = "11111111-1111-1111-1111-111111111111";
 const PEER_A = "22222222-2222-2222-2222-222222222222";
@@ -203,5 +208,70 @@ describe("buildThread", () => {
     expect(thread.map((r) => r.filename)).not.toContain(
       "20260507T100200-cccccccc.md"
     );
+  });
+});
+
+describe("computeThreadRoots", () => {
+  function r(filename: string, in_reply_to: string | null): MessageRecord {
+    return {
+      filename,
+      dir: "sent",
+      direction: "out",
+      from: "self",
+      to: "peer",
+      type: "request",
+      priority: "normal",
+      created_at: "",
+      in_reply_to,
+      broadcast_id: null,
+      body: "",
+    };
+  }
+
+  test("親無し → 自分が root", () => {
+    const recs = [r("a.md", null)];
+    const roots = computeThreadRoots(recs);
+    expect(roots.get("a.md")).toBe("a.md");
+  });
+
+  test("単一 thread の連鎖 → 全員 root を共有", () => {
+    const recs = [
+      r("a.md", null),
+      r("b.md", "a.md"),
+      r("c.md", "b.md"),
+    ];
+    const roots = computeThreadRoots(recs);
+    expect(roots.get("a.md")).toBe("a.md");
+    expect(roots.get("b.md")).toBe("a.md");
+    expect(roots.get("c.md")).toBe("a.md");
+  });
+
+  test("親が records 外 → 自分が root (= 視界に親がない isolated 連鎖)", () => {
+    const recs = [r("b.md", "missing-parent.md"), r("c.md", "b.md")];
+    const roots = computeThreadRoots(recs);
+    expect(roots.get("b.md")).toBe("b.md");
+    expect(roots.get("c.md")).toBe("b.md");
+  });
+
+  test("複数 thread が混在 → 各 thread が独立した root を持つ", () => {
+    const recs = [
+      r("a.md", null),
+      r("b.md", "a.md"),
+      r("x.md", null),
+      r("y.md", "x.md"),
+    ];
+    const roots = computeThreadRoots(recs);
+    expect(roots.get("a.md")).toBe("a.md");
+    expect(roots.get("b.md")).toBe("a.md");
+    expect(roots.get("x.md")).toBe("x.md");
+    expect(roots.get("y.md")).toBe("x.md");
+  });
+
+  test("循環参照 → 自分を root に倒して無限ループ回避", () => {
+    const recs = [r("a.md", "b.md"), r("b.md", "a.md")];
+    const roots = computeThreadRoots(recs);
+    // 入口側 (a.md) を root とする (= 安全網、循環は不正な状態)
+    expect(roots.get("a.md")).toBeTruthy();
+    expect(roots.get("b.md")).toBeTruthy();
   });
 });

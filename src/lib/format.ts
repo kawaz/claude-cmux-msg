@@ -13,5 +13,16 @@ export function shortId(id: string): string {
   return id;
 }
 
+/**
+ * メッセージ filename (`YYYYMMDDTHHMMSS-<8hex>.md`) から 8 文字の id 部分のみ抽出。
+ * thread_id 表示等で「短い識別子」が欲しい時に使う。
+ * パターン不一致なら filename そのまま (= 安全側、id 推測しない)。
+ * 例: `20260527T021810-a97350d4.md` → `a97350d4`
+ */
+export function messageShortId(filename: string): string {
+  const m = filename.match(/-([0-9a-f]{8})\.md$/);
+  return m ? m[1]! : filename;
+}
+
 /** message.type の表示時 padding 長 (最も長い "broadcast" + `[]` ベース) */
 export const TYPE_LABEL_WIDTH = "[broadcast]".length;
