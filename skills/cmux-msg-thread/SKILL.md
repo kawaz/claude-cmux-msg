@@ -5,7 +5,7 @@ argument-hint: <filename> [--json]
 disable-model-invocation: true
 ---
 
-ユーザの slash command。`cmux-msg thread $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。
+ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg thread $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。
 
 引数:
 - `<filename>` (必須): 起点となるメッセージファイル名 (例: `20260527T173014-8c12c596.md`)
