@@ -31,11 +31,15 @@ default:
 
 # ---------- main entries (利用者が直接叩く) ----------
 
-# push (main@origin に push 後、ローカルプラグインも自動更新)
-push: ensure-clean test check-translations check-version-bumped
+# push (バージョン bump 済みを前提、全 gate 通過後に push してローカルも更新)
+push: ensure-clean ci check-translations check-versions check-version-bumped
     bump-semver vcs push --branch main --jj-bookmark-auto-advance
-    claude plugin marketplace update cmux-msg
-    claude plugin update cmux-msg@cmux-msg
+    @just _local-plugin-reload
+
+# push (ドキュメント更新等のみで bump 不要な場合)
+push-without-bump: ensure-clean ci check-translations check-versions
+    bump-semver vcs push --branch main --jj-bookmark-auto-advance
+    @just _local-plugin-reload
 
 # version を bump して Release commit を作成 (push は別途 `just push`)
 [script]
@@ -80,6 +84,22 @@ version:
 ensure-clean: lint
     bump-semver vcs is clean
 
+# 3 ファイル (plugin.json / marketplace.json / package.json) の version 一致を保証。
+# bump-semver get は multi-file 時に内部で整合チェック (不一致は error 表示で exit 非 0)。
+[private]
+check-versions:
+    @bump-semver get {{ version-files }} --no-hint >/dev/null
+
+# push 成功直後の local 反映: 現セッションの marketplace + plugin を update し、
+# /reload-plugins 依頼まで出す。push して終わりだと local Claude は古い plugin で
+# 動き続けるため、push task に embed して仕組みで強制する。
+[private]
+_local-plugin-reload:
+    claude plugin marketplace update cmux-msg
+    claude plugin update cmux-msg@cmux-msg
+    @echo ""
+    @echo "[hint] /reload-plugins to apply in this session without restart"
+
 # 翻訳ペア (NAME-ja.md / NAME.md) の整合性チェック
 # timestamp 順序は vcs outdated で一括自動発見 (DR-0027)、相互リンクヘッダは個別 grep。
 check-translations: ensure-clean check-translation-freshness (_check-translation-headers "README") (_check-translation-headers "docs/DESIGN") (_check-translation-headers "docs/MANUAL")
@@ -99,11 +119,21 @@ _check-translation-headers name:
     head -5 {{ name }}-ja.md | grep -qF "> [English](./{{ file_name(name) }}.md) | 日本語"
     head -5 {{ name }}.md    | grep -qF "> English | [日本語](./{{ file_name(name) }}-ja.md)"
 
-# product code に変更があれば version も main@origin より bump 済 (変更なしならスキップ)。
-# git/jj-agnostic (DR-0020): vcs diff -q が差分を検知したら compare gt で version 検証。
+# product code に変更があれば version も main@origin より bump 済か検証 (変更なしならスキップ)。
+# bump-semver vcs diff の exit code:
+#   0 = bump-trigger-paths に変更なし → bump 不要
+#   1 = 変更あり → version bump 済みかチェックに進む
+# 3 = VCS error (main@origin 未 track 等) → 明示エラーで fetch を促す
 [private]
 [script]
 check-version-bumped:
-    if ! bump-semver vcs diff -q main@origin -- {{ bump-trigger-paths }}; then
-        bump-semver compare gt .claude-plugin/plugin.json vcs:main@origin:.claude-plugin/plugin.json
-    fi
+    rc=0
+    bump-semver vcs diff -q main@origin -- {{ bump-trigger-paths }} || rc=$?
+    case "$rc" in
+      0) exit 0 ;;
+      1) ;;
+      *) echo "ERROR: bump-semver vcs diff failed (rc=$rc). main@origin が track されていない可能性。先に 'jj git fetch' を試してください" >&2; exit 1 ;;
+    esac
+    bump-semver compare gt .claude-plugin/plugin.json vcs:main@origin:.claude-plugin/plugin.json --no-hint && exit 0
+    echo 'ERROR: bump-trigger-paths が変わってるが version 未 bump。"just bump-version" を実行してください' >&2
+    exit 1
