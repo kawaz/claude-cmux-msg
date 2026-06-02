@@ -2,6 +2,8 @@
 #
 # kawaz/* リポの共通テンプレ (kawaz/bump-semver justfile が canonical) に揃えてある。
 # 言語依存箇所 (lint/typecheck/test) と claude-plugin 固有 (validate) のみカスタム。
+# VCS 操作 (clean 判定 / diff / push / commit) と翻訳鮮度チェックは bump-semver vcs
+# サブコマンド (DR-0020 / DR-0027) に委譲し、jj/git 分岐の手書きを撲滅する。
 # 構造変更は bump-semver 側を先に直してからこちらへ追従する。
 # ---------- settings ----------
 
@@ -12,12 +14,6 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 set script-interpreter := ["bash", "-eu", "-o", "pipefail"]
 
 # ---------- variables ----------
-# jj/git 判定 (path_exists は "true"/"false" 文字列を返すので、bash の `if {{ is-jj }}; then` で
-# bash builtin として評価できる)。jj/git 並存時は jj 優先 (kawaz の git bare + .jj 構成と整合)。
-
-is-jj := path_exists('.jj')
-is-git := if is-jj == "true" { "false" } else { path_exists('.git') }
-
 # bump-version トリガとなる product code パス (テンプレ流用時に各リポで上書き)。
 # docs/ や *.md / justfile / version ファイル自身などは除外。
 
@@ -37,14 +33,15 @@ default:
 
 # push (main@origin に push 後、ローカルプラグインも自動更新)
 push: ensure-clean test check-translations check-version-bumped
-    jj bookmark set main -r @-
-    jj git push --bookmark main
+    bump-semver vcs push --branch main --jj-bookmark-auto-advance
     claude plugin marketplace update cmux-msg
     claude plugin update cmux-msg@cmux-msg
 
 # version を bump して Release commit を作成 (push は別途 `just push`)
+[script]
 bump-version bump="patch": ensure-clean
-    new_version=$(bump-semver {{ bump }} {{ version-files }} --write --no-hint) && jj commit -m "Release v${new_version}"
+    new_version=$(bump-semver {{ bump }} {{ version-files }} --write --no-hint)
+    bump-semver vcs commit -m "Release v${new_version}" {{ version-files }}
 
 # CI 単一エントリ (lint→typecheck→test→validate を依存重複排除で1回ずつ保証)
 ci: lint typecheck test validate
@@ -79,48 +76,34 @@ version:
 
 # ---------- check recipes (push の sanity 検証、基本は push 経由でしか叩かない) ----------
 
-# ワーキングコピーがクリーン (jj は @ が empty、git は porcelain 空)
+# ワーキングコピーがクリーン (jj は @ が empty、git は porcelain 空。git/jj-agnostic, DR-0020)
 ensure-clean: lint
-    if {{ is-jj }}; then [ "$(jj log -r @ --no-graph -T 'empty')" = "true" ]; fi
-    if {{ is-git }}; then [ -z "$(git status --porcelain)" ]; fi
+    bump-semver vcs is clean
 
-# 翻訳ペア (NAME-ja.md / NAME.md) の整合性チェック (対象は明示列挙、-ja.md 不在ならスキップ)
-check-translations: ensure-clean (_check-translation "README") (_check-translation "docs/DESIGN") (_check-translation "docs/MANUAL")
+# 翻訳ペア (NAME-ja.md / NAME.md) の整合性チェック
+# timestamp 順序は vcs outdated で一括自動発見 (DR-0027)、相互リンクヘッダは個別 grep。
+check-translations: ensure-clean check-translation-freshness (_check-translation-headers "README") (_check-translation-headers "docs/DESIGN") (_check-translation-headers "docs/MANUAL")
 
-# 翻訳ペア NAME-ja.md / NAME.md の存在 + 相互リンク + timestamp 順序確認
+# 翻訳ペアの鮮度: en の最終 commit timestamp >= ja (= ja を更新したら en も更新する)。
+# 対象は **/*-ja.md を自動発見 ($1=ディレクトリ, $2=basename)。git/jj-agnostic (DR-0027)。
+[private]
+check-translation-freshness:
+    bump-semver vcs outdated 'glob:**/*-ja.md' '$1/$2.md'
 
-# `?` sigil (set guards := true) で -ja.md 不在時は recipe 全体を success として早期 return
-_check-translation name:
+# 相互リンクヘッダの確認 (vcs outdated は timestamp のみ検証するので grep は別途)。
+# `?` sigil で -ja.md 不在時は recipe 全体を success として早期 return。
+[private]
+_check-translation-headers name:
     ?test -f {{ name }}-ja.md
     test -f {{ name }}.md
     head -5 {{ name }}-ja.md | grep -qF "> [English](./{{ file_name(name) }}.md) | 日本語"
     head -5 {{ name }}.md    | grep -qF "> English | [日本語](./{{ file_name(name) }}-ja.md)"
-    test "$(just _file-ts {{ name }}-ja.md)" -le "$(just _file-ts {{ name }}.md)"
 
-# file の最終 commit timestamp (jj/git 自動切替、stdout に epoch 秒)
-[script]
-_file-ts file:
-    if {{ is-jj }}; then
-        jj log --no-graph -T 'committer.timestamp().format("%s")' -r "latest(::@ & files('{{ file }}'))" 2>/dev/null || echo 0
-    elif {{ is-git }}; then
-        git log -1 --format=%ct -- {{ file }} 2>/dev/null || echo 0
-    else
-        echo 0
-    fi
-
-# product code に変更があれば version も main@origin より bump 済 (変更なしならスキップ)
-
-# bump-semver compare gt FILE vcs:main@origin:FILE: ローカル > origin/main なら exit 0
+# product code に変更があれば version も main@origin より bump 済 (変更なしならスキップ)。
+# git/jj-agnostic (DR-0020): vcs diff -q が差分を検知したら compare gt で version 検証。
+[private]
 [script]
 check-version-bumped:
-    # 変更なしなら早期 return (success)
-    if {{ is-jj }}; then
-        # jj diff の exit code は常に 0 だが、main@origin 未 track 等の失敗は伝播させる必要がある
-        diff_out=$(jj diff -r 'main@origin..@' --summary -- {{ bump-trigger-paths }}) || { echo 'ERROR: jj diff failed (main@origin not tracked? run jj git fetch first)' >&2; exit 1; }
-        [ -z "$diff_out" ] && exit 0
-    elif {{ is-git }}; then
-        git diff --quiet origin/main -- {{ bump-trigger-paths }} && exit 0
+    if ! bump-semver vcs diff -q main@origin -- {{ bump-trigger-paths }}; then
+        bump-semver compare gt .claude-plugin/plugin.json vcs:main@origin:.claude-plugin/plugin.json
     fi
-    # バージョン更新済みだったなら return (success)
-    bump-semver compare gt .claude-plugin/plugin.json vcs:main@origin:.claude-plugin/plugin.json --no-hint && exit 0
-    echo 'ERROR: code changed but version not bumped; run "just bump-version"' >&2; exit 1
