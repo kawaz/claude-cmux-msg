@@ -21,7 +21,7 @@ import { cmdScreen } from "./commands/screen";
 import { cmdHistory } from "./commands/history";
 import { cmdThread } from "./commands/thread";
 import { cmdGc } from "./commands/gc";
-import { UsageError } from "./lib/errors";
+import { GuardError, UsageError } from "./lib/errors";
 
 const HELP = `cmux-msg: cmux CC間メッセージングシステム (DR-0004)
 
@@ -116,8 +116,9 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  // UsageError は usage 文をそのまま表示 (「エラー:」プレフィックスなし)
-  if (e instanceof UsageError) {
+  // UsageError は usage 文を、GuardError は既に整形済みの文言を、
+  // どちらも「エラー:」プレフィックスを追加せずそのまま表示する。
+  if (e instanceof UsageError || e instanceof GuardError) {
     console.error(e.message);
   } else {
     console.error(`エラー: ${e?.message || e}`);

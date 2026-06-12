@@ -1,5 +1,5 @@
 import {
-  requireCmux,
+  requireSessionId,
   getSessionId,
   getMsgBase,
   myDir,
@@ -38,7 +38,7 @@ axis (複数指定可、AND 結合):
   cmux-msg peers --all -v             # 上記 + ws/tags/home 詳細`;
 
 export function cmdPeers(args: string[] = []): void {
-  requireCmux();
+  requireSessionId();
 
   // --help → ヘルプ表示で終了
   if (args.includes("--help")) {

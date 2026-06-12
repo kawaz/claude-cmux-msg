@@ -1,10 +1,10 @@
-import { requireCmux } from "../config";
+import { requireSessionId } from "../config";
 import { readMessage } from "../lib/inbox";
 import { validateFilename } from "../lib/validate";
 import { UsageError } from "../lib/errors";
 
 export function cmdRead(args: string[]): void {
-  requireCmux();
+  requireSessionId();
 
   if (args.length < 1) {
     throw new UsageError("使い方: cmux-msg read <filename>");

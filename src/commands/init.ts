@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import {
-  requireCmux,
+  requireSessionId,
   myDir,
   getSessionId,
   getWorkspaceId,
@@ -114,7 +114,7 @@ function getPluginVersion(): string {
 }
 
 export function cmdInit(): void {
-  requireCmux();
+  requireSessionId();
 
   const dir = myDir();
   initWorkspace(dir);

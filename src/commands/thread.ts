@@ -1,4 +1,4 @@
-import { requireCmux, getSessionId } from "../config";
+import { requireSessionId, getSessionId } from "../config";
 import { buildThread, MessageRecord } from "../lib/history";
 import { validateFilename } from "../lib/validate";
 import { shortId } from "../lib/format";
@@ -12,7 +12,7 @@ function header(rec: MessageRecord): string {
 }
 
 export function cmdThread(args: string[]): void {
-  requireCmux();
+  requireSessionId();
   const json = args.includes("--json");
   const positional = args.filter((a) => a !== "--json");
   if (positional.length === 0) {

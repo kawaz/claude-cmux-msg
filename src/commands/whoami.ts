@@ -1,4 +1,4 @@
-import { requireCmux, getSessionId, myDir } from "../config";
+import { requireSessionId, getSessionId, myDir } from "../config";
 import { readMetaByDir } from "../lib/meta";
 import { abbreviateHome } from "../lib/paths";
 
@@ -21,7 +21,7 @@ OUTPUT (--verbose 追加):
   name:       <worker_name>`;
 
 export function cmdWhoami(args: string[] = []): void {
-  requireCmux();
+  requireSessionId();
 
   if (args.includes("--help")) {
     console.log(WHOAMI_HELP);

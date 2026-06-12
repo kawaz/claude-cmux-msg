@@ -65,6 +65,17 @@ describe("initWorkspace", () => {
     expect(fs.existsSync(path.join(dir, "pid"))).toBe(false);
   });
 
+  test("CMUX_WORKSPACE_ID 未設定でも init は成功し workspace_id は空文字で記録される", () => {
+    // cmux 環境外 (background job 等) を模す
+    delete process.env.CMUX_WORKSPACE_ID;
+    const dir = path.join(workDir, SID);
+    initWorkspace(dir, { cwd: workDir });
+    const meta = readMeta(dir);
+    expect(meta.workspace_id).toBe("");
+    // 受信箱は問題なく作られる
+    expect(fs.existsSync(path.join(dir, "inbox"))).toBe(true);
+  });
+
   test("再 init で既存の last_observed_pid を維持する (照合失敗時)", () => {
     const dir = path.join(workDir, SID);
     fs.mkdirSync(dir, { recursive: true });

@@ -2,6 +2,7 @@ import * as path from "path";
 import * as os from "os";
 import { readBySurfaceIndex } from "./lib/session-index";
 import { getMsgBase } from "./lib/paths";
+import { GuardError } from "./lib/errors";
 
 // 旧版の `MSG_BASE` 定数は廃止 (import 時固定値で env 切替が反映されない問題)。
 // 全箇所で関数版 `getMsgBase()` を経由する。`config.ts` を import している
@@ -48,19 +49,33 @@ export function getClaudeHome(): string {
   return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
 }
 
-export function requireCmux(): void {
-  if (!getWorkspaceId()) {
-    console.error(
-      "エラー: cmux環境外では使えません (CMUX_WORKSPACE_ID が未設定)"
-    );
-    process.exit(1);
-  }
+/**
+ * session_id が解決できることを要求する (messaging 系コマンド共通ガード)。
+ *
+ * messaging の配送経路は sid 直接化済み (DR-0004) なので cmux surface 不要。
+ * session_id さえ解決できれば cmux 環境外 (background job 等) でも動作する。
+ */
+export function requireSessionId(): void {
   if (!getSessionId()) {
-    console.error(
+    throw new GuardError(
       "エラー: session_id を解決できません (env CLAUDE_CODE_SESSION_ID / CMUXMSG_SESSION_ID も by-surface index も無い。SessionStart hook が未実行？)"
     );
-    process.exit(1);
   }
+}
+
+/**
+ * cmux surface の直接操作を要求する (tell / screen / spawn / stop 共通ガード)。
+ *
+ * これらは cmux pane へのキー入力注入・画面読み取り・pane 起動/終了を行うため
+ * cmux 環境 (CMUX_WORKSPACE_ID 非空) が前提。messaging 系には使わない。
+ */
+export function requireCmux(): void {
+  if (!getWorkspaceId()) {
+    throw new GuardError(
+      "エラー: cmux環境外では使えません (CMUX_WORKSPACE_ID が未設定)"
+    );
+  }
+  requireSessionId();
 }
 
 /**

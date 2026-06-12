@@ -1,14 +1,20 @@
 import * as fs from "fs";
-import { requireCmux } from "../config";
+import { requireSessionId } from "../config";
 import { sendMessage } from "../lib/sender";
 import { validateSessionId } from "../lib/validate";
 import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
 import { UsageError } from "../lib/errors";
+import { looksLikeFlag, splitDoubleDash } from "../lib/argv";
 
 const USAGE = `使い方: cmux-msg send <session_id> [<メッセージ>]
        cmux-msg send <session_id> --file <path>
        cmux-msg send <session_id> --file -    # stdin から読み込み
-       cat msg.md | cmux-msg send <session_id>  # メッセージ省略時は stdin (非 TTY のみ)`;
+       cmux-msg send <session_id> -- <メッセージ>  # 本文が - で始まる場合
+       cat msg.md | cmux-msg send <session_id>  # メッセージ省略時は stdin (非 TTY のみ)
+
+返信は send ではなく reply を使う:
+       cmux-msg reply <filename> <返信内容>
+(send に --in-reply-to / --type 等の返信フラグは無い。reply が in_reply_to を付与する)`;
 
 export interface ParsedSendArgs {
   target: string;
@@ -17,13 +23,16 @@ export interface ParsedSendArgs {
 }
 
 export function parseSendArgs(args: string[]): ParsedSendArgs {
+  // `--` 以降は全て本文 (positional)。本文が `-` で始まる正当ケースの逃げ道。
+  const { before, after } = splitDoubleDash(args);
+
   const positional: string[] = [];
   let file: string | undefined;
 
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i]!;
+  for (let i = 0; i < before.length; i++) {
+    const a = before[i]!;
     if (a === "--file") {
-      const v = args[i + 1];
+      const v = before[i + 1];
       if (v === undefined) {
         throw new UsageError("--file には値が必要です\n" + USAGE);
       }
@@ -31,6 +40,10 @@ export function parseSendArgs(args: string[]): ParsedSendArgs {
       i++;
     } else if (a.startsWith("--file=")) {
       file = a.slice("--file=".length);
+    } else if (looksLikeFlag(a)) {
+      // 未知の `-`/`--` 始まり引数は本文に silent 混入させず弾く。
+      // 本文が正当に `-` で始まるなら `send <id> -- <本文>` を使う。
+      throw new UsageError(`不明なオプション: ${a}\n` + USAGE);
     } else {
       positional.push(a);
     }
@@ -41,15 +54,19 @@ export function parseSendArgs(args: string[]): ParsedSendArgs {
     throw new UsageError(USAGE);
   }
 
+  // `--` 以降のトークンも本文を構成する (positional の続きとして連結)。
+  const bodyParts = positional.slice(1);
+  if (after !== undefined) bodyParts.push(...after);
+
   // body は --file が無ければ positional の残りを join。
   // --file 指定時に message が同時指定されたらエラー (曖昧さ回避)。
-  if (file !== undefined && positional.length >= 2) {
+  if (file !== undefined && bodyParts.length >= 1) {
     throw new UsageError(
       "--file と <メッセージ> は同時に指定できません\n" + USAGE
     );
   }
 
-  const body = positional.length >= 2 ? positional.slice(1).join(" ") : undefined;
+  const body = bodyParts.length >= 1 ? bodyParts.join(" ") : undefined;
   return { target, body, file };
 }
 
@@ -75,7 +92,7 @@ export async function resolveSendBody(parsed: ParsedSendArgs): Promise<string> {
 }
 
 export async function cmdSend(args: string[]): Promise<void> {
-  requireCmux();
+  requireSessionId();
 
   const parsed = parseSendArgs(args);
   validateSessionId(parsed.target);

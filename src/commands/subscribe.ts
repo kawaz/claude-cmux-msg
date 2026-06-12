@@ -1,4 +1,4 @@
-import { requireCmux, getSessionId } from "../config";
+import { requireSessionId, getSessionId } from "../config";
 import { listInbox, type InboxMessage } from "../lib/inbox";
 import { cmuxWaitFor } from "../lib/cmux";
 import { diffInbox } from "../lib/subscribe";
@@ -24,7 +24,7 @@ function emit(msg: InboxMessage): void {
 }
 
 export async function cmdSubscribe(_args: string[]): Promise<void> {
-  requireCmux();
+  requireSessionId();
 
   // cwd (worktree 等) がセッション中に削除されても subscribe が落ちないよう、
   // 起動時に安定 dir へ移動する。cwd が残っていると、子プロセス `cmux wait-for`

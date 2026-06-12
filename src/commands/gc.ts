@@ -15,7 +15,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { requireCmux, getMsgBase, getSessionId } from "../config";
+import { requireSessionId, getMsgBase, getSessionId } from "../config";
 import { listPeers, type PeerEntry } from "../lib/peer";
 
 function isDirEmpty(dir: string): boolean {
@@ -51,7 +51,7 @@ function reasonNotDeleted(
 }
 
 export function cmdGc(args: string[]): void {
-  requireCmux();
+  requireSessionId();
   const force = args.includes("--force");
   const verbose = args.includes("--verbose");
   const mySessionId = getSessionId();

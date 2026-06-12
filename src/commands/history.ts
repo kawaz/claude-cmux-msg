@@ -1,4 +1,4 @@
-import { requireCmux, getSessionId } from "../config";
+import { requireSessionId, getSessionId } from "../config";
 import {
   listAllMessages,
   computeThreadRoots,
@@ -46,7 +46,7 @@ function formatLine(rec: MessageRecord, threadRootFilename: string): string {
 }
 
 export function cmdHistory(args: string[]): void {
-  requireCmux();
+  requireSessionId();
   const opts = parseArgs(args);
   const self = getSessionId();
 

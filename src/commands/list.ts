@@ -1,8 +1,8 @@
-import { requireCmux } from "../config";
+import { requireSessionId } from "../config";
 import { listInbox } from "../lib/inbox";
 
 export function cmdList(): void {
-  requireCmux();
+  requireSessionId();
 
   const messages = listInbox();
   if (messages.length === 0) {

@@ -1,16 +1,18 @@
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
-import { requireCmux, getMsgBase, getSessionId, myDir } from "../config";
+import { requireSessionId, getMsgBase, getSessionId, myDir } from "../config";
 import { sendMessage } from "../lib/sender";
 import { listPeers } from "../lib/peer";
 import {
   extractByArgs,
   matchAllAxes,
   describeAxis,
+  type ByAxis,
 } from "../lib/peer-filter";
 import { readMetaByDir } from "../lib/meta";
 import { UsageError } from "../lib/errors";
+import { looksLikeFlag, splitDoubleDash } from "../lib/argv";
 
 const BROADCAST_HELP = `使い方: cmux-msg broadcast [--by <axis>...] [--all] <メッセージ>
 
@@ -31,24 +33,54 @@ const BROADCAST_HELP = `使い方: cmux-msg broadcast [--by <axis>...] [--all] <
   cmux-msg broadcast --by repo "build 通った" # 同 repo の alive peer (home 問わない)
   cmux-msg broadcast --all "全員 stop"        # 全 home 横断`;
 
-export async function cmdBroadcast(args: string[]): Promise<void> {
-  requireCmux();
+export interface ParsedBroadcastArgs {
+  axes: ByAxis[];
+  all: boolean;
+  help: boolean;
+  body: string;
+}
 
-  if (args.includes("--help")) {
+export function parseBroadcastArgs(args: string[]): ParsedBroadcastArgs {
+  // `--` 以降は全て本文。`--help`/`--by`/`--all` の解釈はセパレータより前にのみ効く。
+  const { before, after } = splitDoubleDash(args);
+
+  if (before.includes("--help")) {
+    return { axes: [], all: false, help: true, body: "" };
+  }
+
+  const { axes, all, rest } = extractByArgs(before);
+
+  // extractByArgs が処理しなかった `-` 始まり引数は未知フラグ。
+  // 本文に silent 混入させず弾く (LLM の `-m` / `--type` 等の推測対策)。
+  for (const a of rest) {
+    if (looksLikeFlag(a)) {
+      throw new UsageError(`不明なオプション: ${a}\n\n${BROADCAST_HELP}`);
+    }
+  }
+
+  const bodyParts = [...rest];
+  if (after !== undefined) bodyParts.push(...after);
+
+  return { axes, all, help: false, body: bodyParts.join(" ") };
+}
+
+export async function cmdBroadcast(args: string[]): Promise<void> {
+  requireSessionId();
+
+  const parsed = parseBroadcastArgs(args);
+  if (parsed.help) {
     console.log(BROADCAST_HELP);
     return;
   }
 
-  const { axes, all, rest } = extractByArgs(args);
+  const { axes, all, body } = parsed;
 
-  if (rest.length === 0) {
+  if (body.length === 0) {
     throw new UsageError(`メッセージ本文が空です\n\n${BROADCAST_HELP}`);
   }
 
   // DR-0005: 軸なしのデフォルトは --by home
   const effectiveAxes = !all && axes.length === 0 ? [{ kind: "home" as const }] : axes;
-
-  const body = rest.join(" ");
   const mySessionId = getSessionId();
   const myMeta = readMetaByDir(myDir());
   if (!myMeta && !all) {
