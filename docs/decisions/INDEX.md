@@ -15,4 +15,10 @@
 | [DR-0005](DR-0005-claude-home-default-wall.md) | claude_home 壁を実装に落とす (デフォルト軸 = home、cross-home warning) | Accepted | 2026-05-12 |
 | [DR-0006](DR-0006-fg-detection-claude-pid.md) | fg 判定の対象 pid を CMUX_CLAUDE_PID に切り替える (shell_pid → claude_pid) | Superseded by DR-0007 | 2026-05-17 |
 | [DR-0007](DR-0007-resume-resilient-session-identity.md) | resume 耐性のあるセッション同定 (tty を不変の鍵にした tell 安全境界) | Accepted | 2026-05-17 |
-| [DR-0008](DR-0008-messaging-needs-only-session-id.md) | cmux 依存境界の分離 (messaging は session_id のみ、surface 操作のみ cmux 必須) | Accepted | 2026-06-12 |
+| [DR-0008](DR-0008-messaging-needs-only-session-id.md) | cmux 依存境界の分離 (messaging は session_id のみ、surface 操作のみ cmux 必須) | Superseded by DR-0010 | 2026-06-12 |
+| [DR-0009](DR-0009-hyoui-delegation.md) | surface 操作系 (tell / screen / spawn / stop) を hyoui に委譲 | Proposed | 2026-06-16 |
+| [DR-0010](DR-0010-drop-cmux-environment-requirement.md) | cmux 環境必須を全廃 (requireCmux / workspace_id / by-surface lookup 削除) | Proposed | 2026-06-16 |
+| [DR-0011](DR-0011-drop-tell-command.md) | tell コマンド廃止 + tell-guard 全削除 (中途半端に古いものを残さない) | Proposed | 2026-06-16 |
+| [DR-0012](DR-0012-event-driven-subscribe.md) | subscribe を file system イベント駆動 + watermark + ln atomic 排他に切替 | Proposed | 2026-06-16 |
+| [DR-0013](DR-0013-rename-to-ccmsg.md) | パッケージ / コマンド / env の cmux- prefix を ccmsg に統一 | Proposed | 2026-06-16 |
+| [DR-0014](DR-0014-stdin-body-standardization.md) | send / reply / broadcast の本文入力を stdin に統一 | Proposed | 2026-06-16 |

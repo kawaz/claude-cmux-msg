@@ -1,6 +1,6 @@
 # DR-0008: cmux 依存境界の分離 (messaging は session_id のみ、surface 操作のみ cmux 必須)
 
-- Status: Accepted
+- Status: Superseded by [DR-0010](DR-0010-drop-cmux-environment-requirement.md) (2026-06-16: cmux 廃止に伴い「surface 操作のみ cmux 必須」の境界自体が消滅)
 - Date: 2026-06-12
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (sid-unique inbox により messaging が workspace 非依存になった帰結を実行ガードに反映)
 - Related: 2026-06-12 の issue 報告「cmux 非所属の background job から send が拒否される」を本 DR で解決 (issue ファイルは解決時削除済み)

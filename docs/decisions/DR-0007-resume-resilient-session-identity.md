@@ -1,6 +1,6 @@
 # DR-0007: resume 耐性のあるセッション同定 (tty を不変の鍵にした tell 安全境界)
 
-- Status: Accepted
+- Status: Superseded by [DR-0009](DR-0009-hyoui-delegation.md) / Refined by [DR-0011](DR-0011-drop-tell-command.md) (2026-06-16: cmux 廃止に伴い tty→surface 逆引きの根拠が消滅、tell 安全境界の責務を hyoui に移譲)
 - Date: 2026-05-17 (改訂: 2026-05-18 マルチペルソナレビュー 2 巡 + codex レビュー + 実機検証を反映、同日 Accepted)
 - Supersedes: [DR-0006](DR-0006-fg-detection-claude-pid.md) (fg 判定方式を全面的に置き換え)
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (§7 fg/bg 判定 / §5 tell・screen の安全境界)
