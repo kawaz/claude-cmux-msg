@@ -22,3 +22,4 @@
 | [DR-0012](DR-0012-event-driven-subscribe.md) | subscribe を file system イベント駆動 + watermark + ln atomic 排他に切替 | Proposed | 2026-06-16 |
 | [DR-0013](DR-0013-rename-to-ccmsg.md) | パッケージ / コマンド / env の cmux- prefix を ccmsg に統一 | Proposed | 2026-06-16 |
 | [DR-0014](DR-0014-stdin-body-standardization.md) | send / reply / broadcast の本文入力を stdin に統一 | Proposed | 2026-06-16 |
+| [DR-0015](DR-0015-persistent-cwd-mailbox.md) | 永続宛先 (cwd / repo / tag) の inbox を sid 宛と並列に持つ (sid 揮発性への対応) | Proposed | 2026-06-16 |
