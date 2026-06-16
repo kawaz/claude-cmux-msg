@@ -87,18 +87,34 @@ CREATE INDEX idx_labels_label ON session_labels(label);
 
 -- メッセージ (= 配送 queue、本体は file)
 CREATE TABLE messages (
-  msg_id        TEXT PRIMARY KEY,        -- ULID or timestamp + random
-  from_sid      TEXT,                    -- nullable (システム送信)
-  target_kind   TEXT NOT NULL,           -- sid | cwd | ws | repo | label
-  target_value  TEXT NOT NULL,           -- sid / cwd_hash / repo_hash / label
-  body_path     TEXT NOT NULL,           -- file path (= <base>/msg/<msg-id>.md or sid/inbox/...)
-  priority      INTEGER NOT NULL DEFAULT 0,
-  created_at    INTEGER NOT NULL,        -- epoch ms
-  consumed_by   TEXT,                    -- sid (NULL = 未取得)
-  consumed_at   INTEGER                  -- epoch ms (NULL = 未取得)
+  msg_id              TEXT PRIMARY KEY,        -- timestamp + random
+  -- 送信元 (= 揮発する送信者を遡れるよう、配信時点の snapshot を全部持つ)
+  from_sid            TEXT,                    -- nullable (システム送信)
+  from_ws_hash        TEXT,                    -- DB sessions.ws_hash の snapshot
+  from_repo_hash      TEXT,                    -- 同上
+  from_cwd_hash       TEXT,                    -- 同上
+  from_labels_json    TEXT,                    -- session_labels の snapshot (JSON array)
+  from_home           TEXT,                    -- DR-0005 home 壁の表示用
+  -- 配信宛先
+  target_kind         TEXT NOT NULL,           -- sid | cwd | ws | repo | label
+  target_value        TEXT NOT NULL,           -- sid / cwd_hash / repo_hash / label
+  -- 本体 + メタ
+  body_path           TEXT NOT NULL,           -- file path (= <base>/msg/<msg-id>.md or sid/inbox/...)
+  priority            INTEGER NOT NULL DEFAULT 0,
+  created_at          INTEGER NOT NULL,        -- epoch ms
+  -- queue 取得
+  consumed_by         TEXT,                    -- sid (NULL = 未取得)
+  consumed_at         INTEGER,                 -- epoch ms (NULL = 未取得)
+  -- 自動 fallback トラッキング (DR-0015 §10)
+  original_target_sid  TEXT,                   -- 送信時 sid が dead で fallback した場合の元 sid
+  original_target_kind TEXT,                   -- 元の target_kind (sid 以外も将来用)
+  -- 共有 box hint
+  also_received_by_json TEXT                   -- 配信時点の他 alive peer sid (JSON array)
 );
 CREATE INDEX idx_messages_target ON messages(target_kind, target_value, consumed_by);
-CREATE INDEX idx_messages_from ON messages(from_sid);
+CREATE INDEX idx_messages_from_sid ON messages(from_sid);
+CREATE INDEX idx_messages_from_repo ON messages(from_repo_hash);
+CREATE INDEX idx_messages_from_ws ON messages(from_ws_hash);
 
 -- subscribe 状態 (= watermark + 二重起動 lock)
 CREATE TABLE subscribers (
