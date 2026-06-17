@@ -15,6 +15,10 @@ import { setupLayoutDocs } from "../lib/layout-docs";
 import { detectRepoRoot } from "../lib/repo-root";
 import { lookupSidProcess } from "../lib/session-proc";
 import type { PeerMeta, SessionState } from "../types";
+import { openDb } from "../lib/db";
+import { upsertSession, addLabels } from "../lib/session-status";
+import { computeScopeHashes } from "../lib/scope-hash";
+import { parseLabels } from "../lib/label-parser";
 
 export interface InitOptions {
   /** SessionStart hook の input.cwd。未指定なら process.cwd()。meta.json の cwd / repo_root 算出に使う */
@@ -101,6 +105,49 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
     sessionId: getSessionId(),
     version: getPluginVersion(),
   });
+
+  // DR-0016: DB sessions に upsert + DR-0015: labels も反映 (失敗は silent)
+  try {
+    const db = openDb();
+    try {
+      const scopes = computeScopeHashes(cwd);
+      const claudePid =
+        selfLookup.kind === "found" ? selfLookup.pid : process.ppid;
+      const nowMs = Date.now();
+      upsertSession(db, {
+        sid: sessionId,
+        home: getClaudeHome(),
+        cwd: scopes.cwd,
+        cwdHash: scopes.cwdHash,
+        ws: scopes.ws,
+        wsHash: scopes.wsHash,
+        repo: scopes.repo,
+        repoHash: scopes.repoHash,
+        state: initialState,
+        pid: claudePid,
+        startedAt: nowMs,
+        lastSeen: nowMs,
+        metaJson: null,
+      });
+      // labels: 新 CCMSG_LABELS env、旧 CMUXMSG_TAGS env も互換受付 (DR-0013)
+      const labelsCsv =
+        process.env.CCMSG_LABELS ?? process.env.CMUXMSG_TAGS ?? "";
+      if (labelsCsv.trim().length > 0) {
+        try {
+          const labels = parseLabels(labelsCsv);
+          if (labels.length > 0) addLabels(db, sessionId, labels);
+        } catch {
+          // 不正な label は silent skip
+        }
+      }
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    process.stderr.write(
+      `[cmux-msg init db] ${e instanceof Error ? e.message : String(e)}\n`,
+    );
+  }
 }
 
 function getPluginVersion(): string {
