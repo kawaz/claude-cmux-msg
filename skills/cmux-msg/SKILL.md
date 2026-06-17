@@ -72,6 +72,25 @@ Monitor({
 })
 ```
 
+### plugin update 後の subscribe 再起動 (DR-0012 stage 1)
+
+`cmux-msg` の plugin update (`claude plugin update cmux-msg@cmux-msg`) を実行した後、
+**Monitor で起動中の subscribe は古い実行ファイルを掴んだままで異常終了する**ことがある:
+
+```
+[error] subscribe lock を取得できませんでした ...
+```
+
+または unexpected exit が Monitor 通知に出る。対応:
+
+1. 既存 Monitor を `TaskStop` で停止
+2. `/reload-plugins` で plugin を再ロード
+3. Monitor で subscribe を再起動
+
+これは **plugin update 後の一回切りの作業**。常時必要ではない。
+DR-0012 stage 1 から subscribe は Bun fs.watch + DB lock + watermark で動作するので
+cmux daemon 不要 (= bg job / 任意の cwd で起動可)。
+
 ### ダイレクト操作 (安全境界あり)
 
 - `tell <sid> <text>` — 相手 fg + state ∈ {idle, awaiting_permission} の時のみ即時テキスト送信 (永続なし)
