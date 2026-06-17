@@ -1,7 +1,9 @@
 ---
 description: 自セッションの inbox にあるメッセージ一覧を表示。未読 (= 受信済で未 accept/dismiss/reply) のものが出る。
 disable-model-invocation: true
-model: sonnet[1m]
+model: haiku
+context: fork
+agent: general-purpose
 ---
 
 ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg list` を Bash で実行して結果をそのまま表示してください。

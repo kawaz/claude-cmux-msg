@@ -2,7 +2,9 @@
 description: メッセージファイルを起点に in_reply_to を辿って会話単位で時系列表示する。
 argument-hint: <filename> [--json]
 disable-model-invocation: true
-model: sonnet[1m]
+model: haiku
+context: fork
+agent: general-purpose
 ---
 
 ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg thread $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。
