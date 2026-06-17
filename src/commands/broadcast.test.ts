@@ -3,24 +3,35 @@ import { parseBroadcastArgs } from "./broadcast";
 import { UsageError } from "../lib/errors";
 
 describe("parseBroadcastArgs", () => {
-  test("軸なし本文のみ", () => {
-    const r = parseBroadcastArgs(["build 通った"]);
+  test("引数なし (stdin 経由想定): help=false, text=undefined", () => {
+    const r = parseBroadcastArgs([]);
     expect(r.help).toBe(false);
     expect(r.all).toBe(false);
     expect(r.axes.length).toBe(0);
-    expect(r.body).toBe("build 通った");
+    expect(r.text).toBeUndefined();
   });
 
-  test("--by repo + 本文", () => {
-    const r = parseBroadcastArgs(["--by", "repo", "done"]);
+  test("--text のみ", () => {
+    const r = parseBroadcastArgs(["--text", "build 通った"]);
+    expect(r.text).toBe("build 通った");
+    expect(r.axes.length).toBe(0);
+  });
+
+  test("--by repo + --text", () => {
+    const r = parseBroadcastArgs(["--by", "repo", "--text", "done"]);
     expect(r.axes.length).toBe(1);
-    expect(r.body).toBe("done");
+    expect(r.text).toBe("done");
   });
 
-  test("--all + 本文", () => {
-    const r = parseBroadcastArgs(["--all", "全員 stop"]);
+  test("--all + --text", () => {
+    const r = parseBroadcastArgs(["--all", "--text", "全員 stop"]);
     expect(r.all).toBe(true);
-    expect(r.body).toBe("全員 stop");
+    expect(r.text).toBe("全員 stop");
+  });
+
+  test("--text=<msg>", () => {
+    const r = parseBroadcastArgs(["--text=hello"]);
+    expect(r.text).toBe("hello");
   });
 
   test("--help はヘルプフラグを立てる", () => {
@@ -28,33 +39,23 @@ describe("parseBroadcastArgs", () => {
     expect(r.help).toBe(true);
   });
 
-  test("-- セパレータ以降の --help は本文として扱う", () => {
-    const r = parseBroadcastArgs(["--", "--help"]);
-    expect(r.help).toBe(false);
-    expect(r.body).toBe("--help");
+  test("positional 本文は usage error (DR-0014)", () => {
+    expect(() => parseBroadcastArgs(["build 通った"])).toThrow(UsageError);
+  });
+
+  test("positional 本文 with axes も usage error", () => {
+    expect(() => parseBroadcastArgs(["--by", "repo", "done"])).toThrow(UsageError);
   });
 
   test("未知の short フラグ (-m) は UsageError", () => {
-    expect(() => parseBroadcastArgs(["-m", "本文"])).toThrow(UsageError);
+    expect(() => parseBroadcastArgs(["-m"])).toThrow(UsageError);
   });
 
   test("未知の long フラグ (--type=...) は UsageError", () => {
-    expect(() => parseBroadcastArgs(["--type=x", "本文"])).toThrow(UsageError);
+    expect(() => parseBroadcastArgs(["--type=x"])).toThrow(UsageError);
   });
 
-  test("-- セパレータ以降は - 始まりでも本文として扱う", () => {
-    const r = parseBroadcastArgs(["--", "-m", "本文"]);
-    expect(r.body).toBe("-m 本文");
-  });
-
-  test("-- セパレータ前の --by は通常通り解釈される", () => {
-    const r = parseBroadcastArgs(["--by", "repo", "--", "--こんにちは"]);
-    expect(r.axes.length).toBe(1);
-    expect(r.body).toBe("--こんにちは");
-  });
-
-  test("本文が空なら body は空文字", () => {
-    const r = parseBroadcastArgs(["--all"]);
-    expect(r.body).toBe("");
+  test("--text の値欠落は UsageError", () => {
+    expect(() => parseBroadcastArgs(["--text"])).toThrow(UsageError);
   });
 });

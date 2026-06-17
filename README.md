@@ -50,7 +50,9 @@ $ cmux-msg spawn worker-a --cwd /path/to/project
 spawn完了: id=1d033978-acf7-479b-b355-160ec85217b1 name=worker-a color=red
 
 # Send a task to the worker (persistent)
-$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 "Refactor src/foo.ts"
+# Body is read from stdin (DR-0014). Use --text for short messages.
+$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 --text "Refactor src/foo.ts"
+$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 < task.md   # for longer bodies
 
 # Receive replies via Monitor + cmux-msg subscribe (see below).
 # Once a notification arrives:
@@ -58,7 +60,7 @@ $ cmux-msg list
 $ cmux-msg read <filename>
 
 # Broadcast to every peer in the same repo
-$ cmux-msg broadcast --by repo "build green"
+$ cmux-msg broadcast --by repo --text "build green"
 
 # After several round-trips, see what you and the worker actually said:
 $ cmux-msg history

@@ -12,11 +12,15 @@ import {
 } from "../lib/peer-filter";
 import { readMetaByDir } from "../lib/meta";
 import { UsageError } from "../lib/errors";
-import { looksLikeFlag, splitDoubleDash } from "../lib/argv";
+import { looksLikeFlag } from "../lib/argv";
 
-const BROADCAST_HELP = `使い方: cmux-msg broadcast [--by <axis>...] [--all] <メッセージ>
+const BROADCAST_HELP = `使い方:
+  cmux-msg broadcast [--by <axis>...] [--all]                # 本文 stdin
+  cmux-msg broadcast [--by <axis>...] [--all] --text "<msg>" # 一言オプション
+  cmux-msg broadcast [--by <axis>...] [--all] < msg.md       # ファイル経由
 
 軸なしのデフォルトは --by home (自 claude_home に閉じる、DR-0005)。
+本文を positional 引数で受けることはしない (DR-0014)。
 
 軸 (複数指定可、AND 結合):
   --by home          自分と同じ claude_home の alive peer (デフォルト)
@@ -29,39 +33,70 @@ const BROADCAST_HELP = `使い方: cmux-msg broadcast [--by <axis>...] [--all] <
   --all              alive な全 peer (claude_home 壁を超える、軸無視)
 
 例:
-  cmux-msg broadcast "build 通った"          # 自 home の alive peer
-  cmux-msg broadcast --by repo "build 通った" # 同 repo の alive peer (home 問わない)
-  cmux-msg broadcast --all "全員 stop"        # 全 home 横断`;
+  echo "build 通った" | cmux-msg broadcast              # 自 home の alive peer
+  cmux-msg broadcast --by repo --text "build 通った"    # 同 repo の alive peer
+  cmux-msg broadcast --all < notice.md                  # 全 home 横断`;
 
 export interface ParsedBroadcastArgs {
   axes: ByAxis[];
   all: boolean;
   help: boolean;
-  body: string;
+  text?: string;
 }
 
 export function parseBroadcastArgs(args: string[]): ParsedBroadcastArgs {
-  // `--` 以降は全て本文。`--help`/`--by`/`--all` の解釈はセパレータより前にのみ効く。
-  const { before, after } = splitDoubleDash(args);
-
-  if (before.includes("--help")) {
-    return { axes: [], all: false, help: true, body: "" };
+  if (args.includes("--help")) {
+    return { axes: [], all: false, help: true };
   }
 
-  const { axes, all, rest } = extractByArgs(before);
+  // --text 値が "-" や by axes 引数と紛らわしくないよう、先に --text を抽出
+  const remaining: string[] = [];
+  let text: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]!;
+    if (a === "--text") {
+      const v = args[i + 1];
+      if (v === undefined) {
+        throw new UsageError("--text には値が必要です\n\n" + BROADCAST_HELP);
+      }
+      text = v;
+      i++;
+    } else if (a.startsWith("--text=")) {
+      text = a.slice("--text=".length);
+    } else {
+      remaining.push(a);
+    }
+  }
 
-  // extractByArgs が処理しなかった `-` 始まり引数は未知フラグ。
-  // 本文に silent 混入させず弾く (LLM の `-m` / `--type` 等の推測対策)。
+  const { axes, all, rest } = extractByArgs(remaining);
+
+  // 残った -/-- 始まり引数は未知フラグ、本文 positional は受けない
   for (const a of rest) {
     if (looksLikeFlag(a)) {
       throw new UsageError(`不明なオプション: ${a}\n\n${BROADCAST_HELP}`);
     }
+    throw new UsageError(
+      `本文を positional 引数で受けることはできません: ${a}\n--text または stdin を使ってください\n\n${BROADCAST_HELP}`
+    );
   }
 
-  const bodyParts = [...rest];
-  if (after !== undefined) bodyParts.push(...after);
+  return { axes, all, help: false, text };
+}
 
-  return { axes, all, help: false, body: bodyParts.join(" ") };
+async function readStdin(): Promise<string> {
+  return await Bun.stdin.text();
+}
+
+async function resolveBroadcastBody(parsed: ParsedBroadcastArgs): Promise<string> {
+  if (parsed.text !== undefined) {
+    return parsed.text;
+  }
+  if (process.stdin.isTTY) {
+    throw new UsageError(
+      "stdin が TTY で --text も指定されていません。\n\n" + BROADCAST_HELP
+    );
+  }
+  return await readStdin();
 }
 
 export async function cmdBroadcast(args: string[]): Promise<void> {
@@ -73,11 +108,12 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
     return;
   }
 
-  const { axes, all, body } = parsed;
-
+  const body = await resolveBroadcastBody(parsed);
   if (body.length === 0) {
     throw new UsageError(`メッセージ本文が空です\n\n${BROADCAST_HELP}`);
   }
+
+  const { axes, all } = parsed;
 
   // DR-0005: 軸なしのデフォルトは --by home
   const effectiveAxes = !all && axes.length === 0 ? [{ kind: "home" as const }] : axes;
@@ -123,7 +159,6 @@ export async function cmdBroadcast(args: string[]): Promise<void> {
   const sent = results.filter((r) => r.status === "fulfilled").length;
 
   // 失敗があれば理由を stderr に詳細出力 + exit code 2 (部分失敗)。
-  // 旧実装は失敗を握りつぶして「N ピアに送信」と表示するだけだった。
   const failures: Array<{ sid: string; reason: string }> = [];
   results.forEach((r, i) => {
     if (r.status === "rejected") {

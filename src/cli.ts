@@ -39,14 +39,16 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg peers [--by <axis>...] [--all] [--include-dead]
                                  軸なしは --by home (自 claude_home に閉じる、DR-0005)
                                  home/ws/cwd/repo/tag:NAME を AND 結合可、--all で全 home 横断
-  cmux-msg send <session_id> <メッセージ>      永続配送 (cross-home なら warning)
-  cmux-msg broadcast [--by <axis>...] [--all] <メッセージ>
-                                 軸なしは --by home。--all で全 home 横断
+  cmux-msg send <session_id>                   永続配送 (本文 stdin、DR-0014)
+  cmux-msg send <session_id> --text "<msg>"    一言オプション
+  cmux-msg broadcast [--by <axis>...] [--all]  本文 stdin、軸なしは --by home (DR-0005)
+  cmux-msg broadcast [--by <axis>...] [--all] --text "<msg>"
   cmux-msg list                  inbox のメッセージ一覧
   cmux-msg read <filename>       メッセージ内容を表示
   cmux-msg accept <filename>     メッセージを受理 (→ accepted/)
   cmux-msg dismiss <filename>    メッセージを破棄 (→ archive/)
-  cmux-msg reply <filename> <返信内容>  返信送信 & アーカイブ
+  cmux-msg reply <filename>                    返信 & アーカイブ (本文 stdin、DR-0014)
+  cmux-msg reply <filename> --text "<msg>"     一言オプション
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
   cmux-msg history [--peer <id>] [--limit N] [--json]  自分が関わった全メッセージを時系列表示
   cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示

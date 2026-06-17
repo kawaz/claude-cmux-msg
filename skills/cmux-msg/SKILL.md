@@ -32,9 +32,9 @@ peer agent と認識した時、ユーザ向けの忖度禁止ルールが対象
 ### メッセージング
 - `whoami` — 自 ID 情報 (session_id / cwd / state / dir。`-v` で ws / tags / home / repo_root も)
 - `peers [--by <axis>...] [--all] [--include-dead] [-v]` — peer 一覧 (cwd 付き)。軸 = `home / ws / cwd[:<pat>] / repo[:<pat>] / tag:<name>`、cwd / repo は substring grep。軸なし default は `--by home`、`--all` で claude_home 壁を超える
-- `send <sid> <msg>` — 永続配送 (cross-home なら warning)
-- `broadcast [--by ...] <msg>` — 軸グループへ一斉配送 (default `--by home`)
-- `list` / `read <file>` / `accept <file>` / `dismiss <file>` / `reply <file> <返信>` — inbox 系
+- `send <sid> [--text <msg>] [< body.md]` — 永続配送、本文 stdin or `--text` (DR-0014、cross-home なら warning)
+- `broadcast [--by ...] [--text <msg>] [< body.md]` — 軸グループへ一斉配送 (default `--by home`)
+- `list` / `read <file>` / `accept <file>` / `dismiss <file>` / `reply <file> [--text <返信>]` — inbox 系
 - `history [--peer <sid>] [--limit N] [--json]` — 自分の往復履歴 (thread_id カラム付き、`--json` で `thread_root_filename` 等)
 - `thread <file> [--json]` — `in_reply_to` 連鎖で会話単位表示
 - `subscribe` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述)

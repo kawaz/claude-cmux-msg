@@ -1,48 +1,44 @@
-import * as fs from "fs";
 import { requireSessionId } from "../config";
 import { sendMessage } from "../lib/sender";
 import { validateSessionId } from "../lib/validate";
 import { readMetaBySid, warnIfCrossHome } from "../lib/meta";
 import { UsageError } from "../lib/errors";
-import { looksLikeFlag, splitDoubleDash } from "../lib/argv";
+import { looksLikeFlag } from "../lib/argv";
 
-const USAGE = `使い方: cmux-msg send <session_id> [<メッセージ>]
-       cmux-msg send <session_id> --file <path>
-       cmux-msg send <session_id> --file -    # stdin から読み込み
-       cmux-msg send <session_id> -- <メッセージ>  # 本文が - で始まる場合
-       cat msg.md | cmux-msg send <session_id>  # メッセージ省略時は stdin (非 TTY のみ)
+const USAGE = `使い方:
+  cmux-msg send <session_id>                  # 本文 stdin
+  cmux-msg send <session_id> --text "<msg>"   # 一言オプション
+  cmux-msg send <session_id> < msg.md         # ファイル経由
+  cat msg.md | cmux-msg send <session_id>     # pipe 経由
 
-返信は send ではなく reply を使う:
-       cmux-msg reply <filename> <返信内容>
-(send に --in-reply-to / --type 等の返信フラグは無い。reply が in_reply_to を付与する)`;
+本文を positional 引数で受けることはしない (DR-0014)。
+stdin が TTY かつ --text 未指定なら usage error。
+
+返信は reply を使う:
+  cmux-msg reply <filename>                   # 本文 stdin
+  cmux-msg reply <filename> --text "<msg>"`;
 
 export interface ParsedSendArgs {
   target: string;
-  body?: string;
-  file?: string;
+  text?: string;
 }
 
 export function parseSendArgs(args: string[]): ParsedSendArgs {
-  // `--` 以降は全て本文 (positional)。本文が `-` で始まる正当ケースの逃げ道。
-  const { before, after } = splitDoubleDash(args);
-
   const positional: string[] = [];
-  let file: string | undefined;
+  let text: string | undefined;
 
-  for (let i = 0; i < before.length; i++) {
-    const a = before[i]!;
-    if (a === "--file") {
-      const v = before[i + 1];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]!;
+    if (a === "--text") {
+      const v = args[i + 1];
       if (v === undefined) {
-        throw new UsageError("--file には値が必要です\n" + USAGE);
+        throw new UsageError("--text には値が必要です\n" + USAGE);
       }
-      file = v;
+      text = v;
       i++;
-    } else if (a.startsWith("--file=")) {
-      file = a.slice("--file=".length);
+    } else if (a.startsWith("--text=")) {
+      text = a.slice("--text=".length);
     } else if (looksLikeFlag(a)) {
-      // 未知の `-`/`--` 始まり引数は本文に silent 混入させず弾く。
-      // 本文が正当に `-` で始まるなら `send <id> -- <本文>` を使う。
       throw new UsageError(`不明なオプション: ${a}\n` + USAGE);
     } else {
       positional.push(a);
@@ -53,21 +49,12 @@ export function parseSendArgs(args: string[]): ParsedSendArgs {
   if (!target) {
     throw new UsageError(USAGE);
   }
-
-  // `--` 以降のトークンも本文を構成する (positional の続きとして連結)。
-  const bodyParts = positional.slice(1);
-  if (after !== undefined) bodyParts.push(...after);
-
-  // body は --file が無ければ positional の残りを join。
-  // --file 指定時に message が同時指定されたらエラー (曖昧さ回避)。
-  if (file !== undefined && bodyParts.length >= 1) {
+  if (positional.length > 1) {
     throw new UsageError(
-      "--file と <メッセージ> は同時に指定できません\n" + USAGE
+      "本文を positional 引数で受けることはできません。--text または stdin を使ってください\n" + USAGE
     );
   }
-
-  const body = bodyParts.length >= 1 ? bodyParts.join(" ") : undefined;
-  return { target, body, file };
+  return { target, text };
 }
 
 async function readStdin(): Promise<string> {
@@ -75,18 +62,13 @@ async function readStdin(): Promise<string> {
 }
 
 export async function resolveSendBody(parsed: ParsedSendArgs): Promise<string> {
-  if (parsed.file !== undefined) {
-    if (parsed.file === "-") {
-      return await readStdin();
-    }
-    return fs.readFileSync(parsed.file, "utf-8");
+  if (parsed.text !== undefined) {
+    return parsed.text;
   }
-  if (parsed.body !== undefined) {
-    return parsed.body;
-  }
-  // 引数省略時は stdin から読み込み (対話的入力との誤動作を防ぐため非 TTY 必須)
   if (process.stdin.isTTY) {
-    throw new UsageError(USAGE);
+    throw new UsageError(
+      "stdin が TTY で --text も指定されていません。\n" + USAGE
+    );
   }
   return await readStdin();
 }
