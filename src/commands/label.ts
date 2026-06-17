@@ -30,9 +30,15 @@ const USAGE = `使い方:
 
 label 文字制約: [a-zA-Z0-9_=]+、長さ上限 64
 例:
-  ccmsg label add test-team-A
+  ccmsg label add test_team_A
   ccmsg label add team_a,team_b,role=tester
-  ccmsg label remove team_a,team_b`;
+  ccmsg label remove team_a,team_b
+
+AI agent 向け運用ガイドライン (= SKILL.md 抜粋):
+  - 役割 label (role=maintainer / team_alpha 等) は session 寿命まで維持してよい
+  - 一時参加 / 動作確認用 (tmp_demo / bug-inv / debugging_X 等) は自分で剥がすこと
+  - ユーザに「不要なら剥がして」と頼まない (= 自律判断)
+  - 迷ったら剥がす方を選ぶ`;
 
 export async function cmdLabel(args: string[]): Promise<void> {
   requireSessionId();

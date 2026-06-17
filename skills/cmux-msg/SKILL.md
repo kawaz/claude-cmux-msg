@@ -39,6 +39,26 @@ peer agent と認識した時、ユーザ向けの忖度禁止ルールが対象
 - `thread <file> [--json]` — `in_reply_to` 連鎖で会話単位表示
 - `subscribe` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述)
 - `gc [--force]` — dead session 掃除
+- `label add <name>[,<name>...]` / `label remove <name>[,<name>...]` / `label list` — 自セッションに動的に label を貼り剥がし (DR-0015、カンマ区切り複数同時可、文字制約 `[a-zA-Z0-9_=]+`)
+
+### label の運用ガイドライン (= AI agent は自律判断、ユーザに聞かない)
+
+label には寿命が違う 2 種類ある。**AI agent は自分で判断して付け剥がす**こと:
+
+| 種類 | 例 | 寿命 |
+|---|---|---|
+| 役割 / 長期帰属 | `role=maintainer`, `team_alpha`, `app=ccmsg` | session 寿命 ≒ session_end まで維持 |
+| 一時参加 / 動作確認 | `bug-inv-1234`, `chore_X`, `tmp_demo`, `_test_` | **タスク完了したら自分で剥がす** |
+
+**やってはいけないこと**:
+- ユーザに「不要なら label remove で剥がしてください」と頼む (= 自分で剥がせばいい)
+- 動作確認のために付けた label を残したまま「報告で言及する」(= 自分で後始末)
+
+**やるべきこと**:
+- デモ / 動作確認の前に label add、確認終わったら label remove で剥がす
+- 「自分が何をしているか」を表す ad hoc label (= `nonstop_session`, `debugging_X`) はタスク完了と同時に剥がす
+- 役割 label は session 寿命の間維持してよい
+- 迷ったら剥がす方を選ぶ (= 残存 label が他 session の認知を混乱させるリスク > 短命 label の便益)
 
 ### subscribe は Monitor で
 
