@@ -15,7 +15,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { isSessionId } from "./validate";
-import { lookupSidProcess, type SidProcessLookup } from "./session-proc";
+import {
+  lookupSidProcess,
+  lookupSidProcessBulk,
+  type SidProcessLookup,
+} from "./session-proc";
 
 /**
  * 指定 PID のプロセスが alive か (シグナル 0 で生存確認)。
@@ -73,20 +77,24 @@ export interface PeerEntry {
  * `by-surface` などのインデックスや内部状態ファイルは除外される。
  *
  * alive 判定はディレクトリ名 (= session_id) で `ps` を照合する。
+ * peer 数 N に対して **`ps` は 1 回だけ実行** (= lookupSidProcessBulk)。
  */
 export function listPeers(wsDir: string): PeerEntry[] {
   if (!fs.existsSync(wsDir)) return [];
   const entries = fs.readdirSync(wsDir, { withFileTypes: true });
-  const result: PeerEntry[] = [];
+  const sids: string[] = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
     if (!isSessionId(entry.name)) continue;
-    const dir = path.join(wsDir, entry.name);
-    result.push({
-      sessionId: entry.name,
-      dir,
-      alive: isPeerAlive(entry.name),
-    });
+    sids.push(entry.name);
   }
-  return result;
+  if (sids.length === 0) return [];
+  const lookups = lookupSidProcessBulk(sids);
+  return sids.map((sid) => ({
+    sessionId: sid,
+    dir: path.join(wsDir, sid),
+    alive: aliveFromLookup(
+      lookups.get(sid) ?? { kind: "check_failed", error: "missing in bulk result" },
+    ),
+  }));
 }

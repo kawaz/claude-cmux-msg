@@ -295,7 +295,12 @@ export function recheckPidProcess(pid: number): PidRecheck {
  *
  * `LC_ALL=C` を強制し、lstart 列をロケール非依存の英語表記で得る。
  */
-export function lookupSidProcess(sid: string): SidProcessLookup {
+/**
+ * `ps -axww` を 1 回実行し、PsRow[] と raw を返す。
+ * 失敗時は check_failed (= 呼出側で sid 数分の同じ check_failed を返せるよう、
+ * `kind: "check_failed"` 形で返す)。
+ */
+function runPsOnce(): { rows: PsRow[] } | { failure: SidProcessLookup } {
   let raw: string;
   try {
     const proc = Bun.spawnSync({
@@ -313,21 +318,51 @@ export function lookupSidProcess(sid: string): SidProcessLookup {
     if (proc.exitCode !== 0) {
       const err = new TextDecoder().decode(proc.stderr).trim();
       return {
-        kind: "check_failed",
-        error: `ps exited with code ${proc.exitCode}${err ? `: ${err}` : ""}`,
+        failure: {
+          kind: "check_failed",
+          error: `ps exited with code ${proc.exitCode}${err ? `: ${err}` : ""}`,
+        },
       };
     }
     raw = new TextDecoder().decode(proc.stdout);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { kind: "check_failed", error: `ps execution failed: ${msg}` };
+    return { failure: { kind: "check_failed", error: `ps execution failed: ${msg}` } };
   }
-  let rows: PsRow[];
   try {
-    rows = parsePsOutput(raw);
+    const rows = parsePsOutput(raw);
+    return { rows };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { kind: "check_failed", error: `ps output parse failed: ${msg}` };
+    return { failure: { kind: "check_failed", error: `ps output parse failed: ${msg}` } };
   }
-  return resolveSidFromPsRows(rows, sid);
+}
+
+export function lookupSidProcess(sid: string): SidProcessLookup {
+  const r = runPsOnce();
+  if ("failure" in r) return r.failure;
+  return resolveSidFromPsRows(r.rows, sid);
+}
+
+/**
+ * N 個の sid を **1 回の ps spawn で一括照合**する。
+ * peers / broadcast / listPeers などで peer 数 N に対して O(N) の ps 呼び出しが
+ * O(1) になる (= 全件で 1 回の ps 実行のみ)。
+ *
+ * 失敗時は全 sid に同じ check_failed を Map で割り振って返す。
+ */
+export function lookupSidProcessBulk(
+  sids: string[],
+): Map<string, SidProcessLookup> {
+  const result = new Map<string, SidProcessLookup>();
+  if (sids.length === 0) return result;
+  const r = runPsOnce();
+  if ("failure" in r) {
+    for (const sid of sids) result.set(sid, r.failure);
+    return result;
+  }
+  for (const sid of sids) {
+    result.set(sid, resolveSidFromPsRows(r.rows, sid));
+  }
+  return result;
 }
