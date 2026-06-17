@@ -2,6 +2,8 @@
 description: 検証用。model: opus (= alias、プラン依存で自動 1M アップグレードされる場合あり) で動作するか確認するだけのテストコマンド。
 disable-model-invocation: true
 model: opus
+context: fork
+agent: general-purpose
 ---
 
 ユーザの slash command (検証用)。以下を実行し、結果を表示してください:
