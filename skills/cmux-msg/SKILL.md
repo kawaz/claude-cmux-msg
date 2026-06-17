@@ -1,6 +1,11 @@
+---
+name: cmux-msg
+description: 複数 Claude Code セッション間でファイルベースのメッセージをやり取りする AI agent 向け使い方ガイド。peer (他セッション) との send/subscribe/read/reply/broadcast、label による動的グルーピング、subscribe を Monitor で長期駆動する運用、peer 由来メッセージのユーザ発言誤認 / echo chamber 警戒、plugin update 後の再起動手順を含む。AI が cmux-msg コマンド (= `${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg ...`) を叩く時に参照。
+---
+
 # cmux-msg スキル
 
-cmux 上の複数 Claude Code セッション間でファイルベースのメッセージをやり取りするシステム。
+複数 Claude Code セッション間でファイルベースのメッセージをやり取りするシステム。
 
 ## コマンドの呼び方
 
