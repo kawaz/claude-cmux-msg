@@ -1,6 +1,6 @@
 # DR-0013: パッケージ / コマンド / env の cmux- prefix を ccmsg に統一
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Related: [DR-0009](DR-0009-hyoui-delegation.md) / [DR-0010](DR-0010-drop-cmux-environment-requirement.md) (cmux 廃止系)
 

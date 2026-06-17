@@ -1,6 +1,6 @@
 # DR-0015: 永続宛先 (cwd / ws / repo / label) の inbox を sid 宛と並列に持つ (sid 揮発性への対応)
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (sid 主体は維持しつつ、並列軸として永続宛先を追加)
 - Refines: [DR-0005](DR-0005-claude-home-default-wall.md) (永続宛先も home 壁の対象)

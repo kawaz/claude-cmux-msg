@@ -1,6 +1,6 @@
 # DR-0011: tell コマンド廃止 + tell-guard 全削除 (中途半端に古いものを残さない)
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Supersedes parts of: [DR-0007](DR-0007-resume-resilient-session-identity.md) (tell 安全境界の責務、tell 廃止に伴い消滅)
 - Related: [DR-0009](DR-0009-hyoui-delegation.md) (hyoui 委譲、tell 完全廃止を確定), [DR-0010](DR-0010-drop-cmux-environment-requirement.md) (cmux 環境必須全廃)

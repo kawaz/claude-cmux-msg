@@ -1,6 +1,6 @@
 # DR-0012: subscribe を file system イベント駆動 + watermark + ln atomic 排他に切替
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Related: [DR-0004](DR-0004-session-as-primary-key.md) (sid 主体), [DR-0008](DR-0008-messaging-needs-only-session-id.md) (messaging は cmux 非依存), 本草稿の根拠 findings: `docs/findings/2026-06-16-file-watcher-comparison.md`
 - Borrowed from: agmsg `watch.sh:216-231` (watermark 永続化), `actas-lock.sh:121,154-178` (ln atomic + mkdir double-check)

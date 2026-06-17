@@ -1,6 +1,6 @@
 # DR-0010: cmux 環境必須を全廃 (requireCmux / workspace_id / by-surface lookup 削除)
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Supersedes: [DR-0008](DR-0008-messaging-needs-only-session-id.md) (cmux 依存境界の分離自体が不要になるため)
 - Related: [DR-0004](DR-0004-session-as-primary-key.md) (sid 主体), [DR-0009](DR-0009-hyoui-delegation.md) (hyoui 委譲、surface 操作系も cmux 不要に)

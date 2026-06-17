@@ -1,6 +1,6 @@
 # DR-0016: session status / 軸索引 / queue 状態を SQLite に集約 (メッセージ本体は file のまま)
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Refines: [DR-0004](DR-0004-session-as-primary-key.md) (sid 主体の状態管理を file 分散から DB 集約に)
 - Depended by: [DR-0015](DR-0015-persistent-cwd-mailbox.md) (永続宛先の物理実装、軸索引と queue 状態)

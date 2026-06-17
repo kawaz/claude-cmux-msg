@@ -1,6 +1,6 @@
 # DR-0009: surface 操作系 (tell / screen / spawn / stop) を hyoui に委譲
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Supersedes: [DR-0007](DR-0007-resume-resilient-session-identity.md) (tell 安全境界の根拠が hyoui 側に移譲、tty→surface 逆引きが不要に)
 - Related: [DR-0004](DR-0004-session-as-primary-key.md) (sid 主体), [DR-0010](DR-0010-drop-cmux-environment-requirement.md) (cmux 環境必須を全廃), [DR-0011](DR-0011-drop-tell-command.md) (input-guard 縮退)

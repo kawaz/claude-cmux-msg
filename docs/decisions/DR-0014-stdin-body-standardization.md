@@ -1,6 +1,6 @@
 # DR-0014: send / reply / broadcast の本文入力を stdin に統一
 
-- Status: Proposed
+- Status: Accepted (2026-06-17, kawaz 一括承認)
 - Date: 2026-06-16
 - Related: cli-design-preferences (ロングオプション基本、補完前提), AI agent の Markdown / バックティック親和性
 
