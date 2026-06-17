@@ -4,6 +4,20 @@ cmux-msg の user slash command (= `/cmux-msg:list` 等の薄い bash 橋渡し)
 
 ## 判明した事実
 
+### 0. **opus は単純 bash 橋渡しで「無駄なハイエフォート思考」を発動して遅い、haiku は straight execution で早い**
+
+検証 `test-opus` / `test-opus-pinned` (= `date` 1 つ実行して 1 行宣言するだけ) で、opus 系は実行に **~9 秒** かかっていた。kawaz 観察によると「無駄にハイエフォートな思考をするせい」。
+
+これは `effort` field の仕様と整合:
+- opus 系は effort=high (default、xhigh on Opus 4.7) → 単純 task でも extended thinking する
+- haiku は effort 非対応 (公式 docs: "Models not listed here do not support effort") → straight execution、即応
+
+つまり cmux-msg の薄い bash 橋渡しでは:
+- haiku: 早い + 安い + thinking なし
+- opus: 遅い (9s) + 高い + 無駄な reasoning
+
+→ 軽量 task ほど haiku の有効性が高い。`context: fork` + `model: haiku` の組み合わせが採算最適。
+
 ### 1. `commands/<name>.md` でも `context: fork` + `agent` が動く
 
 公式の `claude-plugin-reference` (`reference/commands.md` §3 field 表) には `context` / `agent` が **未掲載**だが、実機で動作する。
