@@ -17,8 +17,8 @@ interface HookInput {
 }
 
 export async function runStateHook(target: SessionState): Promise<void> {
-  // cmux 環境外 (CMUX_WORKSPACE_ID 未設定) では何もしない
-  if (!process.env.CMUX_WORKSPACE_ID) return;
+  // DR-0010 stage 1: 旧 `if (!CMUX_WORKSPACE_ID) return` を撤廃。
+  // cmux 環境外 (kawaz 現環境 / hyoui 配下) でも state 遷移を反映する。
 
   let input: HookInput;
   try {

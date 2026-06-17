@@ -39,11 +39,8 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // cmux 環境チェック
-  const workspaceId = process.env.CMUX_WORKSPACE_ID;
-  if (!workspaceId) {
-    process.exit(0);
-  }
+  // DR-0010 stage 1: 旧 `if (!workspaceId) process.exit(0)` を撤廃。
+  // cmux 環境外でも未読 inbox を通知 + state=running 反映する。
 
   const sessionId = input.session_id;
   if (!sessionId || !UUID_PATTERN.test(sessionId)) {

@@ -44,11 +44,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  // cmux 環境チェック
+  // cmux 環境チェック (= DR-0010 stage 1: 早期 return を廃止)。
+  // cmux 環境外 (kawaz の現環境 / hyoui 配下) でも meta.json / DB sessions を作成し、
+  // messaging (send/subscribe/read) が動くようにする。
+  // workspaceId は cmux signal 通知 (parentSessionId 経由) でのみ使う。
   const workspaceId = process.env.CMUX_WORKSPACE_ID;
-  if (!workspaceId) {
-    process.exit(0);
-  }
 
   // session_id は claude から必ず渡される前提
   const sessionId = input.session_id;
@@ -160,7 +160,11 @@ async function main(): Promise<void> {
   // 親 (spawn コマンド) は cmux wait-for で待機中。
   // 旧実装は親が screen の文字列マッチでポーリングしていたが、Claude Code の
   // 表示文字列バージョン依存だった。signal 駆動のほうが確実。
-  if (parentSessionId) {
+  //
+  // DR-0010 stage 1: cmuxSignal は cmux 必須なので workspaceId 不在時はスキップ。
+  // (cmux 環境外で spawn は使えないため parentSessionId が立っていることもないが
+  //  安全側で skip)
+  if (parentSessionId && workspaceId) {
     try {
       await cmuxSignal(`cmux-msg:spawned-${sessionId}`);
     } catch {
