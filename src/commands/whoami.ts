@@ -1,11 +1,12 @@
 import { requireSessionId, getSessionId, myDir } from "../config";
 import { readMetaByDir } from "../lib/meta";
 import { abbreviateHome } from "../lib/paths";
+import { openDb } from "../lib/db";
+import { getSession, listLabels } from "../lib/session-status";
 
 const WHOAMI_HELP = `使い方: cmux-msg whoami [-v|--verbose]
 
-自セッションの ID 情報を表示する (peers と同じ流儀: cwd 中心、ws は冗長なので
---verbose 時のみ)。
+自セッションの ID 情報を表示する。
 
 OUTPUT (default):
   session_id: <UUID>
@@ -15,10 +16,16 @@ OUTPUT (default):
 
 OUTPUT (--verbose 追加):
   repo_root:  <repo_root を ~ 短縮>
-  workspace:  <workspace_id (UUID)>
+  workspace:  <workspace_id (UUID、旧 cmux 環境のみ)>
   home:       <claude_home を ~ 短縮>
   tags:       <CSV>
-  name:       <worker_name>`;
+  name:       <worker_name>
+  ws:         <ws (DR-0015 worktree root) を ~ 短縮>
+  cwd_hash:   <cwd-hash (DR-0015 軸索引)>
+  ws_hash:    <ws-hash>
+  repo_hash:  <repo-hash>
+  labels:     <DB session_labels から、CSV>
+  pid:        <DB sessions.pid>`;
 
 export function cmdWhoami(args: string[] = []): void {
   requireSessionId();
@@ -66,6 +73,29 @@ export function cmdWhoami(args: string[] = []): void {
     }
     if (meta?.worker_name) {
       console.log(`name:       ${meta.worker_name}`);
+    }
+
+    // DR-0015 / DR-0016: DB sessions row + labels も verbose で表示
+    try {
+      const db = openDb();
+      try {
+        const row = getSession(db, sid);
+        if (row) {
+          if (row.ws) console.log(`ws:         ${abbreviateHome(row.ws)}`);
+          console.log(`cwd_hash:   ${row.cwdHash}`);
+          if (row.wsHash) console.log(`ws_hash:    ${row.wsHash}`);
+          if (row.repoHash) console.log(`repo_hash:  ${row.repoHash}`);
+          console.log(`pid:        ${row.pid}`);
+          const labels = listLabels(db, sid);
+          if (labels.length > 0) {
+            console.log(`labels:     ${labels.join(",")}`);
+          }
+        }
+      } finally {
+        db.close();
+      }
+    } catch {
+      // DB エラーは silent (= 既存挙動を壊さない、verbose の追加情報なので)
     }
   }
 }
