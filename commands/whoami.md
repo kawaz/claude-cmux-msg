@@ -1,5 +1,4 @@
 ---
-name: cmux-msg-whoami
 description: 自セッションの ID 情報 (session_id, workspace_id, cwd, repo_root, claude_home, tags 等) を表示する。
 disable-model-invocation: true
 ---
