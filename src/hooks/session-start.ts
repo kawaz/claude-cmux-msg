@@ -20,6 +20,11 @@ import {
   detectSubscribeForSid,
   decideSubscribeMessage,
 } from "../lib/subscribe-watch";
+import { openDb } from "../lib/db";
+import { upsertSession, addLabels } from "../lib/session-status";
+import { computeScopeHashes } from "../lib/scope-hash";
+import { parseLabels } from "../lib/label-parser";
+import { lookupSidProcess } from "../lib/session-proc";
 
 interface SessionStartInput {
   session_id: string;
@@ -78,6 +83,49 @@ async function main(): Promise<void> {
   // init 共通関数で初期化 (DR-0004: workspace_id 階層なし)
   const myDirPath = path.join(msgBase, sessionId);
   initWorkspace(myDirPath, { cwd: input.cwd });
+
+  // DR-0016 stage E: DB sessions に並列書き込み (= 真実源を file から DB へ段階移行)
+  // 既存 meta.json は維持 (= 後方互換)、DB 書き込み失敗は silent (= 既存動作を壊さない)
+  try {
+    const db = openDb();
+    const scopes = computeScopeHashes(input.cwd);
+    const lookup = lookupSidProcess(sessionId);
+    const claudePid = lookup.kind === "found" ? lookup.pid : process.ppid;
+    const home =
+      process.env.CLAUDE_CONFIG_DIR || process.env.HOME || "/";
+    const now = Date.now();
+    upsertSession(db, {
+      sid: sessionId,
+      home,
+      cwd: scopes.cwd,
+      cwdHash: scopes.cwdHash,
+      ws: scopes.ws,
+      wsHash: scopes.wsHash,
+      repo: scopes.repo,
+      repoHash: scopes.repoHash,
+      state: "idle",
+      pid: claudePid,
+      startedAt: now,
+      lastSeen: now,
+      metaJson: null,
+    });
+    // labels: 新 CCMSG_LABELS env、旧 CMUXMSG_TAGS env も互換受付 (DR-0013)
+    const labelsCsv =
+      process.env.CCMSG_LABELS ?? process.env.CMUXMSG_TAGS ?? "";
+    if (labelsCsv.trim().length > 0) {
+      try {
+        const labels = parseLabels(labelsCsv);
+        if (labels.length > 0) addLabels(db, sessionId, labels);
+      } catch {
+        // 不正な label 値は silent skip (= hook 自体を止めない)
+      }
+    }
+    db.close();
+  } catch (e) {
+    // DB 書き込み失敗は stderr に出すが hook は続行 (= 既存 meta.json 経路は生きている)
+    const msg = e instanceof Error ? e.message : String(e);
+    process.stderr.write(`[cmux-msg session-start db] ${msg}\n`);
+  }
 
   // CMUX_SURFACE_ID → session_id の lookup index を書く。
   // CLAUDE_ENV_FILE 経由の env 伝播が claude-code Issue #15840 で動かないため、
