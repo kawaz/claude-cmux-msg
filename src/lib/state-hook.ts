@@ -9,6 +9,8 @@
 import { transitionState } from "./state";
 import { UUID_PATTERN } from "./validate";
 import type { SessionState } from "../types";
+import { openDb } from "./db";
+import { updateState } from "./session-status";
 
 interface HookInput {
   session_id?: string;
@@ -33,5 +35,16 @@ export async function runStateHook(target: SessionState): Promise<void> {
     transitionState(sid, target);
   } catch {
     // meta 未存在 / 書き込み失敗は致命的ではない
+  }
+
+  // DR-0016 stage E: DB sessions の state も並列更新 (失敗は silent)。
+  try {
+    const db = openDb();
+    updateState(db, sid, target);
+    db.close();
+  } catch (e) {
+    process.stderr.write(
+      `[cmux-msg state-hook db] ${e instanceof Error ? e.message : String(e)}\n`,
+    );
   }
 }
