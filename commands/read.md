@@ -2,6 +2,7 @@
 description: inbox のメッセージ本文を表示する。引数に ${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg list で見えるファイル名を渡す。
 argument-hint: <filename>
 disable-model-invocation: true
+model: haiku
 ---
 
 ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg read $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。
