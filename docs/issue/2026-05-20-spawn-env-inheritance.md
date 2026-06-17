@@ -1,5 +1,7 @@
 # spawn が子 claude に CMUX_WORKSPACE_ID 等を継承できず hook が早期 exit する
 
+- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+
 `cmux-msg spawn` の signal タイムアウトの真因は、bin 廃止 (DR-0007 task #3) で
 仮定した「子 hook の同期ビルド」ではなく、**子 claude プロセスに `CMUX_WORKSPACE_ID`
 が継承されておらず、子の SessionStart hook が cmux 環境チェックで早期 exit する**

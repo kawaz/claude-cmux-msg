@@ -1,5 +1,7 @@
 # `cmux-msg subscribe` の2重起動防止 (= 通知重複対策)
 
+- Status: Will be sublimated after DR-0012 land (subscribe を SQLite lock + Bun fs.watch + watermark で解決)
+
 報告者: kawaz (2026-06-02)。claude-plugin-reference リポでの議論から起票。
 
 ## 背景: 何が起きるか

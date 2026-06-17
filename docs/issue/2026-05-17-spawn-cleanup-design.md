@@ -1,5 +1,7 @@
 # spawn した子 CC / surface のクリーンアップ設計
 
+- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+
 `cmux-msg spawn` は子 CC 用に cmux surface を作り、その中の shell に
 `claude` 起動コマンドを送る。この「surface + shell + claude プロセス」の
 ライフサイクル終了時のクリーンアップが設計されていない。

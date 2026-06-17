@@ -1,5 +1,7 @@
 # cmux への atomic 送信 API 要望 (foreground pgrp 条件付きキー入力)
 
+- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+
 `cmux-msg tell` の TOCTOU 窓を根本的に閉じるための、cmux 本体への機能要望。
 
 報告者: kawaz (2026-05-18)。DR-0007 決定6 / 未解決節で「別 issue 起票する」と

@@ -1,5 +1,7 @@
 # cmux 0.64.5 の `new-split` で新 pane のシェルが自動起動しない
 
+- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+
 `cmux-msg spawn` の signal タイムアウトの**さらに別の真因**として、cmux 本体の
 `new-split` で作った新 pane のシェルが自動起動しなくなっていることが判明した。
 

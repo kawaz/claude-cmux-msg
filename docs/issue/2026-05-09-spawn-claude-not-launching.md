@@ -1,5 +1,7 @@
 # spawn が Claude 起動 signal を受信できず、session が永続化されない
 
+- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+
 ## 症状
 
 `cmux-msg spawn` を実行すると、表面上は「spawn完了」のログが出るが:
