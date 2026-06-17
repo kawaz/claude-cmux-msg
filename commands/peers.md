@@ -2,7 +2,7 @@
 description: cmux-msg の peer 一覧 (= 他セッション) を cwd 付きで表示。--by cwd:<pat> で部分一致 grep、--all で全 home 横断、-v で ws/tags/home 詳細。
 argument-hint: [--all] [--by cwd:<pat>] [-v|--verbose] [--include-dead]
 disable-model-invocation: true
-model: haiku
+model: sonnet[1m]
 ---
 
 ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg peers $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。

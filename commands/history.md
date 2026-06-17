@@ -2,7 +2,7 @@
 description: 自セッションが関わった全メッセージ (送受信) を時系列で表示。--peer <id> で特定相手に絞る、--limit N で件数制限。
 argument-hint: [--peer <id>] [--limit N] [--json]
 disable-model-invocation: true
-model: haiku
+model: sonnet[1m]
 ---
 
 ユーザの slash command。`${CLAUDE_PLUGIN_ROOT}/bin/cmux-msg history $ARGUMENTS` を Bash で実行して結果をそのまま表示してください。
