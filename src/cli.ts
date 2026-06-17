@@ -14,6 +14,7 @@ import { cmdDismiss } from "./commands/dismiss";
 import { cmdReply } from "./commands/reply";
 import { cmdBroadcast } from "./commands/broadcast";
 import { cmdSubscribe } from "./commands/subscribe";
+import { cmdLabel } from "./commands/label";
 import { cmdSpawn } from "./commands/spawn";
 import { cmdStop } from "./commands/stop";
 import { cmdTell } from "./commands/tell";
@@ -53,6 +54,9 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg history [--peer <id>] [--limit N] [--json]  自分が関わった全メッセージを時系列表示
   cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示
   cmux-msg gc [--force] [--verbose]  inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
+  cmux-msg label add <name>[,<name>...]      自セッションに label 付与 (DR-0015)
+  cmux-msg label remove <name>[,<name>...]   label 剥がし
+  cmux-msg label list                        自セッションの label 一覧
 
 ダイレクト操作 (安全境界あり):
   cmux-msg tell <session_id> <テキスト>  fg + state ∈ {idle, awaiting_permission} 必須、cross-home なら warning
@@ -87,6 +91,7 @@ const COMMANDS: Record<string, CmdHandler> = {
   reply: cmdReply,
   broadcast: cmdBroadcast,
   subscribe: cmdSubscribe,
+  label: cmdLabel,
   spawn: cmdSpawn,
   stop: cmdStop,
   tell: cmdTell,
