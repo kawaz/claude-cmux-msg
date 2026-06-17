@@ -16,6 +16,8 @@ import * as path from "path";
 import { UUID_PATTERN } from "../lib/validate";
 import { getMsgBase } from "../lib/paths";
 import { transitionState } from "../lib/state";
+import { openDb } from "../lib/db";
+import { updateState } from "../lib/session-status";
 
 interface Input {
   session_id: string;
@@ -53,6 +55,17 @@ async function main(): Promise<void> {
     transitionState(sessionId, "running");
   } catch {
     // 遷移失敗は致命的ではない (meta 未存在等)
+  }
+
+  // DR-0016 stage E: DB sessions.state も並列更新
+  try {
+    const db = openDb();
+    updateState(db, sessionId, "running");
+    db.close();
+  } catch (e) {
+    process.stderr.write(
+      `[cmux-msg user-prompt-submit db] ${e instanceof Error ? e.message : String(e)}\n`,
+    );
   }
 
   // DR-0004: dir 構造が `<base>/<sid>/` に変更された
