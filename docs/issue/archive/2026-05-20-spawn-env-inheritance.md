@@ -1,6 +1,23 @@
-# spawn が子 claude に CMUX_WORKSPACE_ID 等を継承できず hook が早期 exit する
+---
+title: spawn が子 claude に CMUX_WORKSPACE_ID 等を継承できず hook が早期 exit する
+status: resolved
+category: bug
+created: 2026-05-20T00:00:00+09:00
+last_read:
+open_entered: 2026-05-20T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered:
+resolved_entered: 2026-06-19T10:00:00+09:00
+discard_reason:
+pending_reason:
+close_reason: ["implemented"]
+blocked_by:
+origin: 自リポ TODO
+---
 
-- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+# spawn が子 claude に CMUX_WORKSPACE_ID 等を継承できず hook が早期 exit する
 
 `cmux-msg spawn` の signal タイムアウトの真因は、bin 廃止 (DR-0007 task #3) で
 仮定した「子 hook の同期ビルド」ではなく、**子 claude プロセスに `CMUX_WORKSPACE_ID`

@@ -1,3 +1,22 @@
+---
+title: プロセス情報を構造化 JSON で取得するツール / 機能
+status: open
+category: request
+created: 2026-05-17T00:00:00+09:00
+last_read:
+open_entered: 2026-05-17T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered:
+resolved_entered:
+discard_reason:
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
+
 # プロセス情報を構造化 JSON で取得するツール / 機能
 
 fg 判定 (DR-0006 周辺) で「sid → claude プロセスの PID・状態」を引くために

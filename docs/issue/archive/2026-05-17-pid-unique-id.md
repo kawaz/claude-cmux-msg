@@ -1,3 +1,22 @@
+---
+title: PID の同一性判定を proc_bsdinfo.pbi_uniqueid で厳密化する案
+status: discarded
+category: request
+created: 2026-05-17T00:00:00+09:00
+last_read:
+open_entered: 2026-05-17T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered: 2026-06-19T10:00:00+09:00
+resolved_entered:
+discard_reason: ["dr/DR-0007"]
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
+
 # PID の同一性判定を proc_bsdinfo.pbi_uniqueid で厳密化する案
 
 報告者: kawaz (2026-05-17)。本 issue は提案の記録であり、現時点では着手しない。

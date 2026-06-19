@@ -1,6 +1,23 @@
-# cmux 0.64.5 の `new-split` で新 pane のシェルが自動起動しない
+---
+title: cmux 0.64.5 の `new-split` で新 pane のシェルが自動起動しない
+status: discarded
+category: bug
+created: 2026-05-20T00:00:00+09:00
+last_read:
+open_entered: 2026-05-20T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered: 2026-06-19T10:00:00+09:00
+resolved_entered:
+discard_reason: ["dr/DR-0009"]
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
 
-- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+# cmux 0.64.5 の `new-split` で新 pane のシェルが自動起動しない
 
 `cmux-msg spawn` の signal タイムアウトの**さらに別の真因**として、cmux 本体の
 `new-split` で作った新 pane のシェルが自動起動しなくなっていることが判明した。

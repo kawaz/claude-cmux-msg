@@ -1,7 +1,24 @@
+---
+title: child の内部観測には csa timeline cursor を併用する (skills/ ドキュメント補強)
+status: open
+category: request
+created: 2026-05-27T00:00:00+09:00
+last_read:
+open_entered: 2026-05-27T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered:
+resolved_entered:
+discard_reason:
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
+
 # child の内部観測には csa timeline cursor を併用する (skills/ ドキュメント補強)
 
-- Status: Open
-- Date: 2026-05-27
 - Priority: Low (ドキュメント追記)
 - 発見元: 2026-05-27 hyoui + cmux-msg 並列実験
 

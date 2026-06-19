@@ -1,6 +1,23 @@
-# spawn した子 CC / surface のクリーンアップ設計
+---
+title: spawn した子 CC / surface のクリーンアップ設計
+status: discarded
+category: design
+created: 2026-05-17T00:00:00+09:00
+last_read:
+open_entered: 2026-05-17T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered: 2026-06-19T10:00:00+09:00
+resolved_entered:
+discard_reason: ["dr/DR-0009"]
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
 
-- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+# spawn した子 CC / surface のクリーンアップ設計
 
 `cmux-msg spawn` は子 CC 用に cmux surface を作り、その中の shell に
 `claude` 起動コマンドを送る。この「surface + shell + claude プロセス」の

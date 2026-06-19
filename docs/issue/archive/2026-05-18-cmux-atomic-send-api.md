@@ -1,6 +1,23 @@
-# cmux への atomic 送信 API 要望 (foreground pgrp 条件付きキー入力)
+---
+title: cmux への atomic 送信 API 要望 (foreground pgrp 条件付きキー入力)
+status: discarded
+category: request
+created: 2026-05-18T00:00:00+09:00
+last_read:
+open_entered: 2026-05-18T00:00:00+09:00
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered: 2026-06-19T10:00:00+09:00
+resolved_entered:
+discard_reason: ["dr/DR-0011"]
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
 
-- Status: Will be sublimated after DR-0009/0010 land (cmux 全廃で消失)
+# cmux への atomic 送信 API 要望 (foreground pgrp 条件付きキー入力)
 
 `cmux-msg tell` の TOCTOU 窓を根本的に閉じるための、cmux 本体への機能要望。
 

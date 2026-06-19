@@ -1,3 +1,22 @@
+---
+title: '設計議論: Claude Code jsonl 更新ストリーミング監視ループ (kawaz と議論)'
+status: idea
+category: idea
+created: 2026-05-09T00:00:00+09:00
+last_read:
+open_entered:
+wip_entered:
+blocked_entered:
+pending_entered:
+discarded_entered:
+resolved_entered:
+discard_reason:
+pending_reason:
+close_reason:
+blocked_by:
+origin: 自リポ TODO
+---
+
 # 設計議論: Claude Code jsonl 更新ストリーミング監視ループ (kawaz と議論)
 
 別セッションで kawaz と文面ベースで議論する用の起票。
