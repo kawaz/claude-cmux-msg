@@ -32,12 +32,12 @@ default:
 # ---------- main entries (利用者が直接叩く) ----------
 
 # push (バージョン bump 済みを前提、全 gate 通過後に push してローカルも更新)
-push: ensure-clean ci check-translations check-versions check-version-bumped
+push: check-on-default-branch ensure-clean ci check-translations check-versions check-version-bumped
     bump-semver vcs push --branch main --jj-bookmark-auto-advance
     @just _local-plugin-reload
 
 # push (ドキュメント更新等のみで bump 不要な場合)
-push-without-bump: ensure-clean ci check-translations check-versions
+push-without-bump: check-on-default-branch ensure-clean ci check-translations check-versions
     bump-semver vcs push --branch main --jj-bookmark-auto-advance
     @just _local-plugin-reload
 
@@ -45,7 +45,7 @@ push-without-bump: ensure-clean ci check-translations check-versions
 [script]
 bump-version bump="patch": ensure-clean
     new_version=$(bump-semver {{ bump }} {{ version-files }} --write --no-hint)
-    bump-semver vcs commit -m "Release v${new_version}" {{ version-files }}
+    bump-semver vcs commit --allow-nonexistent-path -m "Release v${new_version}" {{ version-files }}
 
 # CI 単一エントリ (lint→typecheck→test→validate を依存重複排除で1回ずつ保証)
 ci: lint typecheck test validate
@@ -79,6 +79,21 @@ version:
     @bump-semver get {{ version-files }} --no-hint
 
 # ---------- check recipes (push の sanity 検証、基本は push 経由でしか叩かない) ----------
+
+# 現在の bookmark/branch が default (= main) 上にあるか確認 (DR-0038 dogfood)。
+# `vcs is on-default-branch` の反転 — `vcs is worktree` ベースだと kawaz の
+# jj 運用 (main workspace 自体が secondary workspace) で main からの push が
+# 誤検出される (bump-semver v0.40.1 DR-0038 Adoption pattern 節)。lint 等を
+# 先に走らせると無駄が大きいので push の最初の dep に置く。
+[private]
+[script]
+check-on-default-branch:
+    if ! bump-semver vcs is on-default-branch; then
+        cur=$(bump-semver vcs get current-branch 2>/dev/null || echo "(ambiguous)")
+        bn=$(bump-semver vcs get default-branch)
+        printf >&2 "⚠ 現在 '%s' bookmark/branch にいます。%s に合流してから push してください\n  1. bump-semver vcs sync --onto %s@origin\n  2. bump-semver vcs promote\n  3. %s ワークスペースに移動して just push\n" "$cur" "$bn" "$bn" "$bn"
+        exit 1
+    fi
 
 # ワーキングコピーがクリーン (jj は @ が empty、git は porcelain 空。git/jj-agnostic, DR-0020)
 ensure-clean: lint
