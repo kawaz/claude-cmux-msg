@@ -18,6 +18,7 @@ import { getMsgBase } from "../lib/paths";
 import { transitionState } from "../lib/state";
 import { openDb } from "../lib/db";
 import { updateState } from "../lib/session-status";
+import { detectSubscribeForSid } from "../lib/subscribe-watch";
 
 interface Input {
   session_id: string;
@@ -68,15 +69,30 @@ async function main(): Promise<void> {
   // DR-0004: dir 構造が `<base>/<sid>/` に変更された
   const inboxDir = path.join(getMsgBase(), sessionId, "inbox");
   const count = countUnread(inboxDir);
-  if (count === 0) {
+
+  // issue 2026-06-18: SessionStart は `/cd` で発火しないため、subscribe が
+  // 落ちても気付けない。UserPromptSubmit 経路でも生存チェックして補完する。
+  // 落ちていれば次ターンに <system-reminder> で張り直しを促す。
+  const subscribeDetected = detectSubscribeForSid(sessionId);
+
+  const lines: string[] = [];
+  if (!subscribeDetected) {
+    const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+    const cmuxMsgBin = pluginRoot ? `${pluginRoot}/bin/cmux-msg` : "cmux-msg";
+    lines.push(
+      `[cmux-msg] ⚠️ subscribe が稼働していません (claude の子孫プロセスに未検出)。新着通知に気付けない可能性があります。**Monitor ツールで** \`${cmuxMsgBin} subscribe\` を起動 / 張り直してください。`,
+    );
+  }
+  if (count > 0) {
+    lines.push(
+      `[cmux-msg] 未読 ${count} 件: \`cmux-msg list\` で確認、\`cmux-msg read <filename>\` で本文取得。`,
+    );
+  }
+  if (lines.length === 0) {
     process.exit(0);
   }
-
   // stdout は次ターンの <system-reminder> に injection される。
-  // 短く、行動を促す形にする。
-  console.log(
-    `[cmux-msg] 未読 ${count} 件: \`cmux-msg list\` で確認、\`cmux-msg read <filename>\` で本文取得。`
-  );
+  console.log(lines.join("\n"));
 }
 
 main().catch(() => {

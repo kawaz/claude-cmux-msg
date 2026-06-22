@@ -24,3 +24,5 @@
 | [DR-0014](DR-0014-stdin-body-standardization.md) | send / reply / broadcast の本文入力を stdin に統一 | Accepted | 2026-06-16 |
 | [DR-0015](DR-0015-persistent-cwd-mailbox.md) | 永続宛先 (cwd / ws / repo / label) の inbox を sid 宛と並列に持つ (sid 揮発性への対応) | Accepted | 2026-06-16 |
 | [DR-0016](DR-0016-status-store-sqlite.md) | session status / 軸索引 / queue 状態を SQLite に集約 (メッセージ本体は file のまま) | Accepted | 2026-06-16 |
+| [DR-0017](DR-0017-notify-payload-schema.md) | notify subcommand の payload schema (event_type 並列 + text 同梱) | Accepted | 2026-06-23 |
+| [DR-0018](DR-0018-notify-lifecycle.md) | notify の lifecycle (TTL 12 分 + catch-up window 60 秒) | Accepted | 2026-06-23 |

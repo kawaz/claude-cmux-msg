@@ -14,6 +14,8 @@ import { cmdDismiss } from "./commands/dismiss";
 import { cmdReply } from "./commands/reply";
 import { cmdBroadcast } from "./commands/broadcast";
 import { cmdSubscribe } from "./commands/subscribe";
+import { cmdCheckSubscribe } from "./commands/check-subscribe";
+import { cmdNotify } from "./commands/notify";
 import { cmdLabel } from "./commands/label";
 import { cmdSpawn } from "./commands/spawn";
 import { cmdStop } from "./commands/stop";
@@ -51,6 +53,11 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg reply <filename>                    返信 & アーカイブ (本文 stdin、DR-0014)
   cmux-msg reply <filename> --text "<msg>"     一言オプション
   cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
+  cmux-msg check-subscribe       現セッションの subscribe 稼働を判定 (exit 0=動作中, 1=不在, 2=sid 解決失敗)
+  cmux-msg notify --self                       軽量通知 (本文 stdin、subscribe stream に同梱、TTL 12 分)
+  cmux-msg notify --self --text "<msg>"        一言オプション
+  cmux-msg notify --to <sid>                   peer 宛 (本文 stdin)
+  cmux-msg notify --to <sid> --text "<msg>"
   cmux-msg history [--peer <id>] [--limit N] [--json]  自分が関わった全メッセージを時系列表示
   cmux-msg thread <filename> [--json]  in_reply_to を辿って会話単位で表示
   cmux-msg gc [--force] [--verbose]  inbox/accepted が空の dead セッションを掃除 (既定 dry-run)
@@ -91,6 +98,8 @@ const COMMANDS: Record<string, CmdHandler> = {
   reply: cmdReply,
   broadcast: cmdBroadcast,
   subscribe: cmdSubscribe,
+  "check-subscribe": cmdCheckSubscribe,
+  notify: cmdNotify,
   label: cmdLabel,
   spawn: cmdSpawn,
   stop: cmdStop,

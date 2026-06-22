@@ -20,7 +20,12 @@ import { validateSessionId } from "./validate";
 export interface SendOptions {
   target: string;
   body: string;
-  type?: "request" | "response" | "broadcast";
+  /**
+   * message_type: 既存 send 系は request/response/broadcast。
+   * notify (DR-0017) は軽量通知。frontmatter type に書かれ、subscribe stream は
+   * type=notify を event_type=notify として emit + text 同梱する。
+   */
+  type?: "request" | "response" | "broadcast" | "notify";
   priority?: "normal" | "urgent";
   inReplyTo?: string;
   /**
