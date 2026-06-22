@@ -1,6 +1,6 @@
 ---
 title: check-subscribe subcommand を追加し subscribe 落ちを recipe fail で強制気付かせる
-status: open
+status: resolved
 category: design
 created: 2026-06-22T23:42:23+09:00
 last_read: 2026-06-23T00:00:00+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-23T08:44:15+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented","v0.30.13 で check-subscribe subcommand 実装完了。exit code 0=動作中, 1=不在 (Monitor 起動コマンドを stderr 出力), 2=sid 解決失敗。decideCheckSubscribe を純粋関数として切り出してテスト可。"]
 blocked_by: subscribe-drop-on-cd-and-fleetview
 origin: 自リポ TODO (notify 議論の派生、2026-06-22 セッション)
 ---
