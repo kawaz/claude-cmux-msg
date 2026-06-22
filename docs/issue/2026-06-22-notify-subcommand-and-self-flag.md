@@ -3,7 +3,7 @@ title: notify subcommand と --self flag の追加
 status: open
 category: design
 created: 2026-06-22T22:35:59+09:00
-last_read:
+last_read: 2026-06-22T22:57:43+09:00
 open_entered: 2026-06-22T22:35:59+09:00
 wip_entered:
 blocked_entered:
