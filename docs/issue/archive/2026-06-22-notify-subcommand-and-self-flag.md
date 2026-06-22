@@ -1,6 +1,6 @@
 ---
 title: notify subcommand と --self flag の追加
-status: wip
+status: resolved
 category: design
 created: 2026-06-22T22:35:59+09:00
 last_read: 2026-06-23T08:22:22+09:00
@@ -9,10 +9,10 @@ wip_entered: 2026-06-22T23:39:40+09:00
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-23T08:43:03+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["dr/DR-0017","dr/DR-0018","implemented"]
 blocked_by:
 origin: cache-warden
 ---
