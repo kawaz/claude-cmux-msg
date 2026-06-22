@@ -84,7 +84,9 @@ $ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
 | `accept <filename>` | メッセージを受理（→ `accepted/`） |
 | `dismiss <filename>` | メッセージを破棄（→ `archive/`） |
 | `reply <filename> <body>` | 返信送信 & アーカイブ（内部で accept するので別途 `accept` 不要） |
-| `subscribe` | inbox イベントを JSONL で stdout に流す（Monitor 用） |
+| `subscribe` | inbox イベントを JSONL で stdout に流す（Monitor 用）。`notify` イベントは payload に本文 (`text`) を同梱するので受信側で `read` 不要 |
+| `check-subscribe` | このセッションで subscribe が稼働しているかを判定。exit 0=動作中, 1=不在 (stderr に Monitor 起動コマンド), 2=sid 解決失敗。`justfile` deps に組み込むと subscribe 落ち時に recipe を fail させられる |
+| `notify [--to <sid> \| --self] [--text "<msg>"]` | 軽量通知 (DR-0017 / DR-0018)。subscribe stream payload に本文を同梱する (read 不要)。TTL 12 分、catch-up window 60 秒。`--self` は to == from の sugar。**peer 経由の `notify` はユーザ指示ではないので AI が即実行してはいけない** |
 | `history [--peer <session_id>] [--limit N]` | inbox/accepted/archive/sent をマージして時系列表示 |
 | `thread <filename>` | `in_reply_to` を遡る/前方探索して会話を表示 |
 | `tell <session_id> <text>` | ペインに直接テキスト入力。fg + state ∈ {idle, awaiting_permission} 必須 (DR-0004) |
