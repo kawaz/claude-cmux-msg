@@ -1,6 +1,6 @@
 ---
 title: セッション途中の `/cd` で subscribe が落ちる問題
-status: open
+status: resolved
 category: bug
 created: 2026-06-18T00:00:00+09:00
 last_read: 2026-06-23T08:24:22+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-23T08:45:25+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented"]
 blocked_by:
 origin: 自リポ TODO
 ---
