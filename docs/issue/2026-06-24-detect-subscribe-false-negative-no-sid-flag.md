@@ -3,7 +3,7 @@ title: detectSubscribeForSid が --session-id / --resume なしで起動され�
 status: open
 category: bug
 created: 2026-06-24T17:59:33+09:00
-last_read:
+last_read: 2026-06-26T23:56:27+09:00
 open_entered: 2026-06-24T17:59:33+09:00
 wip_entered:
 blocked_entered:
