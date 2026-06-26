@@ -4,6 +4,7 @@ active な issue の一覧。close 済みは `archive/` にあり、ここには
 
 | date | category | status | slug | 概要 |
 |---|---|---|---|---|
+| 2026-06-27 | bug | open | [subscribe-lock-cross-session-contention](./2026-06-27-subscribe-lock-cross-session-contention.md) | 複数セッション並列時に subscribe lock が cross-session で競合し新規起動を弾く |
 | 2026-06-24 | bug | open | [detect-subscribe-false-negative-no-sid-flag](./2026-06-24-detect-subscribe-false-negative-no-sid-flag.md) | detectSubscribeForSid が --session-id / --resume なしで起動された claude で false negative |
 | 2026-06-23 | request | open | [cmux-msg-spawn-subcommand-deletion](./2026-06-23-cmux-msg-spawn-subcommand-deletion.md) | cmux-msg spawn sub-command の削除 |
 | 2026-05-27 | request | open | [observation-via-csa-timeline](./2026-05-27-observation-via-csa-timeline.md) | child の内部活動観測手段として csa timeline cursor 経路を SKILL.md に追記 |
