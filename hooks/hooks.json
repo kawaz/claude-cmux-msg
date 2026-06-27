@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "bun run ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/src/hooks/session-start-ensure-path.ts"
           }
         ]
       }
