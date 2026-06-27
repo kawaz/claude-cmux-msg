@@ -3,7 +3,7 @@ title: subscribe lock の cross-session 競合
 status: open
 category: bug
 created: 2026-06-27T00:00:05+09:00
-last_read:
+last_read: 2026-06-27T22:55:48+09:00
 open_entered: 2026-06-27T00:00:05+09:00
 wip_entered:
 blocked_entered:
