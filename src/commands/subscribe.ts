@@ -19,7 +19,34 @@ import {
 } from "../lib/subscriber-state";
 import { isProcessAlive } from "../lib/peer";
 import { isSqliteBusyError } from "../lib/sqlite-error";
+import { forceTakeover } from "../lib/force-takeover";
+import { looksLikeFlag } from "../lib/argv";
+import { UsageError } from "../lib/errors";
 import type { Database } from "bun:sqlite";
+
+const SUBSCRIBE_USAGE = `使い方:
+  cmux-msg subscribe                 通常起動 (同一 sid に subscribe があれば exit 1)
+  cmux-msg subscribe --force         前 subscribe を SIGTERM → grace → SIGKILL で奪取`;
+
+export interface ParsedSubscribeArgs {
+  force: boolean;
+}
+
+export function parseSubscribeArgs(args: string[]): ParsedSubscribeArgs {
+  let force = false;
+  for (const a of args) {
+    if (a === "--force") {
+      force = true;
+    } else if (looksLikeFlag(a)) {
+      throw new UsageError("不明なオプション: " + a + "\n" + SUBSCRIBE_USAGE);
+    } else {
+      throw new UsageError(
+        "subscribe は positional 引数を受け付けません\n" + SUBSCRIBE_USAGE,
+      );
+    }
+  }
+  return { force };
+}
 
 /** notify text フィールドの最大サイズ (DR-0017: 64 KiB)。超過時は truncate。 */
 const NOTIFY_TEXT_MAX_BYTES = 64 * 1024;
@@ -160,8 +187,9 @@ function rescanAndEmit(ctx: RescanCtx): void {
 }
 
 
-export async function cmdSubscribe(_args: string[]): Promise<void> {
+export async function cmdSubscribe(args: string[]): Promise<void> {
   requireSessionId();
+  const parsed = parseSubscribeArgs(args);
 
   // notify (DR-0018) 用 catch-up window は固定値 (60s)。
   // 既存 send 経路はこの window の影響を受けない (= 既存挙動維持)。
@@ -198,16 +226,59 @@ export async function cmdSubscribe(_args: string[]): Promise<void> {
     );
     lockAcquired = result.acquired;
     if (!lockAcquired) {
-      // sid 単位の per-row lock (DR-0016 stage C) が同一 sid の二重起動を防いだ。
-      // 別 sid 間では衝突しない (= subscribers.sid PRIMARY KEY)。
-      // 利用者語彙: 何が起きたか + 次にどうすればよいかを書く (interface-wording)。
-      const heldBy = result.heldBy ?? "?";
-      process.stderr.write(
-        `[error] 同一 session_id の subscribe が既に起動中です (sid=${mySid}, lock_pid=${heldBy})。\n` +
-          `先行プロセスを停止してから再起動してください: kill ${heldBy}\n`,
-      );
-      db.close();
-      process.exit(1);
+      const heldBy = result.heldBy;
+      if (parsed.force && typeof heldBy === "number") {
+        // 前 subscribe を SIGTERM → grace → SIGKILL で奪取して再 tryAcquireLock。
+        process.stderr.write(
+          `[info] --force: 前 subscribe (pid=${heldBy}) を停止して奪取します\n`,
+        );
+        const outcome = await forceTakeover({
+          pid: heldBy,
+          kill: (pid, signal) => {
+            try {
+              process.kill(pid, signal);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          isAlive: (pid) => isProcessAlive(pid),
+          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+        });
+        if (outcome.kind === "still-alive-after-kill") {
+          process.stderr.write(
+            `[error] --force: pid=${heldBy} が SIGKILL でも停止しませんでした。手動で原因調査してください。\n`,
+          );
+          db.close();
+          process.exit(1);
+        }
+        const retry = tryAcquireLock(db, mySid, myPid, (pid) =>
+          isProcessAlive(pid),
+        );
+        lockAcquired = retry.acquired;
+        if (!lockAcquired) {
+          process.stderr.write(
+            `[error] --force: 前 subscribe を停止後も lock を取得できませんでした (heldBy=${retry.heldBy ?? "?"})。\n`,
+          );
+          db.close();
+          process.exit(1);
+        }
+        process.stderr.write(
+          `[info] --force: 前 subscribe (pid=${heldBy}) を停止して lock を奪取しました (outcome=${outcome.kind})\n`,
+        );
+      } else {
+        // sid 単位の per-row lock (DR-0016 stage C) が同一 sid の二重起動を防いだ。
+        // 別 sid 間では衝突しない (= subscribers.sid PRIMARY KEY)。
+        // 利用者語彙: 何が起きたか + 次にどうすればよいかを書く (interface-wording)。
+        const heldByDisp = heldBy ?? "?";
+        process.stderr.write(
+          `[error] 同一 session_id の subscribe が既に起動中です (sid=${mySid}, lock_pid=${heldByDisp})。\n` +
+            `先行プロセスを停止してから再起動してください: kill ${heldByDisp}\n` +
+            `または --force で自動奪取できます: cmux-msg subscribe --force\n`,
+        );
+        db.close();
+        process.exit(1);
+      }
     }
   } catch (e) {
     // SQLITE_BUSY / SQLITE_LOCKED は「lock 取得失敗を握り潰せない」(silent

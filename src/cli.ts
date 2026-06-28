@@ -52,7 +52,8 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg dismiss <filename>    メッセージを破棄 (→ archive/)
   cmux-msg reply <filename>                    返信 & アーカイブ (本文 stdin、DR-0014)
   cmux-msg reply <filename> --text "<msg>"     一言オプション
-  cmux-msg subscribe             inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
+  cmux-msg subscribe [--force]   inbox 新着を JSONL で stdout に連続出力 (Monitor 用)
+                                 --force: 前 subscribe を SIGTERM → grace → SIGKILL で奪取
   cmux-msg check-subscribe       現セッションの subscribe 稼働を判定 (exit 0=動作中, 1=不在, 2=sid 解決失敗)
   cmux-msg notify --self                       軽量通知 (本文 stdin、subscribe stream に同梱、TTL 12 分)
   cmux-msg notify --self --text "<msg>"        一言オプション

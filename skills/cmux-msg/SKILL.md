@@ -118,16 +118,23 @@ Monitor({
 **Monitor で起動中の subscribe は古い実行ファイルを掴んだままで異常終了する**ことがある:
 
 ```
-[error] subscribe lock を取得できませんでした ...
+[error] 同一 session_id の subscribe が既に起動中です (sid=..., lock_pid=<pid>)。
+先行プロセスを停止してから再起動してください: kill <pid>
+または --force で自動奪取できます: cmux-msg subscribe --force
 ```
 
-または unexpected exit が Monitor 通知に出る。対応:
+または unexpected exit が Monitor 通知に出る。対応 (どちらでも可):
 
-1. 既存 Monitor を `TaskStop` で停止
-2. `/reload-plugins` で plugin を再ロード
-3. Monitor で subscribe を再起動
+- **A. 手動で順に停止**:
+  1. 既存 Monitor を `TaskStop` で停止
+  2. `/reload-plugins` で plugin を再ロード
+  3. Monitor で subscribe を再起動
+- **B. `--force` で一発で奪取**: Monitor で `cmux-msg subscribe --force` を起動するだけ。
+  前 subscribe を SIGTERM → 5s grace → SIGKILL で停止して新 PID で lock を奪取する。
+  TaskStop 忘れ / 古い Monitor が残っているケースに便利。
 
-これは **plugin update 後の一回切りの作業**。常時必要ではない。
+`--force` は **plugin update 後 / Monitor 取り違え時 / 死にきれない subscribe の掃除**
+の用途向け。通常起動では使わない (= 同一 sid の重複起動を意図的に許してしまう)。
 DR-0012 stage 1 から subscribe は Bun fs.watch + DB lock + watermark で動作するので
 cmux daemon 不要 (= bg job / 任意の cwd で起動可)。
 
