@@ -3,7 +3,7 @@ title: launcher symlink 経由実行で "Module not found" エラー
 status: open
 category: bug
 created: 2026-06-28T23:43:01+09:00
-last_read:
+last_read: 2026-06-29T00:00:00+09:00
 open_entered: 2026-06-28T23:43:01+09:00
 wip_entered:
 blocked_entered:
