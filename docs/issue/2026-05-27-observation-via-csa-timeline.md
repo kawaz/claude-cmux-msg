@@ -3,7 +3,7 @@ title: child の内部観測には csa timeline cursor を併用する (skills/ 
 status: open
 category: request
 created: 2026-05-27T00:00:00+09:00
-last_read:
+last_read: 2026-06-28T20:08:25+09:00
 open_entered: 2026-05-27T00:00:00+09:00
 wip_entered:
 blocked_entered:
