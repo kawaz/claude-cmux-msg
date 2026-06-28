@@ -1,7 +1,7 @@
 {
   "name": "cmux-msg",
   "owner": { "name": "kawaz" },
-  "metadata": { "description": "File-based messaging between Claude Code sessions", "version": "0.31.2", "license": "MIT" },
+  "metadata": { "description": "File-based messaging between Claude Code sessions", "version": "0.31.3", "license": "MIT" },
   "plugins": [
     {
       "name": "cmux-msg",
