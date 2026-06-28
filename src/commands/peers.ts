@@ -102,20 +102,18 @@ export function cmdPeers(args: string[] = []): void {
     const aliveLabel = peer.alive ? "alive" : "dead";
     const state = peerMeta?.state ?? "?";
     const cwd = peerMeta?.cwd ? abbreviateHome(peerMeta.cwd) : "(no meta)";
-    const name = peerMeta?.worker_name ? `  name=${peerMeta.worker_name}` : "";
 
     if (verbose) {
       // 補助情報も並べる (= UUID 完全長は既に出てる)
-      const ws = peerMeta?.workspace_id ? `  ws=${peerMeta.workspace_id}` : "";
       const home = peerMeta?.claude_home ? `  home=${abbreviateHome(peerMeta.claude_home)}` : "";
       const repo = peerMeta?.repo_root ? `  repo=${abbreviateHome(peerMeta.repo_root)}` : "";
       const tags = peerMeta?.tags && peerMeta.tags.length > 0 ? `  tags=${peerMeta.tags.join(",")}` : "";
       console.log(
-        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  cwd=${cwd}${repo}${ws}${home}${tags}${name}`
+        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  cwd=${cwd}${repo}${home}${tags}`
       );
     } else {
       console.log(
-        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  ${cwd}${name}`
+        `${peer.sessionId}  ${aliveLabel}  state=${state}${marker}  ${cwd}`
       );
     }
     printed++;

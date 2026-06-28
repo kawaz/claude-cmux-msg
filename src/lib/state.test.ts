@@ -31,10 +31,8 @@ beforeEach(() => {
   workDir = fs.mkdtempSync(path.join(os.tmpdir(), "state-test-"));
   originalEnv = {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
-    CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
   };
   process.env.CMUXMSG_BASE = workDir;
-  process.env.CMUX_WORKSPACE_ID = "WS1";
 });
 
 afterEach(() => {

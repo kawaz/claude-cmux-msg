@@ -15,13 +15,11 @@ beforeEach(() => {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
     CMUXMSG_SESSION_ID: process.env.CMUXMSG_SESSION_ID,
     CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
-    CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
     CMUXMSG_TAGS: process.env.CMUXMSG_TAGS,
   };
   process.env.CMUXMSG_BASE = workDir;
   process.env.CMUXMSG_SESSION_ID = SID;
   delete process.env.CLAUDE_CODE_SESSION_ID;
-  process.env.CMUX_WORKSPACE_ID = "WS1";
   delete process.env.CMUXMSG_TAGS;
 });
 
@@ -65,15 +63,13 @@ describe("initWorkspace", () => {
     expect(fs.existsSync(path.join(dir, "pid"))).toBe(false);
   });
 
-  test("CMUX_WORKSPACE_ID 未設定でも init は成功し workspace_id は空文字で記録される", () => {
-    // cmux 環境外 (background job 等) を模す
-    delete process.env.CMUX_WORKSPACE_ID;
+  test("init で受信箱とサブディレクトリが揃う", () => {
     const dir = path.join(workDir, SID);
     initWorkspace(dir, { cwd: workDir });
-    const meta = readMeta(dir);
-    expect(meta.workspace_id).toBe("");
-    // 受信箱は問題なく作られる
     expect(fs.existsSync(path.join(dir, "inbox"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "accepted"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "archive"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "sent"))).toBe(true);
   });
 
   test("再 init で既存の last_observed_pid を維持する (照合失敗時)", () => {

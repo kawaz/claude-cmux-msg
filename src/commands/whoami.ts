@@ -16,10 +16,8 @@ OUTPUT (default):
 
 OUTPUT (--verbose 追加):
   repo_root:  <repo_root を ~ 短縮>
-  workspace:  <workspace_id (UUID、旧 cmux 環境のみ)>
   home:       <claude_home を ~ 短縮>
   tags:       <CSV>
-  name:       <worker_name>
   ws:         <ws (DR-0015 worktree root) を ~ 短縮>
   cwd_hash:   <cwd-hash (DR-0015 軸索引)>
   ws_hash:    <ws-hash>
@@ -62,17 +60,11 @@ export function cmdWhoami(args: string[] = []): void {
     if (meta?.repo_root) {
       console.log(`repo_root:  ${abbreviateHome(meta.repo_root)}`);
     }
-    if (meta?.workspace_id) {
-      console.log(`workspace:  ${meta.workspace_id}`);
-    }
     if (meta?.claude_home) {
       console.log(`home:       ${abbreviateHome(meta.claude_home)}`);
     }
     if (meta?.tags && meta.tags.length > 0) {
       console.log(`tags:       ${meta.tags.join(",")}`);
-    }
-    if (meta?.worker_name) {
-      console.log(`name:       ${meta.worker_name}`);
     }
 
     // DR-0015 / DR-0016: DB sessions row + labels も verbose で表示

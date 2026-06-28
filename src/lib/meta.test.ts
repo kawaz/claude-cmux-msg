@@ -15,7 +15,6 @@ function makeMeta(overrides: Partial<PeerMeta> = {}): PeerMeta {
   return {
     session_id: SID,
     claude_home: "/home/u/.claude",
-    workspace_id: "WS1",
     cwd: "/repo/foo",
     tags: [],
     state: "idle",
@@ -31,11 +30,9 @@ beforeEach(() => {
   workDir = fs.mkdtempSync(path.join(os.tmpdir(), "meta-test-"));
   originalEnv = {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
-    CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
     CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
   };
   process.env.CMUXMSG_BASE = workDir;
-  process.env.CMUX_WORKSPACE_ID = "WS1";
   process.env.CLAUDE_CONFIG_DIR = "/home/u/.claude";
   stderrBuf = "";
   origStderrWrite = process.stderr.write.bind(process.stderr);

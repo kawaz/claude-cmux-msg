@@ -7,10 +7,8 @@
  * - `<MSG_BASE>/.docs/latest -> v<version>` を current 版として向ける
  * - 各階層の README.md は `.docs/latest/data-layout-*.md` への相対 symlink
  *
- * DR-0004: workspace_id 階層を廃止したため `data-layout-workspace.md` も廃止。
- * 残るのは root (`<base>/`) と session (`<base>/<sid>/`) の 2 階層。
- *
- * 既に同じ symlink target が存在する場合は何もしない。冪等。
+ * root (`<base>/`) と session (`<base>/<sid>/`) の 2 階層に符号する README.md
+ * を貼る。既に同じ symlink target が存在する場合は何もしない。冪等。
  */
 
 import * as fs from "fs";
@@ -128,8 +126,6 @@ export interface SetupLayoutOptions {
 /**
  * 全階層の layout README をセットアップ。SessionStart hook の initWorkspace から呼ばれる。
  * 失敗してもメッセージング機能には影響しないため throw しない。
- *
- * DR-0004: workspace_id 階層を廃止したので root と session の 2 階層のみ。
  */
 export function setupLayoutDocs(opts: SetupLayoutOptions): void {
   try {

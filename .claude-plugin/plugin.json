@@ -1,6 +1,6 @@
 {
   "name": "cmux-msg",
-  "description": "Inter-CC messaging system for cmux terminal",
+  "description": "File-based messaging between Claude Code sessions",
   "version": "0.30.20",
   "author": { "name": "kawaz" },
   "license": "MIT",

@@ -27,15 +27,8 @@ function isDirEmpty(dir: string): boolean {
   }
 }
 
-function shortMeta(peerDir: string): string {
-  const metaFile = path.join(peerDir, "meta.json");
-  if (!fs.existsSync(metaFile)) return "";
-  try {
-    const meta = JSON.parse(fs.readFileSync(metaFile, "utf-8"));
-    return meta.worker_name ? ` name=${meta.worker_name}` : "";
-  } catch {
-    return "";
-  }
+function shortMeta(_peerDir: string): string {
+  return "";
 }
 
 function reasonNotDeleted(

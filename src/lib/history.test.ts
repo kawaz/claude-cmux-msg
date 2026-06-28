@@ -12,7 +12,6 @@ import {
 const SELF = "11111111-1111-1111-1111-111111111111";
 const PEER_A = "22222222-2222-2222-2222-222222222222";
 const PEER_B = "33333333-3333-3333-3333-333333333333";
-const WS = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE";
 
 let workDir: string;
 let originalEnv: { [k: string]: string | undefined };
@@ -25,17 +24,13 @@ beforeEach(() => {
   }
   originalEnv = {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
-    CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
     CMUXMSG_SESSION_ID: process.env.CMUXMSG_SESSION_ID,
     CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
-    CMUX_SURFACE_ID: process.env.CMUX_SURFACE_ID,
   };
   // 親プロセスが持つ CLAUDE_CODE_SESSION_ID が優先されてしまうので
   // テスト中は明示クリアして CMUXMSG_SESSION_ID で制御する
   delete process.env.CLAUDE_CODE_SESSION_ID;
-  delete process.env.CMUX_SURFACE_ID;
   process.env.CMUXMSG_BASE = workDir;
-  process.env.CMUX_WORKSPACE_ID = WS;
   process.env.CMUXMSG_SESSION_ID = SELF;
 });
 

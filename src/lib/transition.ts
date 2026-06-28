@@ -68,8 +68,8 @@ export function dismissMessage(filename: string): void {
  *   呼び出し側 (cmd reply) には警告として stderr に出す。
  *
  *   accepted/ にあって response_at が無ければ「未送信」とみなし、通常の送信を
- *   行う (これは旧実装と同じ挙動)。送信途中で失敗した場合の二重送信リスクは、
- *   sendMessage の cmuxSignal 失敗を握りつぶす設計上、極めて低い。
+ *   行う。送信途中で失敗した場合の二重送信リスクはあるが、累積上限は
+ *   sentDir 作成失敗時の warning のみで進行する設計のため極めて低い。
  */
 export async function replyMessage(
   filename: string,

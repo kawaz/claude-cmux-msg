@@ -4,8 +4,6 @@ import {
   requireSessionId,
   myDir,
   getSessionId,
-  getWorkspaceId,
-  getTabId,
   getClaudeHome,
   nowIso,
   pluginRoot,
@@ -76,14 +74,7 @@ export function initWorkspace(dir: string, opts: InitOptions = {}): void {
 
   const meta: PeerMeta = {
     session_id: sessionId,
-    parent_session_id:
-      process.env.CMUXMSG_PARENT_SESSION_ID || existing.parent_session_id,
-    worker_name: process.env.CMUXMSG_WORKER_NAME || existing.worker_name,
     claude_home: getClaudeHome(),
-    workspace_id: getWorkspaceId(),
-    tab_id: getTabId() || existing.tab_id,
-    surface_id: process.env.CMUX_SURFACE_ID || existing.surface_id,
-    surface_ref: process.env.CMUXMSG_SURFACE_REF || existing.surface_ref,
     cwd,
     repo_root: repoRoot ?? existing.repo_root,
     tags,

@@ -2,8 +2,8 @@
  * message.ts のクリティカル経路 (送信・受信・状態遷移) 統合テスト。
  *
  * リファクタの safety net として、シグネチャと挙動の不変条件を確認する。
- * env (CMUXMSG_BASE / CMUX_WORKSPACE_ID / CMUXMSG_SESSION_ID) を切り替えて
- * tmp ディレクトリ上で I/O を実際に走らせる。
+ * env (CMUXMSG_BASE / CMUXMSG_SESSION_ID) を切り替えて tmp ディレクトリ上で
+ * I/O を実際に走らせる。
  */
 
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
@@ -18,7 +18,6 @@ import { parseFrontmatter } from "./frontmatter";
 const SELF = "11111111-1111-1111-1111-111111111111";
 const PEER_A = "22222222-2222-2222-2222-222222222222";
 const PEER_B = "33333333-3333-3333-3333-333333333333";
-const WS = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE";
 
 let workDir: string;
 let originalEnv: { [k: string]: string | undefined };
@@ -41,10 +40,8 @@ beforeEach(() => {
   workDir = fs.mkdtempSync(path.join(os.tmpdir(), "message-test-"));
   originalEnv = {
     CMUXMSG_BASE: process.env.CMUXMSG_BASE,
-    CMUX_WORKSPACE_ID: process.env.CMUX_WORKSPACE_ID,
     CMUXMSG_SESSION_ID: process.env.CMUXMSG_SESSION_ID,
     CLAUDE_CODE_SESSION_ID: process.env.CLAUDE_CODE_SESSION_ID,
-    CMUX_SURFACE_ID: process.env.CMUX_SURFACE_ID,
     CMUXMSG_PRIORITY: process.env.CMUXMSG_PRIORITY,
     CMUXMSG_TYPE: process.env.CMUXMSG_TYPE,
     CMUXMSG_REPLY_TO: process.env.CMUXMSG_REPLY_TO,
@@ -56,9 +53,7 @@ beforeEach(() => {
   // 親プロセスが CLAUDE_CODE_SESSION_ID を持っているとそちらが優先されるので
   // テスト中は両方クリアして CMUXMSG_SESSION_ID 経由で制御する。
   delete process.env.CLAUDE_CODE_SESSION_ID;
-  delete process.env.CMUX_SURFACE_ID;
   process.env.CMUXMSG_BASE = workDir;
-  process.env.CMUX_WORKSPACE_ID = WS;
 
   makeSession(SELF);
   makeSession(PEER_A);
@@ -142,7 +137,7 @@ describe("sendMessage", () => {
   });
 
   test("DR-0004: sid 一意の base 直下 dir に配送される (workspace 階層なし)", async () => {
-    // DR-0004 では sid だけで配送先が決まる (workspace_id 階層なし)。
+    // 配送先は sid 直接 (= <base>/<sid>/inbox/)。
     // 旧テスト「別 workspace のセッションへ送信 (cross-workspace fallback)」と
     // 「自 ws 優先」は構造上消滅し、配送先が一意化されることを確認する。
     const REMOTE_PEER = "55555555-5555-5555-5555-555555555555";

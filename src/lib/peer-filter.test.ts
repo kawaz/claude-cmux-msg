@@ -12,7 +12,6 @@ function meta(overrides: Partial<PeerMeta> = {}): PeerMeta {
   return {
     session_id: "11111111-1111-1111-1111-111111111111",
     claude_home: "/home/user/.claude",
-    workspace_id: "WS1",
     cwd: "/repo/foo",
     repo_root: "/repo",
     tags: [],
@@ -28,7 +27,6 @@ function meta(overrides: Partial<PeerMeta> = {}): PeerMeta {
 describe("parseByAxis", () => {
   test("plain 軸", () => {
     expect(parseByAxis("home")).toEqual({ kind: "home" });
-    expect(parseByAxis("ws")).toEqual({ kind: "ws" });
     expect(parseByAxis("cwd")).toEqual({ kind: "cwd" });
     expect(parseByAxis("repo")).toEqual({ kind: "repo" });
   });
@@ -62,8 +60,8 @@ describe("parseByAxis", () => {
 
 describe("extractByArgs", () => {
   test("--by を分離", () => {
-    const r = extractByArgs(["--by", "ws", "msg"]);
-    expect(r.axes).toEqual([{ kind: "ws" }]);
+    const r = extractByArgs(["--by", "home", "msg"]);
+    expect(r.axes).toEqual([{ kind: "home" }]);
     expect(r.all).toBe(false);
     expect(r.rest).toEqual(["msg"]);
   });
@@ -74,8 +72,8 @@ describe("extractByArgs", () => {
   });
 
   test("複数 --by は配列で積まれる", () => {
-    const r = extractByArgs(["--by", "home", "--by", "ws", "body"]);
-    expect(r.axes).toEqual([{ kind: "home" }, { kind: "ws" }]);
+    const r = extractByArgs(["--by", "home", "--by", "repo", "body"]);
+    expect(r.axes).toEqual([{ kind: "home" }, { kind: "repo" }]);
     expect(r.rest).toEqual(["body"]);
   });
 
@@ -93,7 +91,6 @@ describe("extractByArgs", () => {
 describe("matchAxis / matchAllAxes", () => {
   const me = meta({
     claude_home: "/home/u/.claude",
-    workspace_id: "WS_X",
     cwd: "/repo/foo",
     repo_root: "/repo",
     tags: ["alpha", "beta"],
@@ -102,11 +99,6 @@ describe("matchAxis / matchAllAxes", () => {
   test("home 一致", () => {
     expect(matchAxis(me, meta({ claude_home: "/home/u/.claude" }), { kind: "home" })).toBe(true);
     expect(matchAxis(me, meta({ claude_home: "/other/.claude" }), { kind: "home" })).toBe(false);
-  });
-
-  test("ws 一致", () => {
-    expect(matchAxis(me, meta({ workspace_id: "WS_X" }), { kind: "ws" })).toBe(true);
-    expect(matchAxis(me, meta({ workspace_id: "WS_Y" }), { kind: "ws" })).toBe(false);
   });
 
   test("repo 一致は repo_root が両方ある時のみ true", () => {
@@ -142,11 +134,10 @@ describe("matchAxis / matchAllAxes", () => {
   test("matchAllAxes: 全 axis 一致のみ true (AND)", () => {
     const peer = meta({
       claude_home: "/home/u/.claude",
-      workspace_id: "WS_X",
       tags: ["alpha"],
     });
-    expect(matchAllAxes(me, peer, [{ kind: "home" }, { kind: "ws" }])).toBe(true);
-    expect(matchAllAxes(me, peer, [{ kind: "home" }, { kind: "ws" }, { kind: "tag", name: "missing" }])).toBe(false);
+    expect(matchAllAxes(me, peer, [{ kind: "home" }, { kind: "tag", name: "alpha" }])).toBe(true);
+    expect(matchAllAxes(me, peer, [{ kind: "home" }, { kind: "tag", name: "missing" }])).toBe(false);
   });
 
   test("matchAllAxes: 空配列は常に true (no-op filter)", () => {

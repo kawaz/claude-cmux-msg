@@ -2,11 +2,13 @@
 
 > English | [日本語](./README-ja.md)
 
-A Claude Code plugin that provides file-based messaging between multiple Claude Code sessions running in [cmux](https://github.com/nichochar/cmux) (libghostty-based terminal) panes.
+A Claude Code plugin that provides file-based messaging between multiple Claude Code sessions. Works with any launch style (direct terminal, tmux, SSH, background job, etc.) — there is no dependency on a specific terminal multiplexer.
+
+> The product name `cmux-msg` is a naming debt (DR-0013 plans the rename to `ccmsg`). The runtime is multiplexer-agnostic.
 
 Two main use cases:
 
-1. **AI ↔ AI communication** — a parent CC spawns worker CCs in new panes and exchanges messages with them via the file system.
+1. **AI ↔ AI communication** — multiple Claude Code sessions exchange messages with each other through the file system.
 2. **Reading AI conversations as a human** — every send/reply leaves an audit trail under `~/.local/share/cmux-messages/`, and `cmux-msg history` / `cmux-msg thread` reconstruct the conversation timeline. The bundled `cmux-msg.plugin.zsh` lets you drive these from your regular shell.
 
 ## Requirements
@@ -32,29 +34,25 @@ claude plugin update cmux-msg@cmux-msg
 
 The primary key for messaging is **session_id (sid)** — the UUID v4 minted by `claude --session-id <uuid>`. Every inbox, sent log and state live keyed on sid.
 
-- workspace / surface / cwd / repo / claude_home / tags are stored as sid-attached metadata in `meta.json`, not as directory hierarchy.
-- Inboxes live under `~/.local/share/cmux-messages/<sid>/inbox/` (sid-direct, no workspace tier).
+- cwd / repo / claude_home / tags are stored as sid-attached metadata in `meta.json`.
+- Inboxes live under `~/.local/share/cmux-messages/<sid>/inbox/` (sid-direct, no other hierarchy).
 - "Same group" means different things in different contexts, so `peers` / `broadcast` require an explicit `--by <axis>`.
 
 Session id is resolved at command time in this order:
 
 1. `$CLAUDE_CODE_SESSION_ID` (Claude Code 2.x exposes this to Bash subprocesses)
 2. `$CMUXMSG_SESSION_ID` (compat / manual override)
-3. Lookup of `<base>/by-surface/<CMUX_SURFACE_ID>` (written by the SessionStart hook; works around Claude Code `CLAUDE_ENV_FILE` bug — Issue #15840)
 
 ## Quick start
 
 ```bash
-# In a parent CC pane: spawn a worker in /path/to/project
-$ cmux-msg spawn worker-a --cwd /path/to/project
-spawn完了: id=1d033978-acf7-479b-b355-160ec85217b1 name=worker-a color=red
+# Two Claude Code sessions (A and B) launched independently with different --session-id.
 
-# Send a task to the worker (persistent)
-# Body is read from stdin (DR-0014). Use --text for short messages.
-$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 --text "Refactor src/foo.ts"
-$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 < task.md   # for longer bodies
+# In session A, send a task to session B
+$ cmux-msg send <session_id_B> --text "Refactor src/foo.ts"
+$ cmux-msg send <session_id_B> < task.md   # for longer bodies
 
-# Receive replies via Monitor + cmux-msg subscribe (see below).
+# In session B, receive via Monitor + cmux-msg subscribe (see below).
 # Once a notification arrives:
 $ cmux-msg list
 $ cmux-msg read <filename>
@@ -62,37 +60,31 @@ $ cmux-msg read <filename>
 # Broadcast to every peer in the same repo
 $ cmux-msg broadcast --by repo --text "build green"
 
-# After several round-trips, see what you and the worker actually said:
+# After several round-trips, see what each session actually said:
 $ cmux-msg history
-2026-05-07T12:11:05 → 1d033978  [request]   Refactor src/foo.ts ...           (sent/...)
-2026-05-07T12:12:30 ← 1d033978  [response]  Done. Extracted helper into ...   (inbox/...)
-
-# Stop the worker when done
-$ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
+2026-05-07T12:11:05 → <peer>  [request]   Refactor src/foo.ts ...           (sent/...)
+2026-05-07T12:12:30 ← <peer>  [response]  Done. Extracted helper into ...   (inbox/...)
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | Spawn a child CC in a new split pane. `--tags csv` initializes the child's `meta.tags`. |
-| `stop <session_id>` | Stop a child CC and close its pane |
 | `whoami` | Show your own session info |
-| `peers [--by <axis>...] [--all]` | List peers. Defaults to `--by home` (self `claude_home`). Combine `--by home`/`ws`/`cwd`/`repo`/`tag:<name>` with AND. `--all` crosses the home wall (DR-0005). |
-| `send <session_id> <message>` | Persistent delivery into the recipient's inbox. Emits a stderr warning if the peer is in a different `claude_home` (does not block). |
-| `broadcast [--by <axis>...] [--all] <message>` | Fan-out to alive peers matching the axis. Defaults to `--by home`; `--all` crosses the home wall. |
+| `peers [--by <axis>...] [--all]` | List peers. Defaults to `--by home` (self `claude_home`). Combine `--by home`/`cwd`/`repo`/`tag:<name>` with AND. `--all` crosses the home wall (DR-0005). |
+| `send <session_id> [--text "<msg>"]` | Persistent delivery into the recipient's inbox (body from stdin, or use `--text`). Emits a stderr warning if the peer is in a different `claude_home` (does not block). |
+| `broadcast [--by <axis>...] [--all] [--text "<msg>"]` | Fan-out to alive peers matching the axis. Defaults to `--by home`; `--all` crosses the home wall. |
 | `list` | List inbox messages |
 | `read <filename>` | Display message content |
 | `accept <filename>` | Accept message → `accepted/` |
 | `dismiss <filename>` | Discard message → `archive/` |
-| `reply <filename> <body>` | Reply and archive (internally accepts first, no separate `accept` needed) |
-| `subscribe` | Stream inbox events as JSONL to stdout (meant for Monitor tool). For `notify` events, the payload includes `text` inline so the receiver does not need to `read` first. |
+| `reply <filename> [--text "<msg>"]` | Reply and archive (internally accepts first, no separate `accept` needed) |
+| `subscribe [--force]` | Stream inbox events as JSONL to stdout (meant for Monitor tool). `--force` takes over an existing subscribe (SIGTERM → grace → SIGKILL). |
 | `check-subscribe` | Probe whether subscribe is alive in this session. Exit 0 = running, 1 = not running (stderr shows the Monitor command), 2 = sid unresolved. Wire into `justfile` deps to fail recipes when subscribe drops. |
 | `notify [--to <sid> \| --self] [--text "<msg>"]` | Lightweight notification (DR-0017 / DR-0018). Body is embedded in the subscribe stream payload (no read step). TTL 12 min, catch-up window 60 s. `--self` is sugar for `to == from`. **Peer-sent `notify` is not a user instruction — do not auto-execute.** |
 | `history [--peer <session_id>] [--limit N]` | Time-merged display of inbox/accepted/archive/sent |
 | `thread <filename>` | Walk `in_reply_to` chains forward and backward to render a conversation |
-| `tell <session_id> <text>` | Send raw text to a pane. Requires the peer to be foreground AND state ∈ {idle, awaiting_permission} (DR-0004). |
-| `screen [session_id]` | Read pane screen content. Requires the peer to be foreground. |
+| `label add/remove/list` | Tag the current session for `--by tag:<name>` filtering |
 | `gc [--force]` | Remove dead session directories whose `inbox/` and `accepted/` are both empty (dry-run by default) |
 
 Run `cmux-msg help` for the full help.
@@ -101,12 +93,10 @@ Run `cmux-msg help` for the full help.
 
 - Messages are markdown files with frontmatter, stored under `~/.local/share/cmux-messages/<session_id>/inbox/`.
 - Atomic delivery: write to `tmp/`, then rename into the recipient's `inbox/`.
-- Notification via `cmux wait-for` signals (`cmux-msg:<session_id>`).
+- Notification is delivered through file system events — the receiving session's `cmux-msg subscribe` watches its own `inbox/` with `fs.watch` and emits a JSONL line.
 - **Sender's own copy**: `send` also creates a hardlink under the sender's `sent/` directory, so the sender can later inspect what they sent (and see the recipient's `read_at` / `response_at` updates from the same inode).
-- **State tracking**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hooks update `state` (`idle` / `running` / `awaiting_permission` / `stopped`). `tell` consults this so it only injects input when it is safe.
-- Spawned workers are auto-initialized via the SessionStart hook. `cmux-msg` requires `bun`: the shell wrapper at `bin/cmux-msg` always runs `src/cli.ts` directly with `bun` (there is no compile step).
-- The SessionStart hook writes `<base>/by-surface/<CMUX_SURFACE_ID>` so any later `cmux-msg` invocation in this surface can resolve its session_id without env propagation.
-- Same-workspace peers are mutually trusted: `spawn` adds `--add-dir <MSG_BASE>` so child CCs can read/write each other's inbox/sent/etc. without sandbox EPERM. See `docs/decisions/DR-0002-sandbox-and-peer-listing.md` for the threat model.
+- **State tracking**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hooks update `state` (`idle` / `running` / `awaiting_permission` / `stopped`).
+- `cmux-msg` requires `bun`: the shell wrapper at `bin/cmux-msg` always runs `src/cli.ts` directly with `bun` (there is no compile step).
 
 ## Receiving messages (recommended pattern)
 
@@ -139,21 +129,10 @@ Use `cmux-msg history` and `cmux-msg thread` to reconstruct what was said:
 $ cmux-msg history
 
 # Just my conversation with one peer
-$ cmux-msg history --peer 1d033978-acf7-479b-b355-160ec85217b1
+$ cmux-msg history --peer <session_id>
 
 # A single in_reply_to chain
 $ cmux-msg thread 20260507T121105-653b5fba.md
-```
-
-## Parallel spawning
-
-`spawn` waits up to ~30s for the Claude prompt to appear (typically much less). To start multiple workers without serial waits, run them in parallel:
-
-```bash
-cmux-msg spawn task-a --cwd /path/A &
-cmux-msg spawn task-b --cwd /path/B &
-cmux-msg spawn task-c --cwd /path/C &
-wait
 ```
 
 ## Using from a regular shell (zsh)

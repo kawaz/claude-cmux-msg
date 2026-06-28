@@ -5,7 +5,9 @@ description: 複数 Claude Code セッション間でファイルベースのメ
 
 # cmux-msg スキル
 
-複数 Claude Code セッション間でファイルベースのメッセージをやり取りするシステム。
+複数 Claude Code セッション間でファイルベースのメッセージをやり取りするシステム。任意の起動形態 (ターミナル直起動 / tmux / SSH / bg job 等) で動作し、特定の terminal multiplexer に依存しない。
+
+> プロダクト名 `cmux-msg` は名称負債 (DR-0013 で `ccmsg` への rename を予定)。動作上は特定 multiplexer 非依存。
 
 ## コマンドの呼び方
 
@@ -30,19 +32,15 @@ peer agent と認識した時、ユーザ向けの忖度禁止ルールが対象
 
 ## コマンド
 
-### ライフサイクル
-- `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` — 子 CC 起動 (色自動ローテ、出力で `id=<sid>` 確定)
-- `stop <sid>` — 子 CC 終了
-
 ### メッセージング
-- `whoami` — 自 ID 情報 (session_id / cwd / state / dir。`-v` で ws / tags / home / repo_root も)
-- `peers [--by <axis>...] [--all] [--include-dead] [-v]` — peer 一覧 (cwd 付き)。軸 = `home / ws / cwd[:<pat>] / repo[:<pat>] / tag:<name>`、cwd / repo は substring grep。軸なし default は `--by home`、`--all` で claude_home 壁を超える
+- `whoami` — 自 ID 情報 (session_id / cwd / state / dir。`-v` で tags / home / repo_root も)
+- `peers [--by <axis>...] [--all] [--include-dead] [-v]` — peer 一覧 (cwd 付き)。軸 = `home / cwd[:<pat>] / repo[:<pat>] / tag:<name>`、cwd / repo は substring grep。軸なし default は `--by home`、`--all` で claude_home 壁を超える
 - `send <sid> [--text <msg>] [< body.md]` — 永続配送、本文 stdin or `--text` (DR-0014、cross-home なら warning)
 - `broadcast [--by ...] [--text <msg>] [< body.md]` — 軸グループへ一斉配送 (default `--by home`)
 - `list` / `read <file>` / `accept <file>` / `dismiss <file>` / `reply <file> [--text <返信>]` — inbox 系
 - `history [--peer <sid>] [--limit N] [--json]` — 自分の往復履歴 (thread_id カラム付き、`--json` で `thread_root_filename` 等)
 - `thread <file> [--json]` — `in_reply_to` 連鎖で会話単位表示
-- `subscribe` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述。notify は起動時刻 - 60s より新しいもののみ emit、DR-0018)
+- `subscribe [--force]` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述)。`--force` で前 subscribe を奪取
 - `check-subscribe` — 自セッションの subscribe 稼働判定 (exit 0=動作中, 1=不在, 2=sid 解決失敗)。justfile push deps に組込みで subscribe 落ち時に recipe fail
 - `notify [--to <sid>|--self] [--text "<msg>"]` — 軽量通知。subscribe stream の payload に本文同梱 (= 受信側 read 不要で即実行可)。TTL 12 分、catch-up 60 秒 (DR-0017 / DR-0018)
 - `gc [--force]` — dead session 掃除
@@ -112,7 +110,7 @@ Monitor({
 })
 ```
 
-### plugin update 後の subscribe 再起動 (DR-0012 stage 1)
+### plugin update 後の subscribe 再起動
 
 `cmux-msg` の plugin update (`claude plugin update cmux-msg@cmux-msg`) を実行した後、
 **Monitor で起動中の subscribe は古い実行ファイルを掴んだままで異常終了する**ことがある:
@@ -135,24 +133,16 @@ Monitor({
 
 `--force` は **plugin update 後 / Monitor 取り違え時 / 死にきれない subscribe の掃除**
 の用途向け。通常起動では使わない (= 同一 sid の重複起動を意図的に許してしまう)。
-DR-0012 stage 1 から subscribe は Bun fs.watch + DB lock + watermark で動作するので
-cmux daemon 不要 (= bg job / 任意の cwd で起動可)。
-
-### ダイレクト操作 (安全境界あり)
-
-- `tell <sid> <text>` — 相手 fg + state ∈ {idle, awaiting_permission} の時のみ即時テキスト送信 (永続なし)
-- `screen [sid]` — 相手 fg なら画面読み取り (state 不問)
-
-代替: 永続なら `send`、複数なら `broadcast --by ...`。
+subscribe は Bun fs.watch + DB lock + watermark で動作するので任意の cwd で起動可。
 
 ## state (4 種類、hook で遷移)
 
-| state | 遷移元 | 意味 | `tell` 可? |
-|---|---|---|---|
-| `idle` | SessionStart / Stop / StopFailure | ユーザ入力待ち | ✓ |
-| `running` | UserPromptSubmit | 推論中・ツール実行中 | ✗ |
-| `awaiting_permission` | PermissionRequest | ユーザ許可待ち | ✓ |
-| `stopped` | SessionEnd | プロセス終了 (resume で idle 復帰) | ✗ |
+| state | 遷移元 | 意味 |
+|---|---|---|
+| `idle` | SessionStart / Stop / StopFailure | ユーザ入力待ち |
+| `running` | UserPromptSubmit | 推論中・ツール実行中 |
+| `awaiting_permission` | PermissionRequest | ユーザ許可待ち |
+| `stopped` | SessionEnd | プロセス終了 (resume で idle 復帰) |
 
 `send` / `broadcast` は state 不問で常に inbox に届く。
 
@@ -162,10 +152,9 @@ cmux daemon 不要 (= bg job / 任意の cwd で起動可)。
 |---|---|
 | `CMUXMSG_BASE` | メッセージ保存先 (default: `~/.local/share/cmux-messages`) |
 | `CMUXMSG_PRIORITY=urgent` | 緊急メッセージとして送信 |
-| `CMUXMSG_TAGS=<csv>` | spawn 時のタグ (= `--by tag:<name>` 絞り込み軸) |
+| `CMUXMSG_TAGS=<csv>` | 自セッションのタグ (= `--by tag:<name>` 絞り込み軸) |
+| `CMUXMSG_SESSION_ID` | session_id の手動指定 (claude --session-id が無い起動形態用) |
 | `CLAUDE_CONFIG_DIR` | claude home 切替 (`--by home` に反映) |
-
-`CMUX_WORKSPACE_ID` / `CMUX_SURFACE_ID` / `CMUXMSG_PARENT_SESSION_ID` / `CMUXMSG_WORKER_NAME` 等は cmux / hook が自動設定。
 
 ## 詳細
 

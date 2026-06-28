@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 /**
- * cmux-msg: cmux CC間ファイルベースメッセージングシステム
+ * cmux-msg: 複数 Claude Code セッション間のファイルベースメッセージング。
+ *
+ * 通信単位は session_id (= claude --session-id の UUID)。任意の起動形態の
+ * claude セッション間で動作し、特定のターミナル / マルチプレクサに依存しない。
  */
 
 import { cmdInit } from "./commands/init";
@@ -17,24 +20,15 @@ import { cmdSubscribe } from "./commands/subscribe";
 import { cmdCheckSubscribe } from "./commands/check-subscribe";
 import { cmdNotify } from "./commands/notify";
 import { cmdLabel } from "./commands/label";
-import { cmdSpawn } from "./commands/spawn";
-import { cmdStop } from "./commands/stop";
-import { cmdTell } from "./commands/tell";
-import { cmdScreen } from "./commands/screen";
 import { cmdHistory } from "./commands/history";
 import { cmdThread } from "./commands/thread";
 import { cmdGc } from "./commands/gc";
 import { GuardError, UsageError } from "./lib/errors";
 
-const HELP = `cmux-msg: cmux CC間メッセージングシステム (DR-0004)
+const HELP = `cmux-msg: 複数 Claude Code セッション間のメッセージング (DR-0004)
 
 識別子: 全コマンドの宛先は <session_id> = claude --session-id の UUID。
-spawn 経由または手動で claude --session-id <uuid> 起動された CC 間で通信。
-受信箱は <CMUXMSG_BASE>/<sid>/ に sid 直接化 (workspace 階層なし)。
-
-ライフサイクル管理:
-  cmux-msg spawn [name] [--cwd path] [--args claude-args] [--tags csv]  子CC起動 (色は自動ローテーション)
-  cmux-msg stop <session_id>     子CCを終了してペインを閉じる
+受信箱は <CMUXMSG_BASE>/<sid>/ に sid 直接化 (DR-0004)。
 
 メッセージング:
   cmux-msg init                  メッセージディレクトリを初期化
@@ -65,10 +59,6 @@ spawn 経由または手動で claude --session-id <uuid> 起動された CC 間
   cmux-msg label add <name>[,<name>...]      自セッションに label 付与 (DR-0015)
   cmux-msg label remove <name>[,<name>...]   label 剥がし
   cmux-msg label list                        自セッションの label 一覧
-
-ダイレクト操作 (安全境界あり):
-  cmux-msg tell <session_id> <テキスト>  fg + state ∈ {idle, awaiting_permission} 必須、cross-home なら warning
-  cmux-msg screen [session_id]           fg 必須 (引数なしは自分の surface を読む、制約なし)、cross-home なら warning
 
 環境変数:
   CLAUDE_CODE_SESSION_ID   自セッションの UUID (Claude Code 2.x が提供、最優先)
@@ -102,10 +92,6 @@ const COMMANDS: Record<string, CmdHandler> = {
   "check-subscribe": cmdCheckSubscribe,
   notify: cmdNotify,
   label: cmdLabel,
-  spawn: cmdSpawn,
-  stop: cmdStop,
-  tell: cmdTell,
-  screen: cmdScreen,
   history: cmdHistory,
   thread: cmdThread,
   gc: cmdGc,

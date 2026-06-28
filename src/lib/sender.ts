@@ -4,9 +4,9 @@
  * 責務:
  *   - 相手 inbox にメッセージファイルを原子的に配送 (tmp + rename)
  *   - 自分 sent/ に hardlink で送信ログを残す
- *   - cmux signal で受信側に通知
  *
- * broadcast / reply / send は内部で sendMessage を呼ぶ。
+ * broadcast / reply / send は内部で sendMessage を呼ぶ。受信側への通知は
+ * subscribe の fs.watch が拾うので明示的な signal は不要。
  */
 
 import * as fs from "fs";
@@ -14,7 +14,6 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import { timestamp, nowIso, getSessionId, peerDir, myDir } from "../config";
 import { serializeFrontmatter } from "./frontmatter";
-import { cmuxSignal } from "./cmux";
 import { validateSessionId } from "./validate";
 
 export interface SendOptions {
@@ -94,13 +93,6 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
     }
   } catch {
     // sent/ ディレクトリ作成失敗等は致命的ではない
-  }
-
-  // wait-for シグナルで受信側に通知（UUID ベース）
-  try {
-    await cmuxSignal(`cmux-msg:${opts.target}`);
-  } catch {
-    // cmux が無くても送信自体は成功
   }
 
   return filename;

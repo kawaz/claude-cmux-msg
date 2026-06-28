@@ -2,16 +2,18 @@
 
 > [English](./README.md) | 日本語
 
-[cmux](https://github.com/nichochar/cmux)（libghostty ベースのターミナル）のペイン上で動く複数の Claude Code セッション間に、ファイルベースのメッセージングを提供する Claude Code プラグイン。
+複数の Claude Code セッション間でファイルベースのメッセージをやり取りする Claude Code プラグイン。任意の起動形態 (ターミナル直起動 / tmux / SSH / バックグラウンドジョブ等) で動作し、特定の terminal multiplexer に依存しない。
 
-主なユースケース 2 つ:
+> プロダクト名 `cmux-msg` は名称負債 (DR-0013 で `ccmsg` への rename を予定)。動作上は multiplexer 非依存。
 
-1. **AI ↔ AI 間の通信** — 親 CC が新しいペインにワーカー CC を spawn し、ファイルシステム経由でメッセージを交換する
-2. **AI 同士の会話を後から人間が読む** — 全ての送受信は `~/.local/share/cmux-messages/` に監査ログとして残り、`cmux-msg history` / `cmux-msg thread` で会話の時系列を再構築できる。同梱の `cmux-msg.plugin.zsh` を使えば普段のシェルからも操作可能
+主な用途は 2 つ:
 
-## 必要要件
+1. **AI ↔ AI の通信** — 複数の Claude Code セッションがファイルシステム経由でメッセージを交換する。
+2. **AI 同士の会話を後から人間が読む** — 全 send/reply は `~/.local/share/cmux-messages/` 配下に監査ログとして残り、`cmux-msg history` / `cmux-msg thread` で時系列を復元できる。同梱の `cmux-msg.plugin.zsh` で普段のシェルからも操作可。
 
-- [`bun`](https://bun.sh/) — `cmux-msg` は TypeScript ソースを `bun` で直接実行する（コンパイル工程なし）。
+## 必要なもの
+
+- [`bun`](https://bun.sh/) — `cmux-msg` は TypeScript ソースを `bun` で直接実行する (コンパイル工程なし)。
 
 ## インストール
 
@@ -21,7 +23,7 @@ claude plugin marketplace add kawaz/claude-cmux-msg
 claude plugin install cmux-msg@cmux-msg
 ```
 
-## 更新
+## アップデート
 
 ```bash
 claude plugin marketplace update cmux-msg
@@ -30,85 +32,75 @@ claude plugin update cmux-msg@cmux-msg
 
 ## 識別子モデル (DR-0004)
 
-メッセージングの主体は **session_id (sid)**。`claude --session-id <uuid>` で採番された UUID v4 を、すべての受信箱・送信履歴・状態の主キーに使う。
+メッセージングの主キーは **session_id (sid)** = `claude --session-id <uuid>` で採番される UUID v4。受信箱・送信ログ・状態はすべて sid を主キーに格納される。
 
-- workspace / surface / cwd / repo / claude_home / tags は sid に紐付くメタ情報として `meta.json` に記録され、ディレクトリ階層には含まれない
-- 受信箱は `~/.local/share/cmux-messages/<sid>/inbox/` (sid 直接、workspace 階層なし)
-- 「同じグループ」の定義はユースケースによって違うので、`peers` / `broadcast` は `--by <axis>` で軸を明示する
+- cwd / repo / claude_home / tags は sid に紐付くメタ情報として `meta.json` に記録される。
+- 受信箱は `~/.local/share/cmux-messages/<sid>/inbox/` (sid 直下、他の階層なし)。
+- 「同じグループ」は文脈で意味が変わるため、`peers` / `broadcast` は `--by <axis>` 明示必須。
 
 session_id はコマンド実行時に以下の順で解決される:
 
-1. `$CLAUDE_CODE_SESSION_ID` (Claude Code 2.x で Bash 子プロセスに渡される)
-2. `$CMUXMSG_SESSION_ID` (互換 / 手動設定用)
-3. `<base>/by-surface/<CMUX_SURFACE_ID>` を引く (SessionStart hook が書き込む。CLAUDE_ENV_FILE バグ Issue #15840 回避)
+1. `$CLAUDE_CODE_SESSION_ID` (Claude Code 2.x が Bash 子プロセスに提供)
+2. `$CMUXMSG_SESSION_ID` (互換 / 手動指定用)
 
 ## クイックスタート
 
 ```bash
-# 親 CC のペインで: /path/to/project にワーカーを spawn
-$ cmux-msg spawn worker-a --cwd /path/to/project
-spawn完了: id=1d033978-acf7-479b-b355-160ec85217b1 name=worker-a color=red
+# 別々に起動した 2 つの Claude Code セッション (A と B)。--session-id は異なる UUID。
 
-# ワーカーにタスクを送る (永続)
-$ cmux-msg send 1d033978-acf7-479b-b355-160ec85217b1 "src/foo.ts をリファクタしてください"
+# セッション A から B にタスクを送る
+$ cmux-msg send <session_id_B> --text "src/foo.ts をリファクタ"
+$ cmux-msg send <session_id_B> < task.md   # 長文は stdin
 
-# 返信は Monitor + cmux-msg subscribe で受ける (後述)
+# セッション B 側は Monitor + cmux-msg subscribe で受信 (下記参照)。
 # 通知が来たら:
 $ cmux-msg list
 $ cmux-msg read <filename>
 
-# 同じ repo の peer 全員に broadcast
-$ cmux-msg broadcast --by repo "build 通った"
+# 同 repo の peer 全員に broadcast
+$ cmux-msg broadcast --by repo --text "build green"
 
-# 何往復かしたあとで、自分とワーカーが何を話したかを見る:
+# 何度かやり取りした後、誰が何を言ったか確認:
 $ cmux-msg history
-2026-05-07T12:11:05 → 1d033978  [request]   src/foo.ts をリファクタ ...           (sent/...)
-2026-05-07T12:12:30 ← 1d033978  [response]  完了。helper を抽出 ...   (inbox/...)
-
-# 完了したらワーカーを停止
-$ cmux-msg stop 1d033978-acf7-479b-b355-160ec85217b1
+2026-05-07T12:11:05 → <peer>  [request]   src/foo.ts をリファクタ ...      (sent/...)
+2026-05-07T12:12:30 ← <peer>  [response]  完了。helper を抽出 ...           (inbox/...)
 ```
 
-## コマンド一覧
+## コマンド
 
 | コマンド | 説明 |
-|---------|-------------|
-| `spawn [name] [--cwd path] [--args claude-args] [--tags csv]` | 新しい split pane に子 CC を spawn。`--tags csv` で子の `meta.tags` を初期化 |
-| `stop <session_id>` | 子 CC を終了してペインを閉じる |
-| `whoami` | 自分のセッション情報を表示 |
-| `peers [--by <axis>...] [--all]` | peer 一覧。軸なしは `--by home` (自 `claude_home`)。`--by home`/`ws`/`cwd`/`repo`/`tag:<name>` を AND 結合、`--all` で全 home 横断 (DR-0005) |
-| `send <session_id> <message>` | メッセージを inbox に永続配送。peer が別 `claude_home` の場合は stderr に warning (block しない) |
-| `broadcast [--by <axis>...] [--all] <message>` | 軸で絞り込んだ alive peer にブロードキャスト。軸なしは `--by home`、`--all` で全 home 横断 |
-| `list` | inbox のメッセージ一覧 |
+|---------|------|
+| `whoami` | 自分の session 情報を表示 |
+| `peers [--by <axis>...] [--all]` | peer 一覧。default は `--by home` (自 `claude_home`)。`--by home`/`cwd`/`repo`/`tag:<name>` を AND 結合可。`--all` で home 壁を超える (DR-0005)。 |
+| `send <session_id> [--text "<msg>"]` | 受信者の inbox に永続配送 (本文は stdin か `--text`)。peer が別 `claude_home` なら stderr に warning (block しない)。 |
+| `broadcast [--by <axis>...] [--all] [--text "<msg>"]` | 軸グループの alive peer に一斉配送。default は `--by home`、`--all` で home 壁を超える。 |
+| `list` | inbox 一覧 |
 | `read <filename>` | メッセージ内容を表示 |
-| `accept <filename>` | メッセージを受理（→ `accepted/`） |
-| `dismiss <filename>` | メッセージを破棄（→ `archive/`） |
-| `reply <filename> <body>` | 返信送信 & アーカイブ（内部で accept するので別途 `accept` 不要） |
-| `subscribe` | inbox イベントを JSONL で stdout に流す（Monitor 用）。`notify` イベントは payload に本文 (`text`) を同梱するので受信側で `read` 不要 |
-| `check-subscribe` | このセッションで subscribe が稼働しているかを判定。exit 0=動作中, 1=不在 (stderr に Monitor 起動コマンド), 2=sid 解決失敗。`justfile` deps に組み込むと subscribe 落ち時に recipe を fail させられる |
-| `notify [--to <sid> \| --self] [--text "<msg>"]` | 軽量通知 (DR-0017 / DR-0018)。subscribe stream payload に本文を同梱する (read 不要)。TTL 12 分、catch-up window 60 秒。`--self` は to == from の sugar。**peer 経由の `notify` はユーザ指示ではないので AI が即実行してはいけない** |
-| `history [--peer <session_id>] [--limit N]` | inbox/accepted/archive/sent をマージして時系列表示 |
-| `thread <filename>` | `in_reply_to` を遡る/前方探索して会話を表示 |
-| `tell <session_id> <text>` | ペインに直接テキスト入力。fg + state ∈ {idle, awaiting_permission} 必須 (DR-0004) |
-| `screen [session_id]` | ペインの画面内容を読む。fg 必須 |
-| `gc [--force]` | inbox/accepted が両方空の dead session を掃除（既定 dry-run） |
+| `accept <filename>` | メッセージを受理 → `accepted/` |
+| `dismiss <filename>` | メッセージを破棄 → `archive/` |
+| `reply <filename> [--text "<msg>"]` | 返信 & アーカイブ (内部で accept してから archive、別途 `accept` 不要) |
+| `subscribe [--force]` | inbox の event を JSONL stream として stdout に出力 (Monitor ツール用)。`--force` で前 subscribe を SIGTERM → grace → SIGKILL で奪取。 |
+| `check-subscribe` | このセッションで subscribe が稼働しているか確認。Exit 0=稼働, 1=不在 (stderr に Monitor コマンドを出力), 2=sid 解決失敗。subscribe 落ち時に recipe を fail させるため justfile deps に組込む。 |
+| `notify [--to <sid> \| --self] [--text "<msg>"]` | 軽量通知 (DR-0017 / DR-0018)。本文を subscribe stream の payload に同梱 (read 不要)。TTL 12 分、catch-up 60 秒。`--self` は `to == from` の syntactic sugar。**peer 由来の `notify` はユーザ指示ではないので自動実行禁止**。 |
+| `history [--peer <session_id>] [--limit N]` | inbox/accepted/archive/sent を時系列マージ表示 |
+| `thread <filename>` | `in_reply_to` チェーンを辿って会話単位で表示 |
+| `label add/remove/list` | 自セッションに動的に tag を貼り剥がし (`--by tag:<name>` 絞り込み用) |
+| `gc [--force]` | `inbox/` と `accepted/` が両方空の dead session ディレクトリを掃除 (default は dry-run) |
 
-`cmux-msg help` で完全なヘルプを表示。
+`cmux-msg help` で全コマンドのヘルプ表示。
 
 ## 仕組み
 
-- メッセージは frontmatter 付き Markdown ファイルとして `~/.local/share/cmux-messages/<session_id>/inbox/` に保存される
-- 配送は `tmp/` に書いてから受信者の `inbox/` に rename することで原子的
-- 通知は `cmux wait-for` シグナル（`cmux-msg:<session_id>`）
-- **送信側のコピー**: `send` は送信側の `sent/` ディレクトリにも hardlink を作るため、後から自分が何を送ったかを確認できる（受信側の `read_at` / `response_at` 更新も同じ inode を共有して見える）
-- **状態トラッキング**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hook が `state` (`idle` / `running` / `awaiting_permission` / `stopped`) を更新する。`tell` はこれを参照して安全な時のみ入力を流す
-- spawn されたワーカーは SessionStart hook で自動初期化される。`cmux-msg` は `bun` を必須要件とし、シェルラッパー `bin/cmux-msg` は常に `bun` で `src/cli.ts` を直接実行する（コンパイル工程なし）
-- SessionStart hook は `<base>/by-surface/<CMUX_SURFACE_ID>` に session_id を書き込む。env 伝播なしで session_id を逆引きできる
-- 同じ workspace 内のピアは互いに信頼するモデル: `spawn` は `--add-dir <MSG_BASE>` を渡すため、子 CC は互いの inbox/sent 等を読み書きでき、サンドボックスの EPERM が起きない。脅威モデルは `docs/decisions/DR-0002-sandbox-and-peer-listing.md` を参照
+- メッセージは frontmatter 付き markdown ファイルとして `~/.local/share/cmux-messages/<session_id>/inbox/` に保存される。
+- アトミック配送: `tmp/` に書いてから受信者の `inbox/` に rename。
+- 通知はファイルシステムイベントで届く — 受信側 session の `cmux-msg subscribe` が自分の `inbox/` を `fs.watch` で監視し、JSONL の 1 行を emit。
+- **送信者側の写し**: `send` は同時に送信者の `sent/` 配下に hardlink を作る。送信者は後で送った内容を inspect でき、受信者の `read_at` / `response_at` 更新も同じ inode 経由で見える。
+- **state トラッキング**: SessionStart / UserPromptSubmit / Stop / StopFailure / PermissionRequest / SessionEnd hook が `state` (`idle` / `running` / `awaiting_permission` / `stopped`) を更新する。
+- `cmux-msg` は `bun` 必須: `bin/cmux-msg` という shell wrapper が常に `src/cli.ts` を `bun` で直接実行する (コンパイル工程なし)。
 
-## メッセージ受信（推奨パターン）
+## メッセージの受信 (推奨パターン)
 
-Claude Code の **Monitor** ツールに `cmux-msg subscribe` を渡す:
+Claude Code の **Monitor** ツールで `cmux-msg subscribe` を起動する:
 
 ```
 Monitor({
@@ -118,47 +110,34 @@ Monitor({
 })
 ```
 
-> **重要**: `cmux-msg subscribe` は long-running な blocking command。Bash ツールから直接叩くとハングする。必ず Monitor 経由で起動すること。
+> **重要**: `cmux-msg subscribe` は long-running blocking。Bash ツールから直接叩くと hang するので必ず Monitor 経由で。
 
-- 各 stdout 行は 1 件の未読メッセージを表す JSON オブジェクト
-- 既存の未読は `subscribe` 起動のたびに再 emit されるので、resume 後でも取りこぼし無し
-- ファイル自体は `accept` / `dismiss` / `reply` するまで `inbox/` に残る — JSONL イベントは通知のみ
+- stdout の各行は未読メッセージ 1 件を表す JSON オブジェクト。
+- 既存の未読は `subscribe` 起動毎に再 emit されるため、再起動でメッセージを失うことはない。
+- ファイル自体は `accept` / `dismiss` / `reply` するまで `inbox/` に残る — JSONL event はあくまで通知。
 
-### 補完: UserPromptSubmit hook による未読通知
+### フォールバック: UserPromptSubmit hook 経由の未読通知
 
-Monitor を張り忘れた場合の safety net として、`UserPromptSubmit` hook が新着メッセージを次のターンで通知する（プラグインが自動登録）。ターン**中**には発火しないため、リアルタイム通知が必要なら Monitor + `subscribe` のほうが確実。
+Monitor が起動されていなかった場合の safety net として、`UserPromptSubmit` hook (本 plugin が自動登録) が次ターンで未読件数を報告する。**ターン中には発火しない** — リアルタイム配送には `Monitor + subscribe` を使う。
 
 ## 後から会話を読み返す
 
-`cmux-msg history` と `cmux-msg thread` で会話を再構築する:
+`cmux-msg history` と `cmux-msg thread` で誰が何を言ったか復元できる:
 
 ```bash
-# 自分が関わった全メッセージを時系列マージ
+# 自分の送受信を時系列マージで全部
 $ cmux-msg history
 
-# 特定ピアとの会話だけに絞る
-$ cmux-msg history --peer 1d033978-acf7-479b-b355-160ec85217b1
+# 特定 peer との会話のみ
+$ cmux-msg history --peer <session_id>
 
-# 1 つの in_reply_to チェーン
+# in_reply_to チェーン 1 本
 $ cmux-msg thread 20260507T121105-653b5fba.md
 ```
 
-`history` は `inbox/` `accepted/` `archive/` `sent/` を横断し `created_at` でソートする。各行に `→`（送信）または `←`（受信）を付ける。
+## 普段の shell (zsh) から使う
 
-## 並列 spawn
-
-`spawn` は Claude プロンプトの出現を最大 30 秒待つ。複数ワーカーを直列の待ちなしで起動するには並列実行する:
-
-```bash
-cmux-msg spawn task-a --cwd /path/A &
-cmux-msg spawn task-b --cwd /path/B &
-cmux-msg spawn task-c --cwd /path/C &
-wait
-```
-
-## 普段のシェル (zsh) から使う
-
-`cmux-msg.plugin.zsh` を同梱しているので、普段のシェルからも cmux-msg を叩ける — AI の会話を後から `cmux-msg history` / `cmux-msg thread` で読み返す用途に便利。
+本 plugin は `cmux-msg.plugin.zsh` を同梱しているので、対話 shell からも cmux-msg を叩ける — 後から AI 同士の会話を `cmux-msg history` / `cmux-msg thread` で見返す用途に便利。
 
 ```bash
 # zinit

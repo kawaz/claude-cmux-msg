@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as os from "os";
-import { readBySurfaceIndex } from "./lib/session-index";
 import { getMsgBase } from "./lib/paths";
 import { GuardError } from "./lib/errors";
 
@@ -9,36 +8,20 @@ import { GuardError } from "./lib/errors";
 // 既存箇所は引き続き `getMsgBase` を re-export 経由で利用可能。
 export { getMsgBase };
 
-export function getWorkspaceId(): string {
-  return process.env.CMUX_WORKSPACE_ID || "";
-}
-
 /**
  * claude の session UUID。cmux-msg の通信単位。
  *
  * 解決順序 (DR-0004):
  *   1. env CLAUDE_CODE_SESSION_ID (Claude Code 2.x で Bash 子プロセスに提供される)
- *   2. env CMUXMSG_SESSION_ID (CLAUDE_ENV_FILE 機能時の互換 / 手動設定用)
- *   3. CMUX_SURFACE_ID 起点で by-surface index から逆引き
- *      (SessionStart hook が CLAUDE_ENV_FILE バグ Issue #15840 を回避するため
- *       <base>/by-surface/<surface_id> に session_id を書いている)
- *   4. 解決不可なら ""
+ *   2. env CMUXMSG_SESSION_ID (互換 / 手動設定用)
+ *   3. 解決不可なら ""
  */
 export function getSessionId(): string {
   const fromClaudeEnv = process.env.CLAUDE_CODE_SESSION_ID;
   if (fromClaudeEnv) return fromClaudeEnv;
   const fromEnv = process.env.CMUXMSG_SESSION_ID;
   if (fromEnv) return fromEnv;
-  const surfaceId = process.env.CMUX_SURFACE_ID;
-  if (surfaceId) {
-    const found = readBySurfaceIndex(surfaceId);
-    if (found) return found;
-  }
   return "";
-}
-
-export function getTabId(): string {
-  return process.env.CMUX_TAB_ID || "";
 }
 
 /**
@@ -51,35 +34,17 @@ export function getClaudeHome(): string {
 
 /**
  * session_id が解決できることを要求する (messaging 系コマンド共通ガード)。
- *
- * messaging の配送経路は sid 直接化済み (DR-0004) なので cmux surface 不要。
- * session_id さえ解決できれば cmux 環境外 (background job 等) でも動作する。
  */
 export function requireSessionId(): void {
   if (!getSessionId()) {
     throw new GuardError(
-      "エラー: session_id を解決できません (env CLAUDE_CODE_SESSION_ID / CMUXMSG_SESSION_ID も by-surface index も無い。SessionStart hook が未実行？)"
+      "エラー: session_id を解決できません (env CLAUDE_CODE_SESSION_ID / CMUXMSG_SESSION_ID が未設定。SessionStart hook が未実行？)"
     );
   }
 }
 
 /**
- * cmux surface の直接操作を要求する (tell / screen / spawn / stop 共通ガード)。
- *
- * これらは cmux pane へのキー入力注入・画面読み取り・pane 起動/終了を行うため
- * cmux 環境 (CMUX_WORKSPACE_ID 非空) が前提。messaging 系には使わない。
- */
-export function requireCmux(): void {
-  if (!getWorkspaceId()) {
-    throw new GuardError(
-      "エラー: cmux環境外では使えません (CMUX_WORKSPACE_ID が未設定)"
-    );
-  }
-  requireSessionId();
-}
-
-/**
- * 自セッションの dir (`<base>/<sid>/`)。DR-0004 で workspace_id 階層を廃止。
+ * 自セッションの dir (`<base>/<sid>/`)。
  */
 export function myDir(): string {
   return path.join(getMsgBase(), getSessionId());
@@ -87,10 +52,6 @@ export function myDir(): string {
 
 /**
  * peer session の dir (`<base>/<peerSid>/`)。
- *
- * DR-0004: session_id 一意の sid-unique inbox 構造により、workspace を跨いだ
- * 走査 fallback は不要になった。同じ sid が複数 workspace 配下に dir を持つ
- * 旧構造の問題 (resume で dead dir が残置) も発生しない。
  */
 export function peerDir(peerSessionId: string): string {
   return path.join(getMsgBase(), peerSessionId);
@@ -139,13 +100,3 @@ export function pluginRoot(): string {
   return process.cwd();
 }
 
-export const SPAWN_COLORS = [
-  "red",
-  "blue",
-  "green",
-  "purple",
-  "orange",
-  "pink",
-  "cyan",
-  "yellow",
-] as const;

@@ -26,3 +26,4 @@
 | [DR-0016](DR-0016-status-store-sqlite.md) | session status / 軸索引 / queue 状態を SQLite に集約 (メッセージ本体は file のまま) | Accepted | 2026-06-16 |
 | [DR-0017](DR-0017-notify-payload-schema.md) | notify subcommand の payload schema (event_type 並列 + text 同梱) | Accepted | 2026-06-23 |
 | [DR-0018](DR-0018-notify-lifecycle.md) | notify の lifecycle (TTL 12 分 + catch-up window 60 秒) | Accepted | 2026-06-23 |
+| [DR-0019](DR-0019-drop-cmux-everything.md) | cmux 連携機能を完全除去 (spawn / tell / screen / stop / lib/cmux* / CMUX_* env) | Accepted | 2026-06-28 |

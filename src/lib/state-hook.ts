@@ -17,9 +17,6 @@ interface HookInput {
 }
 
 export async function runStateHook(target: SessionState): Promise<void> {
-  // DR-0010 stage 1: 旧 `if (!CMUX_WORKSPACE_ID) return` を撤廃。
-  // cmux 環境外 (kawaz 現環境 / hyoui 配下) でも state 遷移を反映する。
-
   let input: HookInput;
   try {
     const stdinText = await Bun.stdin.text();

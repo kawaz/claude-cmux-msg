@@ -42,25 +42,19 @@ export type SessionState =
  * - `init_at` は dir 初回作成時点で固定。resume では維持する
  * - `last_started_at` は SessionStart hook で毎回更新 (resume 含む)
  * - `state` / `state_changed_at` は各 hook で transitionState() を呼んで更新する
- * - `tags` は spawn 時の CMUXMSG_TAGS env から渡される (`,` 区切り)。未指定なら `[]`
+ * - `tags` は CMUXMSG_TAGS env から渡される (`,` 区切り)。未指定なら `[]`
  *
  * `undefined` のフィールドは `JSON.stringify` で省かれるため optional。
  */
 export interface PeerMeta {
   session_id: string;
-  parent_session_id?: string;
-  worker_name?: string;
   /** Claude アカウントの ~/.claude (CLAUDE_CONFIG_DIR 解決後の絶対パス) */
   claude_home: string;
-  workspace_id: string;
-  tab_id?: string;
-  surface_id?: string;
-  surface_ref?: string;
   /** SessionStart hook 時点の cwd (claude プロセスの cwd) */
   cwd: string;
   /** cwd から walk up して見つけた .git or .jj の親 dir。なければ未設定 */
   repo_root?: string;
-  /** spawn 時 CMUXMSG_TAGS env で渡されたタグの配列 (空配列を含む) */
+  /** CMUXMSG_TAGS env で渡されたタグの配列 (空配列を含む) */
   tags: string[];
   state: SessionState;
   state_changed_at: string;
@@ -74,8 +68,8 @@ export interface PeerMeta {
    * 最後に観測した自分の claude プロセスの pid と起動時刻 (DR-0007 決定7)。
    *
    * 連続性検出専用 (resume によるプロセス入れ替わりを検出するため)。
-   * tell の許可判定には使わない — 真実源は `ps` 照合 (src/lib/session-proc.ts)。
-   * pid 単独は OS の pid 再利用で誤判定するため start_time とのペアで持つ。
+   * 真実源は `ps` 照合 (src/lib/session-proc.ts)。pid 単独は OS の pid 再利用で
+   * 誤判定するため start_time とのペアで持つ。
    * 自分の sid を `ps` 照合して取得できなかった場合は未設定 (undefined)。
    */
   last_observed_pid?: { pid: number; start_time: string };

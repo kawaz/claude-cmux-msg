@@ -7,7 +7,6 @@
  *
  * 軸:
  *   - home:         claude_home 一致 (自分基準)
- *   - ws:           workspace_id 一致 (自分基準)
  *   - cwd:          cwd 完全一致 (自分基準)
  *   - cwd:<pat>:    cwd に <pat> を含む (substring、絶対パターン)
  *   - repo:         repo_root 完全一致 (自分基準、両方 repo_root を持つ場合のみ)
@@ -23,14 +22,12 @@ import { UsageError } from "./errors";
 
 export type ByAxis =
   | { kind: "home" }
-  | { kind: "ws" }
   | { kind: "cwd"; pattern?: string }
   | { kind: "repo"; pattern?: string }
   | { kind: "tag"; name: string };
 
 export function parseByAxis(spec: string): ByAxis {
   if (spec === "home") return { kind: "home" };
-  if (spec === "ws") return { kind: "ws" };
   if (spec === "cwd") return { kind: "cwd" };
   if (spec === "repo") return { kind: "repo" };
   if (spec.startsWith("cwd:")) {
@@ -51,7 +48,7 @@ export function parseByAxis(spec: string): ByAxis {
     return { kind: "tag", name };
   }
   throw new UsageError(
-    `--by の不明な軸: ${spec}\n  有効な軸: home, ws, cwd[:<pat>], repo[:<pat>], tag:<name>`
+    `--by の不明な軸: ${spec}\n  有効な軸: home, cwd[:<pat>], repo[:<pat>], tag:<name>`
   );
 }
 
@@ -110,8 +107,6 @@ export function matchAxis(
   switch (axis.kind) {
     case "home":
       return me.claude_home === peer.claude_home;
-    case "ws":
-      return me.workspace_id === peer.workspace_id;
     case "cwd":
       if (axis.pattern !== undefined) {
         // substring grep モード
@@ -149,8 +144,6 @@ export function describeAxis(axis: ByAxis): string {
   switch (axis.kind) {
     case "home":
       return "home";
-    case "ws":
-      return "ws";
     case "cwd":
       return axis.pattern !== undefined ? `cwd:${axis.pattern}` : "cwd";
     case "repo":
