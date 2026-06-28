@@ -18,6 +18,7 @@ import {
   setWatermark,
 } from "../lib/subscriber-state";
 import { isProcessAlive } from "../lib/peer";
+import { isSqliteBusyError } from "../lib/sqlite-error";
 import type { Database } from "bun:sqlite";
 
 /** notify text フィールドの最大サイズ (DR-0017: 64 KiB)。超過時は truncate。 */
@@ -209,6 +210,22 @@ export async function cmdSubscribe(_args: string[]): Promise<void> {
       process.exit(1);
     }
   } catch (e) {
+    // SQLITE_BUSY / SQLITE_LOCKED は「lock 取得失敗を握り潰せない」(silent
+    // failure 防止)。defense-in-depth: BEGIN IMMEDIATE 化で発火頻度はほぼ
+    // ゼロだが、何かの拍子に発火した場合は安全側 exit。
+    if (isSqliteBusyError(e)) {
+      const msg = e instanceof Error ? e.message : String(e);
+      process.stderr.write(
+        `[error] subscribe lock の取得が SQLite lock 競合で失敗しました: ${msg}\n` +
+          `しばらく待ってから再実行してください (同一 sid の他 subscribe が tx 中の可能性)。\n`,
+      );
+      if (db) {
+        try {
+          db.close();
+        } catch {}
+      }
+      process.exit(1);
+    }
     // DB 未初期化 / sessions row 不在 → lock なしで続行 (= 旧 file 経路だけで動作)
     if (db) {
       try {

@@ -70,6 +70,8 @@ export function tryAcquireLock(
   now: number = Date.now(),
 ): AcquireLockResult {
   ensureSubscriber(db, sid);
+  // BEGIN IMMEDIATE で WRITER 取得を先頭に持ってくる (DEFERRED だと READ → UPDATE
+  // upgrade window で SQLITE_BUSY_SNAPSHOT を即時 throw、busy_timeout retry 無効)。
   const tx = db.transaction((): AcquireLockResult => {
     const cur = db
       .query("SELECT lock_pid FROM subscribers WHERE sid = ?")
@@ -83,7 +85,7 @@ export function tryAcquireLock(
     }
     return { acquired: false, heldBy };
   });
-  return tx();
+  return tx.immediate();
 }
 
 /** 自 PID が持っている時のみ release。他 PID への誤 release は no-op。 */

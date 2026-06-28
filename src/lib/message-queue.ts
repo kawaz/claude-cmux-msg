@@ -142,6 +142,8 @@ export function tryClaimMessage(
   mySid: string,
   now: number = Date.now(),
 ): boolean {
+  // BEGIN IMMEDIATE: 取得は WRITER 処理なので最初から WRITE lock を取り
+  // SQLITE_BUSY_SNAPSHOT を回避 (findings/2026-06-17, findings/2026-06-28)。
   const tx = db.transaction((): boolean => {
     const r = db
       .prepare(
@@ -150,7 +152,7 @@ export function tryClaimMessage(
       .run(mySid, now, msgId);
     return r.changes === 1;
   });
-  return tx();
+  return tx.immediate();
 }
 
 export function listPendingForTarget(

@@ -199,10 +199,12 @@ export function addLabels(db: Database, sid: string, labels: string[]): void {
   const stmt = db.prepare(
     "INSERT OR IGNORE INTO session_labels (sid, label) VALUES (?, ?)",
   );
+  // BEGIN IMMEDIATE: WRITE 系 transaction は最初から WRITE lock を取る
+  // (findings/2026-06-17, findings/2026-06-28 の WAL 並行 throw 対策)。
   const tx = db.transaction((sid_: string, labels_: string[]) => {
     for (const l of labels_) stmt.run(sid_, l);
   });
-  tx(sid, labels);
+  tx.immediate(sid, labels);
 }
 
 export function removeLabels(db: Database, sid: string, labels: string[]): void {
@@ -212,7 +214,7 @@ export function removeLabels(db: Database, sid: string, labels: string[]): void 
   const tx = db.transaction((sid_: string, labels_: string[]) => {
     for (const l of labels_) stmt.run(sid_, l);
   });
-  tx(sid, labels);
+  tx.immediate(sid, labels);
 }
 
 export function listLabels(db: Database, sid: string): string[] {
