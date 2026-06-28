@@ -1,6 +1,6 @@
 ---
 title: subscriber-state / message-queue の db.transaction() を BEGIN IMMEDIATE に変更
-status: open
+status: resolved
 category: bug
 created: 2026-06-28T15:22:44+09:00
 last_read:
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T15:43:44+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:v0.30.18 で全 WRITE transaction を BEGIN IMMEDIATE 化、新規 begin-immediate-concurrency.test.ts で 20 並行回帰を保証"]
 blocked_by:
 origin: claude-cmux-msg
 ---
