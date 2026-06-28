@@ -69,25 +69,33 @@ describe("subscriber-state", () => {
     expect(getWatermark(db, "sid-1")).toBe("msg-200");
   });
 
-  test("tryAcquireLock 初回 (lock_pid IS NULL) は取得成功", () => {
-    expect(tryAcquireLock(db, "sid-1", 1001, alwaysAlive)).toBe(true);
+  test("tryAcquireLock 初回 (lock_pid IS NULL) は取得成功 (heldBy 無し)", () => {
+    const r = tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
+    expect(r.acquired).toBe(true);
+    expect(r.heldBy).toBeUndefined();
     expect(getLockInfo(db, "sid-1").pid).toBe(1001);
   });
 
   test("tryAcquireLock 同 PID 再取得はベキ等成功", () => {
     tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
-    expect(tryAcquireLock(db, "sid-1", 1001, alwaysAlive)).toBe(true);
+    const r = tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
+    expect(r.acquired).toBe(true);
+    expect(r.heldBy).toBeUndefined();
   });
 
-  test("tryAcquireLock 他 PID alive なら失敗 (取得不可)", () => {
+  test("tryAcquireLock 他 PID alive なら失敗 + heldBy にその PID を返す", () => {
     tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
-    expect(tryAcquireLock(db, "sid-1", 2002, alwaysAlive)).toBe(false);
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysAlive);
+    expect(r.acquired).toBe(false);
+    expect(r.heldBy).toBe(1001);
     expect(getLockInfo(db, "sid-1").pid).toBe(1001); // 不変
   });
 
   test("tryAcquireLock 他 PID dead なら奪取成功", () => {
     tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
-    expect(tryAcquireLock(db, "sid-1", 2002, alwaysDead)).toBe(true);
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysDead);
+    expect(r.acquired).toBe(true);
+    expect(r.heldBy).toBeUndefined();
     expect(getLockInfo(db, "sid-1").pid).toBe(2002);
   });
 

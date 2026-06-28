@@ -192,12 +192,18 @@ export async function cmdSubscribe(_args: string[]): Promise<void> {
   let lockAcquired = false;
   try {
     db = openDb();
-    lockAcquired = tryAcquireLock(db, mySid, myPid, (pid) =>
+    const result = tryAcquireLock(db, mySid, myPid, (pid) =>
       isProcessAlive(pid),
     );
+    lockAcquired = result.acquired;
     if (!lockAcquired) {
+      // sid 単位の per-row lock (DR-0016 stage C) が同一 sid の二重起動を防いだ。
+      // 別 sid 間では衝突しない (= subscribers.sid PRIMARY KEY)。
+      // 利用者語彙: 何が起きたか + 次にどうすればよいかを書く (interface-wording)。
+      const heldBy = result.heldBy ?? "?";
       process.stderr.write(
-        "[error] subscribe lock を取得できませんでした (= 他プロセスが既に subscribe を保持中)。終了します。\n",
+        `[error] 同一 session_id の subscribe が既に起動中です (sid=${mySid}, lock_pid=${heldBy})。\n` +
+          `先行プロセスを停止してから再起動してください: kill ${heldBy}\n`,
       );
       db.close();
       process.exit(1);

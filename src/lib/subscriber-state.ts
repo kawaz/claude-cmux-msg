@@ -49,11 +49,18 @@ export function getLockInfo(db: Database, sid: string): LockInfo {
 }
 
 /**
+ * lock 取得結果。
+ * - acquired=true: 取得成功 (新規 / 自 PID ベキ等 / stale 奪取)
+ * - acquired=false: 他 PID が alive で保持中。heldBy にその PID を入れて返す
+ *   (= 呼び出し側がエラーメッセージに表示して利用者に kill 対象を伝えるため)
+ */
+export interface AcquireLockResult {
+  acquired: boolean;
+  heldBy?: number;
+}
+
+/**
  * lock を取得。transaction 内で「現状読み → 自 PID と比較 → 更新」を atomic に。
- *
- * 戻り値:
- * - true: 取得成功 (新規 / 自 PID ベキ等 / stale 奪取)
- * - false: 他 PID が alive で保持中
  */
 export function tryAcquireLock(
   db: Database,
@@ -61,9 +68,9 @@ export function tryAcquireLock(
   myPid: number,
   isPidAlive: (pid: number) => boolean,
   now: number = Date.now(),
-): boolean {
+): AcquireLockResult {
   ensureSubscriber(db, sid);
-  const tx = db.transaction((): boolean => {
+  const tx = db.transaction((): AcquireLockResult => {
     const cur = db
       .query("SELECT lock_pid FROM subscribers WHERE sid = ?")
       .get(sid) as { lock_pid: number | null } | null;
@@ -72,9 +79,9 @@ export function tryAcquireLock(
       db.prepare(
         "UPDATE subscribers SET lock_pid = ?, lock_at = ? WHERE sid = ?",
       ).run(myPid, now, sid);
-      return true;
+      return { acquired: true };
     }
-    return false;
+    return { acquired: false, heldBy };
   });
   return tx();
 }
