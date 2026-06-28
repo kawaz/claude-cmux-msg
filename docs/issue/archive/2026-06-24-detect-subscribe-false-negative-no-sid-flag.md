@@ -1,6 +1,6 @@
 ---
 title: detectSubscribeForSid が --session-id / --resume なしで起動された claude で false negative
-status: open
+status: resolved
 category: bug
 created: 2026-06-24T17:59:33+09:00
 last_read: 2026-06-27T05:19:30+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T20:07:01+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:v0.31.1 で detectSubscribeForSid を 2 経路 hybrid 化 (argv 照合 → ppid chain fallback)、claude --session-id なし起動 (= claude 'prompt' 直起動) でも false negative なく検出可能。src/lib/claude-ancestor.ts を純粋関数で切出し、11 件のテスト追加"]
 blocked_by:
 origin: 自リポ TODO
 ---
