@@ -4,6 +4,7 @@ active な issue の一覧。close 済みは `archive/` にあり、ここには
 
 | date | category | status | slug | 概要 |
 |---|---|---|---|---|
+| 2026-06-28 | bug | open | [subscribe-lock-pid-reuse-false-positive](./2026-06-28-subscribe-lock-pid-reuse-false-positive.md) | subscribe lock の PID 再利用 false-positive 対策 |
 | 2026-06-28 | bug | open | [subscribe-sqlite-busy-silent-failure](./2026-06-28-subscribe-sqlite-busy-silent-failure.md) | subscribe.ts の SQLITE_BUSY 握り潰し silent failure を解消 |
 | 2026-06-28 | bug | open | [begin-immediate-transaction](./2026-06-28-begin-immediate-transaction.md) | subscriber-state / message-queue の db.transaction() を BEGIN IMMEDIATE に変更 |
 | 2026-06-24 | bug | open | [detect-subscribe-false-negative-no-sid-flag](./2026-06-24-detect-subscribe-false-negative-no-sid-flag.md) | detectSubscribeForSid が --session-id / --resume なしで起動された claude で false negative |
