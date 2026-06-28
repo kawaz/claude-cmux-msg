@@ -156,6 +156,33 @@ subscribe は Bun fs.watch + DB lock + watermark で動作するので任意の 
 | `CMUXMSG_SESSION_ID` | session_id の手動指定 (claude --session-id が無い起動形態用) |
 | `CLAUDE_CONFIG_DIR` | claude home 切替 (`--by home` に反映) |
 
+## peer の内部活動を観測する (csa timeline 併用)
+
+cmux-msg は「peer 間の明示的メッセージング (message 単位、永続)」を担うが、peer の **内部活動 (think / tool call / 試行錯誤)** は cmux-msg からは見えない。
+
+例えば peer が `cmux-msg send` を投げてきた時、その投稿に至るまでに peer がどんな試行錯誤をしたか (= help 読み直し / コマンド誤用とリトライ等) は cmux-msg の inbox には記録されない。
+
+これを補う手段として [claude-session-analysis](https://github.com/kawaz/claude-session-analysis) (csa) の `timeline` サブコマンドが使える。**marker (event id) ベースの range 指定**で「前回読んだ位置から先だけ」を **cursor 的に増分取得**できる:
+
+```bash
+# 増分取得 (初回は全件、2 回目以降は last_marker から)
+last_marker=""
+on_subscribe_event() {
+  out=$(csa timeline "$peer_sid" --jsonl ${last_marker:+${last_marker}..})
+  # … 解析
+  last_marker=$(echo "$out" | tail -1 | jq -r .id)
+}
+```
+
+### ツール組み合わせの責務分離
+
+| ツール | 担当レイヤ | 観測 / 制御の粒度 |
+|---|---|---|
+| cmux-msg | peer 間の明示的メッセージング | message 単位 (永続) |
+| csa timeline | peer の内部活動 (user 発言・think・tool call) | event 単位 (cursor 付き、増分取得可) |
+
+csa が日常的な観測手段、cmux-msg が明示通信、というレイヤ分けで運用すると整理しやすい。
+
 ## 詳細
 
 メッセージ形式 / ディレクトリ構造 / sent と inbox の hardlink 共有 / subscribe event スキーマ等は本 plugin の `docs/decisions/DR-0004` を参照。
