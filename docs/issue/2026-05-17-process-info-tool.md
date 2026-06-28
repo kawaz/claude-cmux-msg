@@ -3,7 +3,7 @@ title: プロセス情報を構造化 JSON で取得するツール / 機能
 status: open
 category: request
 created: 2026-05-17T00:00:00+09:00
-last_read:
+last_read: 2026-06-28T00:00:00+09:00
 open_entered: 2026-05-17T00:00:00+09:00
 wip_entered:
 blocked_entered:
