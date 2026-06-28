@@ -8,3 +8,4 @@ active な issue の一覧。close 済みは `archive/` にあり、ここには
 | 2026-05-09 | idea | idea | [discuss-jsonl-monitoring-loop](./2026-05-09-discuss-jsonl-monitoring-loop.md) | Claude Code jsonl tail-f 監視ループをどこに置くかの議論起点 |
 | 2026-06-28 | request | open | [error-code-system](./2026-06-28-error-code-system.md) | エラーコード体系 + exit code 規約化 (機械可読 stable ID) |
 | 2026-06-28 | request | open | [release-yml-auto-tag-gh-release](./2026-06-28-release-yml-auto-tag-gh-release.md) | release.yml + 自動 tag + GH Release を整備 (release-flow-awareness 適合) |
+| 2026-06-28 | request | open | [lib-subdir-subscribe-session](./2026-06-28-lib-subdir-subscribe-session.md) | src/lib/ flat 構造をサブディレクトリ化 (subscribe/ + session/) |
