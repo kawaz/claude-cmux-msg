@@ -14,8 +14,6 @@
 
 [[ -o interactive ]] || return 0
 
-alias cmux-msg="${0:h}/bin/cmux-msg"
-
 # 補完用 fpath
 if [[ -d "${0:h}/completions" ]]; then
   fpath=("${0:h}/completions" $fpath)
