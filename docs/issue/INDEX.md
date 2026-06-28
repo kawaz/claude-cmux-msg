@@ -12,5 +12,4 @@ active な issue の一覧。close 済みは `archive/` にあり、ここには
 | 2026-06-28 | request | open | [branding-consolidation](./2026-06-28-branding-consolidation.md) | プロダクト名 / env prefix を branding 集約 (DR-0013 rename 準備) |
 | 2026-06-28 | design | open | [threat-model-uid-trust-vs-sid-attestation](./2026-06-28-threat-model-uid-trust-vs-sid-attestation.md) | Threat model 検討: 同 UID 信頼 vs sid attestation (sid spoofing / priority spoof 対策) |
 | 2026-06-28 | bug | open | [launcher-symlink-broken](./2026-06-28-launcher-symlink-broken.md) | symlink 経由で cmux-msg を実行すると "Module not found" で fail (SessionStart 案内通りに従うと即 break) |
-| 2026-06-29 | design | open | [room-based-messaging-redesign](./2026-06-29-room-based-messaging-redesign.md) | p2p から room layer + reaction へ: dogfood 5 問題への構造的再設計検討 |
 | 2026-06-29 | design | idea | [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) | die セッションから room-based messaging v2 提案受領記録 + 論点整理 |
