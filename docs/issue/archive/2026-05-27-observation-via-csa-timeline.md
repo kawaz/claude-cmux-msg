@@ -1,6 +1,6 @@
 ---
 title: child の内部観測には csa timeline cursor を併用する (skills/ ドキュメント補強)
-status: open
+status: resolved
 category: request
 created: 2026-05-27T00:00:00+09:00
 last_read: 2026-06-28T20:08:25+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T20:10:09+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:skills/cmux-msg/SKILL.md に peer 内部活動観測 (csa timeline cursor 併用) ガイドと cmux-msg/csa 責務分離表を追記 (3a1db2b)"]
 blocked_by:
 origin: 自リポ TODO
 ---
