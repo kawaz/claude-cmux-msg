@@ -1,6 +1,6 @@
 ---
 title: Monitor 経由 subscribe のライフサイクル管理 UX 改善
-status: open
+status: resolved
 category: request
 created: 2026-06-28T15:27:13+09:00
 last_read:
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T15:48:28+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:v0.30.19 で cmux-msg subscribe --force を実装、前 subscribe を SIGTERM→grace→SIGKILL で奪取、SKILL.md に張り直し手順併記"]
 blocked_by:
 origin: claude-cmux-msg
 ---
