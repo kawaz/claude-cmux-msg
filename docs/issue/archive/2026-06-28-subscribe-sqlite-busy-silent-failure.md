@@ -1,6 +1,6 @@
 ---
 title: subscribe.ts の SQLITE_BUSY 握り潰し silent failure を解消
-status: open
+status: resolved
 category: bug
 created: 2026-06-28T15:24:18+09:00
 last_read:
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T15:44:35+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented","v0.30.18 で subscribe.ts に isSqliteBusyError() 判定を追加、SQLITE_BUSY 系は exit 1 で安全側停止"]
 blocked_by:
 origin: claude-cmux-msg
 ---
