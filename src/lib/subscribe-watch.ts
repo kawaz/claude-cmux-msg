@@ -11,6 +11,7 @@
  */
 
 import { parsePsOutput, lookupSidProcess } from "./session-proc";
+import { findClaudeAncestor } from "./claude-ancestor";
 
 /** pid/ppid だけを持つ最小プロセスノード (子孫ツリー探索用)。 */
 export interface ProcNode {
@@ -100,16 +101,23 @@ export function detectSubscribeInTree(
 
 /**
  * 自分の claude pid を起点に、`ps` を実行して子孫ツリーに subscribe が居るか判定する
- * ランタイム関数 (DR-0007 決定10)。
+ * ランタイム関数 (DR-0007 決定10 + issue 2026-06-24)。
  *
- * - `lookupSidProcess(sid)` が found でなければ「自分の claude pid が引けない」状態。
- *   検出不能なので false (= 未検出扱い) を返す。これにより未検出時は source 別に
- *   start / restart の文言になり、安全側 (張り直しを促す) に倒れる。
- * - `ps` の失敗時も false を返す (検出不能 → 安全側)。
+ * 自分の claude pid の解決順:
+ *   1. **argv 照合** (`lookupSidProcess(sid)`): claude の argv に `--session-id <uuid>`
+ *      または `--resume <uuid>` がある場合に hit する従来経路
+ *   2. **ppid chain fallback**: 1 で見つからなかった場合、自プロセス (= hook 経由で
+ *      動いている bun) の ppid を辿り、basename = claude を最初に見つけたら採用
+ *      (= `claude "<prompt>"` 直起動などで argv に sid が無いケースに対応)
+ *
+ * いずれの経路でも root claude pid が確定したら、子孫ツリーに subscribe が居るか調べる。
+ *
+ * - 1 と 2 のどちらでも見つからなければ false (検出不能 → 張り直し促し、安全側)
+ * - `ps` の失敗時も false (検出不能 → 安全側)
  */
 export function detectSubscribeForSid(sid: string): boolean {
-  const self = lookupSidProcess(sid);
-  if (self.kind !== "found") return false;
+  // 1 回の ps で 2 経路に流す (= ps 実行コストを削減)
+  let rows;
   try {
     const proc = Bun.spawnSync({
       cmd: ["ps", "-axww", "-o", "pid,ppid,pgid,tpgid,stat,tty,lstart,command"],
@@ -119,11 +127,26 @@ export function detectSubscribeForSid(sid: string): boolean {
       env: { ...process.env, LC_ALL: "C", LANG: "C" },
     });
     if (proc.exitCode !== 0) return false;
-    const rows = parsePsOutput(new TextDecoder().decode(proc.stdout));
-    return detectSubscribeInTree(rows, self.pid);
+    rows = parsePsOutput(new TextDecoder().decode(proc.stdout));
   } catch {
     return false;
   }
+
+  // 経路 1: argv 照合 (rows を再利用)
+  const argvSelf = lookupSidProcess(sid);
+  let rootPid: number | null =
+    argvSelf.kind === "found" ? argvSelf.pid : null;
+
+  // 経路 2: ppid chain fallback (自プロセスの祖先 claude を探す)
+  if (rootPid === null) {
+    rootPid = findClaudeAncestor(
+      rows.map((r) => ({ pid: r.pid, ppid: r.ppid, command: r.command })),
+      process.pid,
+    );
+  }
+
+  if (rootPid === null) return false;
+  return detectSubscribeInTree(rows, rootPid);
 }
 
 /** 出し分ける文言の種別。 */
