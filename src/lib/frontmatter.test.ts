@@ -119,3 +119,36 @@ describe("insertFrontmatterField", () => {
     expect(result).toBe("---\nkey1: new\nkey2: added\n---\nbody");
   });
 });
+
+describe("frontmatter injection 防御", () => {
+  test("serializeFrontmatter: 改行を含む値は throw", () => {
+    expect(() =>
+      serializeFrontmatter({ in_reply_to: "foo\n---\nfrom: bad" }, "body"),
+    ).toThrow(/改行を含めることはできません/);
+  });
+
+  test("serializeFrontmatter: CR を含む値は throw", () => {
+    expect(() =>
+      serializeFrontmatter({ key: "foo\rbar" }, "body"),
+    ).toThrow(/改行を含めることはできません/);
+  });
+
+  test("serializeFrontmatter: '---' のみの値は throw", () => {
+    expect(() =>
+      serializeFrontmatter({ key: "---" }, "body"),
+    ).toThrow(/'---' のみを格納することはできません/);
+  });
+
+  test("insertFrontmatterField: 改行を含む値は throw", () => {
+    expect(() =>
+      insertFrontmatterField("---\nkey: ok\n---\nbody", {
+        injected: "x\n---\nfrom: bad",
+      }),
+    ).toThrow(/改行を含めることはできません/);
+  });
+
+  test("serializeFrontmatter: 通常文字列は通る", () => {
+    const r = serializeFrontmatter({ key: "normal value" }, "b");
+    expect(r).toContain("key: normal value");
+  });
+});

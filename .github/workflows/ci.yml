@@ -5,15 +5,37 @@ on:
   pull_request:
     branches: [main]
 
+# Bun / claude-code のバージョンを集約。実機ローカルとの差を最小化する目的。
+env:
+  BUN_VERSION: 1.3.13
+  # @anthropic-ai/claude-code の major を pin。kawaz 環境で稼働中の最新と一致させる。
+  # 古い patch でも plugin validate の挙動は安定しているので latest 系で OK。
+  CLAUDE_CODE_VERSION: latest
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
       - uses: extractions/setup-just@v4
+
+      # Bun global install cache を再利用 (= claude-code 再 download 抑制)
+      - name: Cache Bun global install
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/global
+            ~/.bun/install/cache
+          # bun.lockb が無い構成なので、Bun version + CC version pin を key にする。
+          key: bun-global-${{ runner.os }}-${{ env.BUN_VERSION }}-cc-${{ env.CLAUDE_CODE_VERSION }}
+          restore-keys: |
+            bun-global-${{ runner.os }}-${{ env.BUN_VERSION }}-
+
       - name: Install Claude Code via bun (for `claude plugin validate`)
         run: |
-          bun add -g @anthropic-ai/claude-code
+          bun add -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
           echo "$(bun pm bin -g)" >> "$GITHUB_PATH"
       - run: just ci

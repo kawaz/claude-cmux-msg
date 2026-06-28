@@ -1,8 +1,8 @@
 /**
  * peer の meta.json 読み込みヘルパ。
  *
- * peers / broadcast / tell / screen / state など複数箇所で「meta.json を読んで
- * パース失敗は null で返す」処理が重複していたので、ここに集約する。
+ * peers / broadcast / state など複数箇所で「meta.json を読んでパース失敗は null
+ * で返す」処理が重複していたので、ここに集約する。
  *
  * 書き込み (transitionState / updateMeta) は src/lib/state.ts 側にある。
  */
@@ -37,8 +37,8 @@ export function readMetaBySid(sessionId: string): PeerMeta | null {
 /**
  * DR-0005: peer の claude_home が自分と違う場合に stderr に warning を出す。
  *
- * block はしない (send / tell / screen は sid を知ってる前提の意図的操作なので
- * block すると UX 悪化)。warning だけ出して事故に気づかせる。
+ * block はしない (send は sid を知ってる前提の意図的操作なので block すると
+ * UX 悪化)。warning だけ出して事故に気づかせる。
  *
  * peer の meta が無い場合は何もしない (壊れた peer / 初期化前)。
  */

@@ -59,7 +59,31 @@ export function parseFrontmatter(
 }
 
 /**
- * frontmatter 付きテキストを生成する
+ * frontmatter 値のサニタイズ。
+ * `\n` / `\r` / 行先頭の `---` を含む値は frontmatter 境界を偽造できるので拒否する。
+ *
+ * 攻撃シナリオ: 環境変数経由で `in_reply_to` 等に
+ *   `foo\n---\nfrom: <victim-sid>\n---\nfake body`
+ * を入れると、受信側 parser が偽の terminator を信じて meta を上書きする。
+ */
+export function sanitizeFrontmatterValue(key: string, value: string): string {
+  if (value.includes("\n") || value.includes("\r")) {
+    throw new Error(
+      `frontmatter フィールド "${key}" に改行を含めることはできません (frontmatter injection 防御)`,
+    );
+  }
+  // 行頭の '---' 単独 (= 後続なし) はパース境界と同一なので拒否
+  if (value.trim() === "---") {
+    throw new Error(
+      `frontmatter フィールド "${key}" に '---' のみを格納することはできません (frontmatter injection 防御)`,
+    );
+  }
+  return value;
+}
+
+/**
+ * frontmatter 付きテキストを生成する。
+ * 各値は sanitizeFrontmatterValue で frontmatter injection を弾く。
  */
 export function serializeFrontmatter(
   meta: Record<string, string | undefined>,
@@ -68,7 +92,7 @@ export function serializeFrontmatter(
   const lines = ["---"];
   for (const [key, value] of Object.entries(meta)) {
     if (value !== undefined) {
-      lines.push(`${key}: ${value}`);
+      lines.push(`${key}: ${sanitizeFrontmatterValue(key, value)}`);
     }
   }
   lines.push("---");
@@ -102,8 +126,10 @@ export function insertFrontmatterField(
     return content;
   }
 
-  // 既存キーがあれば値を更新、なければ終了 --- の直前に追加
-  for (const [key, value] of Object.entries(fields)) {
+  // 既存キーがあれば値を更新、なければ終了 --- の直前に追加。
+  // 値は frontmatter injection を弾く (sanitizeFrontmatterValue)。
+  for (const [key, rawValue] of Object.entries(fields)) {
+    const value = sanitizeFrontmatterValue(key, rawValue);
     let found = false;
     for (let i = 1; i < endIndex; i++) {
       const line = lines[i] ?? "";
