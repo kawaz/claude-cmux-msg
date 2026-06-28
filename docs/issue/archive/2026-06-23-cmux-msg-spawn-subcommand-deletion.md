@@ -1,6 +1,6 @@
 ---
 title: cmux-msg spawn sub-command の削除
-status: open
+status: resolved
 category: request
 created: 2026-06-23T08:24:18+09:00
 last_read: 2026-06-28T19:32:31+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T19:53:50+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:v0.31.0 + DR-0019 で cmux 連携機能を完全除去 (spawn/tell/screen/stop + lib/cmux* + CMUX_* env + by-surface lookup + meta フィールド)、cmux-msg は pure messaging plugin に純化"]
 blocked_by:
 origin: 自リポ TODO
 ---
