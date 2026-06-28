@@ -1,17 +1,17 @@
 ---
 title: プロセス情報を構造化 JSON で取得するツール / 機能
-status: open
+status: pending-sublimation
 category: request
 created: 2026-05-17T00:00:00+09:00
 last_read: 2026-06-28T00:00:00+09:00
 open_entered: 2026-05-17T00:00:00+09:00
 wip_entered:
 blocked_entered:
-pending_entered:
+pending_entered: 2026-06-28T20:11:43+09:00
 discarded_entered:
 resolved_entered:
 discard_reason:
-pending_reason:
+pending_reason: ["現状の ps テキストパース (src/lib/session-proc.ts) は実機 dogfood で問題なく動作中、argv 切り詰め / STAT 差異の実害観測なし。libproc / KERN_PROCARGS2 への移行は性能 / 信頼性の実問題が観測されたタイミング (= 観測駆動) で別 issue を起こして判断する。authsock-warden 等への共通ライブラリ化は dogfood が複数リポにまたがる時点で再評価"]
 close_reason:
 blocked_by:
 origin: 自リポ TODO
