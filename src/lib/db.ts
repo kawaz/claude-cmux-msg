@@ -17,7 +17,7 @@ export function getDbPath(): string {
   return path.join(getMsgBase(), DB_FILENAME);
 }
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 const PRAGMAS = [
   "PRAGMA journal_mode=WAL",
@@ -87,13 +87,31 @@ CREATE INDEX IF NOT EXISTS idx_messages_from_repo ON messages(from_repo_hash);
 CREATE INDEX IF NOT EXISTS idx_messages_from_ws   ON messages(from_ws_hash);
 
 -- subscribe 状態 (watermark + 二重起動防止 lock)
+-- lock_lstart: PID 再利用 false-positive 対策 (DR 候補, v2 で追加)。lock holder の
+--              プロセス開始時刻 (= ps -o lstart) を併せて記録し、生存判定で
+--              「PID alive + lstart 一致」を AND する。
 CREATE TABLE IF NOT EXISTS subscribers (
   sid           TEXT PRIMARY KEY REFERENCES sessions(sid) ON DELETE CASCADE,
   watermark_id  TEXT,
   lock_pid      INTEGER,
-  lock_at       INTEGER
+  lock_at       INTEGER,
+  lock_lstart   TEXT
 );
 `;
+
+/**
+ * 旧 schema (= v1 で作られた subscribers テーブル) に lock_lstart 列が無い場合に追加する。
+ * IF NOT EXISTS 相当の動きを sqlite_master で確認してから ALTER TABLE する
+ * (= SQLite には ADD COLUMN IF NOT EXISTS 構文がない)。
+ */
+function ensureSubscribersLockLstartColumn(db: Database): void {
+  const cols = db
+    .query("PRAGMA table_info(subscribers)")
+    .all() as { name: string }[];
+  if (!cols.some((c) => c.name === "lock_lstart")) {
+    db.exec("ALTER TABLE subscribers ADD COLUMN lock_lstart TEXT");
+  }
+}
 
 /**
  * DB を開き、PRAGMA / schema / version migration を適用済の状態で返す。
@@ -103,6 +121,9 @@ export function openDb(dbPath: string = getDbPath()): Database {
   const db = new Database(dbPath, { create: true });
   for (const sql of PRAGMAS) db.exec(sql);
   db.exec(SCHEMA_SQL);
+
+  // v1 → v2: subscribers に lock_lstart 列を追加 (旧 DB の rolling migration)。
+  ensureSubscribersLockLstartColumn(db);
 
   const row = db.query("SELECT MAX(version) AS v FROM schema_version").get() as
     | { v: number | null }

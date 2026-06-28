@@ -113,6 +113,43 @@ describe("subscriber-state", () => {
     expect(getLockInfo(db, "sid-1").at).toBe(12_345);
   });
 
+  test("signature: lstart 一致なら alive holder の奪取を拒否", () => {
+    const lstartA = "Sat Jun 28 14:00:00 2026";
+    tryAcquireLock(db, "sid-1", 1001, alwaysAlive, 1, {
+      getLstart: () => lstartA,
+      myLstart: lstartA,
+    });
+    // 別 PID (2002) が「lstart 一致」を主張しても false (= 同名の本物)
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysAlive, 2, {
+      getLstart: () => lstartA,
+      myLstart: lstartA,
+    });
+    expect(r.acquired).toBe(false);
+    expect(r.heldBy).toBe(1001);
+  });
+
+  test("signature: lstart 不一致 (= PID 再利用) なら alive holder を stale 扱いで奪取", () => {
+    const lstartA = "Sat Jun 28 14:00:00 2026";
+    const lstartB = "Sat Jun 28 18:00:00 2026";
+    tryAcquireLock(db, "sid-1", 1001, alwaysAlive, 1, {
+      getLstart: () => lstartA,
+      myLstart: lstartA,
+    });
+    // PID 1001 は alive だが lstart が変わっている (= 再利用された別プロセス)
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysAlive, 2, {
+      getLstart: () => lstartB,
+      myLstart: lstartB,
+    });
+    expect(r.acquired).toBe(true);
+    expect(getLockInfo(db, "sid-1").pid).toBe(2002);
+  });
+
+  test("signature 未指定 (= 後方互換) は従来挙動 (alive holder を奪取しない)", () => {
+    tryAcquireLock(db, "sid-1", 1001, alwaysAlive);
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysAlive);
+    expect(r.acquired).toBe(false);
+  });
+
   test("session 削除で subscribers も CASCADE 削除される", () => {
     setWatermark(db, "sid-1", "m1");
     tryAcquireLock(db, "sid-1", 1001, alwaysAlive);

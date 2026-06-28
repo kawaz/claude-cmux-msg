@@ -20,6 +20,7 @@ import {
 import { isProcessAlive } from "../lib/peer";
 import { isSqliteBusyError } from "../lib/sqlite-error";
 import { forceTakeover } from "../lib/force-takeover";
+import { getPidLstart } from "../lib/pid-signature";
 import { looksLikeFlag } from "../lib/argv";
 import { UsageError } from "../lib/errors";
 import type { Database } from "bun:sqlite";
@@ -221,8 +222,18 @@ export async function cmdSubscribe(args: string[]): Promise<void> {
   let lockAcquired = false;
   try {
     db = openDb();
-    const result = tryAcquireLock(db, mySid, myPid, (pid) =>
-      isProcessAlive(pid),
+    // PID 再利用 false-positive 対策: 自 PID の lstart を記録し、stale lock 判定で
+    // 「PID alive + lstart 一致」を AND する (= 別プロセスが PID 再利用した場合に
+    // false-positive で奪取不能になるのを防ぐ)。
+    const myLstart = getPidLstart(myPid);
+    const sigOpts = { getLstart: getPidLstart, myLstart };
+    const result = tryAcquireLock(
+      db,
+      mySid,
+      myPid,
+      (pid) => isProcessAlive(pid),
+      Date.now(),
+      sigOpts,
     );
     lockAcquired = result.acquired;
     if (!lockAcquired) {
@@ -252,8 +263,13 @@ export async function cmdSubscribe(args: string[]): Promise<void> {
           db.close();
           process.exit(1);
         }
-        const retry = tryAcquireLock(db, mySid, myPid, (pid) =>
-          isProcessAlive(pid),
+        const retry = tryAcquireLock(
+          db,
+          mySid,
+          myPid,
+          (pid) => isProcessAlive(pid),
+          Date.now(),
+          sigOpts,
         );
         lockAcquired = retry.acquired;
         if (!lockAcquired) {

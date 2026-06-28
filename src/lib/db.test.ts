@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { Database } from "bun:sqlite";
 import { openDb, currentSchemaVersion, SCHEMA_VERSION } from "./db";
 
 describe("openDb", () => {
@@ -91,6 +92,42 @@ describe("openDb", () => {
         .prepare("INSERT INTO session_labels (sid, label) VALUES (?, ?)")
         .run("ghost-sid", "team-a"),
     ).toThrow();
+    db.close();
+  });
+
+  test("旧 v1 schema (lock_lstart 列なし) に対して openDb で migration が動く", () => {
+    const dbPath = path.join(tmpDir, "old.db");
+    // 旧 v1 schema を手動で作る (lock_lstart 列なし)
+    const setup = new Database(dbPath, { create: true });
+    setup.exec("PRAGMA journal_mode=WAL");
+    setup.exec(`CREATE TABLE subscribers (
+      sid TEXT PRIMARY KEY,
+      watermark_id TEXT,
+      lock_pid INTEGER,
+      lock_at INTEGER
+    )`);
+    setup.exec(`CREATE TABLE schema_version (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)`);
+    setup.prepare("INSERT INTO schema_version VALUES (1, 1)").run();
+    // 既存 row も入れておく (= 既存 deploy 環境の DB を想定)
+    setup.prepare("INSERT INTO subscribers (sid, lock_pid, lock_at) VALUES (?, ?, ?)").run(
+      "legacy-sid",
+      999,
+      111,
+    );
+    setup.close();
+
+    // openDb で再 open → lock_lstart 列が追加されるはず
+    const db = openDb(dbPath);
+    const cols = db.query("PRAGMA table_info(subscribers)").all() as {
+      name: string;
+    }[];
+    expect(cols.map((c) => c.name)).toContain("lock_lstart");
+    // 既存 row は壊れていない、新列は NULL
+    const row = db
+      .query("SELECT lock_pid, lock_lstart FROM subscribers WHERE sid = ?")
+      .get("legacy-sid") as { lock_pid: number; lock_lstart: string | null };
+    expect(row.lock_pid).toBe(999);
+    expect(row.lock_lstart).toBeNull();
     db.close();
   });
 });
