@@ -1,7 +1,7 @@
 {
   "name": "cmux-msg",
   "description": "File-based messaging between Claude Code sessions",
-  "version": "0.31.3",
+  "version": "0.31.4",
   "author": { "name": "kawaz" },
   "license": "MIT",
   "repository": "https://github.com/kawaz/claude-cmux-msg"
