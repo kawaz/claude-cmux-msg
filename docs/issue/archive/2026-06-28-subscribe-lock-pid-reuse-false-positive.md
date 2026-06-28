@@ -1,6 +1,6 @@
 ---
 title: subscribe lock の PID 再利用 false-positive 対策
-status: open
+status: resolved
 category: bug
 created: 2026-06-28T15:25:29+09:00
 last_read:
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-28T15:53:10+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:v0.30.20 で subscribers.lock_lstart 列を追加 (SCHEMA_VERSION 2 で rolling migration)、tryAcquireLock に optional signatureOpts、PID alive + lstart 一致を AND して PID 再利用を識別"]
 blocked_by:
 origin: claude-cmux-msg
 ---
