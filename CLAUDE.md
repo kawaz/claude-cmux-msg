@@ -1,6 +1,6 @@
 # cmux-msg
 
-複数の Claude Code セッション間でファイルベースのメッセージをやり取りする Claude Code プラグイン。任意の起動形態 (ターミナル直起動 / cmux / tmux / SSH / bg job 等) で動作し、特定の terminal multiplexer に依存しない。
+複数の Claude Code セッション間でファイルベースのメッセージをやり取りする Claude Code プラグイン。任意の起動形態 (ターミナル直起動 / tmux / SSH / bg job 等) で動作し、特定の terminal multiplexer に依存しない。
 
 > プロダクト名 `cmux-msg` は名称負債 (DR-0013 で `ccmsg` への rename を予定)。動作上は cmux 非依存。
 

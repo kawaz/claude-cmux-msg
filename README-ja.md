@@ -150,6 +150,23 @@ echo 'kawaz/claude-cmux-msg' >> ~/.zsh_plugins.txt
 source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
 ```
 
+## 0.30.x → 0.31.x への移行 (DR-0019)
+
+v0.31.0 で cmux 連携機能を完全除去しました。以下を使っていた場合は更新が必要です:
+
+| 削除 | 代替 |
+|------|------|
+| `cmux-msg spawn` | `claude --session-id <uuid> ...` を直接呼ぶ |
+| `cmux-msg stop <sid>` | OS の `kill` を使う |
+| `cmux-msg tell` / `screen` | hyoui 等の terminal 側 plugin に委譲 |
+| `cmux-msg peers --by ws` | `--by repo` で代用 (同 worktree なら通常 同 repo) |
+| env `CMUX_WORKSPACE_ID` / `CMUX_SURFACE_ID` 等 | 代替なし。cmux-msg は multiplexer 非依存に |
+| `meta.json` の `workspace_id` / `surface_id` / `worker_name` 等 | 代替なし。旧 file に残っていても無視される |
+
+削除されたサブコマンドを叩くと本セクションへの誘導 hint が出ます。
+
+詳細な理由は `docs/decisions/DR-0019-drop-cmux-everything.md` を参照。
+
 ## ライセンス
 
 MIT License

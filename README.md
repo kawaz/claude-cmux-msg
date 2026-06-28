@@ -150,6 +150,23 @@ echo 'kawaz/claude-cmux-msg' >> ~/.zsh_plugins.txt
 source /path/to/claude-cmux-msg/cmux-msg.plugin.zsh
 ```
 
+## Migration from 0.30.x → 0.31.x (DR-0019)
+
+In v0.31.0 we removed cmux-specific features entirely. If you used any of the following, please update:
+
+| Removed | Replacement |
+|---------|-------------|
+| `cmux-msg spawn` | Call `claude --session-id <uuid> ...` directly |
+| `cmux-msg stop <sid>` | Use OS-level `kill` |
+| `cmux-msg tell` / `screen` | Delegate to hyoui or other terminal-side plugins |
+| `cmux-msg peers --by ws` | Use `--by repo` (same worktree usually means same repo) |
+| env `CMUX_WORKSPACE_ID` / `CMUX_SURFACE_ID` / etc. | No replacement; cmux-msg is now multiplexer-agnostic |
+| `meta.json` fields `workspace_id` / `surface_id` / `worker_name` / etc. | No replacement; ignored if present in old files |
+
+Running a removed subcommand now prints a hint that points at this section.
+
+See `docs/decisions/DR-0019-drop-cmux-everything.md` for the full rationale.
+
 ## License
 
 MIT License

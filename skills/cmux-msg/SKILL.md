@@ -37,7 +37,10 @@ peer agent と認識した時、ユーザ向けの忖度禁止ルールが対象
 - `peers [--by <axis>...] [--all] [--include-dead] [-v]` — peer 一覧 (cwd 付き)。軸 = `home / cwd[:<pat>] / repo[:<pat>] / tag:<name>`、cwd / repo は substring grep。軸なし default は `--by home`、`--all` で claude_home 壁を超える
 - `send <sid> [--text <msg>] [< body.md]` — 永続配送、本文 stdin or `--text` (DR-0014、cross-home なら warning)
 - `broadcast [--by ...] [--text <msg>] [< body.md]` — 軸グループへ一斉配送 (default `--by home`)
-- `list` / `read <file>` / `accept <file>` / `dismiss <file>` / `reply <file> [--text <返信>]` — inbox 系
+- `list` / `read <file>` / `accept <file>` / `dismiss <file>` / `reply <file> [--text <返信>]` — inbox 系。判断ガイド:
+  - 返信する場合       → `reply` (内部で accept してから archive まで一気)
+  - 返信不要、ack 受領 → `accept` (= 受け止めた)
+  - 内容を否定して破棄 → `dismiss` (= 受け止めず破棄)
 - `history [--peer <sid>] [--limit N] [--json]` — 自分の往復履歴 (thread_id カラム付き、`--json` で `thread_root_filename` 等)
 - `thread <file> [--json]` — `in_reply_to` 連鎖で会話単位表示
 - `subscribe [--force]` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述)。`--force` で前 subscribe を奪取
@@ -182,6 +185,64 @@ on_subscribe_event() {
 | csa timeline | peer の内部活動 (user 発言・think・tool call) | event 単位 (cursor 付き、増分取得可) |
 
 csa が日常的な観測手段、cmux-msg が明示通信、というレイヤ分けで運用すると整理しやすい。
+
+## ユーザから「xx プロジェクトと通信して」と指示された時のレシピ
+
+ユーザが `xx プロジェクトに伝えて` / `xx repo と話して` / `bump-semver セッションに聞いて` 等の指示を出した時、AI は以下のフローで peer 通信を成立させる:
+
+### 1. 既存 peer セッションを探す
+
+```bash
+# repo 名で検索 (substring grep でゆるく)
+cmux-msg peers --all --by repo:<xx> -v
+# あるいは cwd 直接
+cmux-msg peers --all --by cwd:<xx> -v
+```
+
+`--all` で claude_home 壁を超えて alive な peer を列挙。verbose (`-v`) で cwd / repo_root / tags を確認し、相手の **main worktree** 上で動いてる session を選ぶ。複数候補あれば user に確認するか、最新の last_observed_pid で判断。
+
+### 2. peer が居なければ起動する
+
+cmux-msg は messaging 専任 (DR-0019) で起動責務を持たないので、`hyoui run` で background 起動する。標準パターン:
+
+```bash
+# UUID v4 を先に採番
+SID=$(uuidgen | tr 'A-Z' 'a-z')
+
+# 相手 repo の main worktree で claude を background 起動
+# stdin EOF で hyoui run が detach し、claude は daemon 配下で生存し続ける
+(cd /path/to/<xx>/main && \
+ hyoui run --stdin-eof=detach -- claude --session-id "$SID" 'cmux-msg subscribe して待て' < /dev/null)
+
+# しばらく待ってから peers で生存確認 (SessionStart hook が走って meta.json + DB sessions row が出来る必要)
+sleep 5
+cmux-msg peers --all --by cwd:<xx> -v | grep "$SID"
+```
+
+ポイント:
+- `hyoui run --stdin-eof=detach`: stdin 即 EOF で hyoui run が exit、claude は daemon 配下で継続稼働
+- `'cmux-msg subscribe して待て'`: 起動 prompt。相手 AI は本指示を受けて Monitor で subscribe を張り、新着 msg を待つ姿勢になる
+- SessionStart hook (cmux-msg 0.31+) が走るまで数秒待ってから peers で確認
+
+### 3. send / broadcast で通信開始
+
+```bash
+# 個別 send
+cmux-msg send "$SID" --text "状況確認: yy について教えて"
+
+# あるいは repo broadcast (= 起動した相手も同じ repo にいるはずなので)
+cmux-msg broadcast --all --by repo:<xx> --text "状況確認: yy について教えて"
+```
+
+### 責務分離 (= 各 plugin の境界を尊重する)
+
+| ツール | 担当 | 本フローでの役割 |
+|---|---|---|
+| cmux-msg | messaging | peer 探索 (peers) + 送受信 (send/broadcast/subscribe/read/reply) |
+| hyoui | terminal-aware process proxy | 不在時の claude background 起動 (`run --stdin-eof=detach`) |
+| csa timeline | event 観測 | peer の内部活動を後追いで観測 (= 上記「peer の内部活動を観測する」節) |
+
+cmux-msg に `send --auto-spawn` 等の起動責務を入れない (DR-0019 で削除した境界を再侵略しないため)。AI が hyoui CLI を直接叩く形で十分。
 
 ## 詳細
 
