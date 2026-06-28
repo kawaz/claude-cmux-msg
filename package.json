@@ -1,6 +1,6 @@
 {
   "name": "cmux-msg",
-  "version": "0.30.20",
+  "version": "0.31.0",
   "type": "module",
   "private": true,
   "license": "MIT",
