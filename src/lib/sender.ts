@@ -16,6 +16,12 @@ import { timestamp, nowIso, getSessionId, peerDir, myDir } from "../config";
 import { serializeFrontmatter } from "./frontmatter";
 import { validateSessionId } from "./validate";
 
+/**
+ * 同一プロセス内で hardlink 失敗 warning を 1 回だけ出すための guard。
+ * broadcast は 1 プロセスで並列 N 件送るので、warning が N 回出ると stderr が騒がしくなる。
+ */
+let hardlinkWarnedOnce = false;
+
 export interface SendOptions {
   target: string;
   body: string;
@@ -85,11 +91,15 @@ export async function sendMessage(opts: SendOptions): Promise<string> {
     try {
       fs.linkSync(inboxFile, sentFile);
     } catch (e) {
-      process.stderr.write(
-        `[warning] sent/ への hardlink 失敗 (${(e as Error).message || e})。` +
-          `送信は成功、ただし sent/ には記録されません。` +
-          `クロス FS 環境では CMUXMSG_BASE を peer と同じファイルシステムに置いてください。\n`
-      );
+      if (!hardlinkWarnedOnce) {
+        hardlinkWarnedOnce = true;
+        process.stderr.write(
+          `[warning] sent/ への hardlink 失敗 (${(e as Error).message || e})。` +
+            `送信は成功、ただし sent/ には記録されません。` +
+            `クロス FS 環境では CMUXMSG_BASE を peer と同じファイルシステムに置いてください。` +
+            ` (以後同一プロセス内では本 warning を抑制)\n`
+        );
+      }
     }
   } catch {
     // sent/ ディレクトリ作成失敗等は致命的ではない

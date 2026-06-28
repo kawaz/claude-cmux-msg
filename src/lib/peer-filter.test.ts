@@ -113,6 +113,12 @@ describe("matchAxis / matchAllAxes", () => {
     expect(matchAxis(me, meta({ tags: ["beta"] }), { kind: "tag", name: "alpha" })).toBe(false);
   });
 
+  test("旧 meta.json (tags フィールド不在) でも tag 軸でクラッシュしない", () => {
+    // 旧 schema を擬似的に作る (= tags プロパティを undefined に倒す)
+    const oldPeer = { ...meta(), tags: undefined as unknown as string[] };
+    expect(matchAxis(me, oldPeer, { kind: "tag", name: "anything" })).toBe(false);
+  });
+
   test("cwd:<pattern> は peer.cwd に pattern を含む時のみ true (自分基準ではない)", () => {
     // 自分の cwd は /repo/foo だが、pattern は peer 側を見る
     expect(matchAxis(me, meta({ cwd: "/repo/foo/sub" }), { kind: "cwd", pattern: "foo" })).toBe(true);

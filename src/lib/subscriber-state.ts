@@ -106,15 +106,17 @@ export function tryAcquireLock(
       const heldByAlive = isPidAlive(heldBy);
       if (!heldByAlive) {
         canAcquire = true;
-      } else if (getLstart && recordedLstart !== null) {
+      } else if (getLstart) {
         // PID 再利用 false-positive 対策: lstart 一致なら同名 (= 奪取不可)、
-        // 不一致なら別プロセス (= 奪取可能)
+        // 不一致なら別プロセス (= 奪取可能)。
+        // unverified (= recordedLstart=null) は奪取可能側に倒す
+        // (pid-signature.ts の rationale 参照: 永久 lock 失敗を防ぐ復旧経路)。
         const verdict = checkLockHolderSignature({
           heldByAlive: true,
           heldByLstart: getLstart(heldBy),
           recordedLstart,
         });
-        canAcquire = verdict === "stale";
+        canAcquire = verdict !== "same";
       }
     }
 

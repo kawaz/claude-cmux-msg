@@ -15,7 +15,6 @@ const PEERS_HELP = `使い方: cmux-msg peers [--by <axis>...] [--all] [--includ
 
 axis (複数指定可、AND 結合):
   --by home          自分と同じ claude_home の peer (デフォルト)
-  --by ws            自分と同じ workspace の peer
   --by cwd           自分と同じ cwd の peer (完全一致)
   --by cwd:<pat>     cwd に <pat> を含む peer (substring grep)
   --by repo          自分と同じ repo_root の peer
@@ -27,15 +26,15 @@ axis (複数指定可、AND 結合):
 
 その他:
   --include-dead     dead な peer も表示 (デフォルトは alive のみ)
-  -v, --verbose      ws / tags / home / repo_root 等の補助情報も出力
+  -v, --verbose      tags / home / repo_root 等の補助情報も出力
 
 例:
   cmux-msg peers                      # 自 home の alive peer (= --by home)
   cmux-msg peers --by repo            # 同 repo の alive peer (home は問わない)
   cmux-msg peers --by cwd:cmux-msg    # cwd に cmux-msg を含む peer (prefix 違い吸収)
-  cmux-msg peers --by home --by ws    # home AND ws 一致 (AND 結合)
+  cmux-msg peers --by home --by repo  # home AND repo 一致 (AND 結合)
   cmux-msg peers --all                # 全 home 横断 alive peer
-  cmux-msg peers --all -v             # 上記 + ws/tags/home 詳細`;
+  cmux-msg peers --all -v             # 上記 + tags/home 詳細`;
 
 export function cmdPeers(args: string[] = []): void {
   requireSessionId();

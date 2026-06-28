@@ -150,6 +150,21 @@ describe("subscriber-state", () => {
     expect(r.acquired).toBe(false);
   });
 
+  test("signature: recordedLstart=null (unverified) は奪取可能側に倒す (永久 lock 失敗の復旧経路)", () => {
+    // 直接 SQL で lstart=null の row を作る (= 旧 v1 schema or ps 失敗で書かれた null を擬似)
+    db.prepare(
+      "INSERT OR REPLACE INTO subscribers (sid, lock_pid, lock_at, lock_lstart) VALUES (?, ?, ?, ?)",
+    ).run("sid-1", 1001, 1, null);
+    // 別 PID 2002 が signature 経路で取り合う。alive だが unverified → 奪取可能
+    const lstartB = "Sat Jun 28 18:00:00 2026";
+    const r = tryAcquireLock(db, "sid-1", 2002, alwaysAlive, 2, {
+      getLstart: () => lstartB,
+      myLstart: lstartB,
+    });
+    expect(r.acquired).toBe(true);
+    expect(getLockInfo(db, "sid-1").pid).toBe(2002);
+  });
+
   test("session 削除で subscribers も CASCADE 削除される", () => {
     setWatermark(db, "sid-1", "m1");
     tryAcquireLock(db, "sid-1", 1001, alwaysAlive);

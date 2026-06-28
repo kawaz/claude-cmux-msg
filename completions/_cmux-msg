@@ -19,12 +19,11 @@ subcommands=(
   'dismiss:メッセージを破棄'
   'reply:返信送信 & アーカイブ'
   'subscribe:inbox 新着を JSONL で連続出力'
+  'check-subscribe:subscribe 稼働判定'
+  'notify:軽量通知 (subscribe stream に本文同梱)'
+  'label:自セッションに label 貼り剥がし'
   'history:時系列マージで全メッセージ表示'
   'thread:in_reply_to を辿って会話単位で表示'
-  'spawn:子CCを起動'
-  'stop:子CCを終了'
-  'tell:対象に直接テキスト入力 (fg + idle 必須)'
-  'screen:画面内容を読み取り (fg 必須)'
   'gc:dead セッション dir の掃除'
   'help:ヘルプ表示'
 )
@@ -41,22 +40,39 @@ case "$state" in
     case "$words[1]" in
       peers|ls-peers)
         _arguments \
-          '*--by[グルーピング軸 (home/ws/cwd/repo/tag:NAME)]:axis:(home ws cwd repo)' \
+          '*--by[グルーピング軸 (home/cwd/repo/tag:NAME)]:axis:(home cwd repo)' \
           '--all[alive な全 peer (軸無視、明示)]' \
-          '--include-dead[dead な peer も表示]'
+          '--include-dead[dead な peer も表示]' \
+          '--verbose[補助情報も出力]' \
+          '-v[補助情報も出力]'
         ;;
       broadcast)
         _arguments \
-          '*--by[グルーピング軸 (home/ws/cwd/repo/tag:NAME)]:axis:(home ws cwd repo)' \
-          '--all[alive な全 peer (軸無視、明示)]'
+          '*--by[グルーピング軸 (home/cwd/repo/tag:NAME)]:axis:(home cwd repo)' \
+          '--all[alive な全 peer (軸無視、明示)]' \
+          '--text[本文 (stdin の代替)]:text'
         ;;
-      spawn)
+      send)
         _arguments \
-          '--name[ワーカー名]:name' \
-          '--cwd[作業ディレクトリ]:dir:_path_files -/' \
-          '--args[claude に渡す引数]:args' \
-          '--tags[meta.tags の初期化 (csv)]:tags' \
-          '--json[構造化出力]'
+          '--text[本文 (stdin の代替)]:text'
+        ;;
+      reply)
+        _arguments \
+          '--text[本文 (stdin の代替)]:text'
+        ;;
+      notify)
+        _arguments \
+          '--to[宛先 session_id]:session_id' \
+          '--self[自セッション宛 (= to == from)]' \
+          '--text[本文 (stdin の代替)]:text'
+        ;;
+      subscribe)
+        _arguments \
+          '--force[前 subscribe を SIGTERM → grace → SIGKILL で奪取]'
+        ;;
+      label)
+        _arguments \
+          '1:action:(add remove list)'
         ;;
       history)
         _arguments \

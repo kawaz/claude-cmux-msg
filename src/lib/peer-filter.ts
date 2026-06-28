@@ -121,7 +121,8 @@ export function matchAxis(
       // 両方とも repo_root を持ち、かつ一致した時のみ true
       return !!me.repo_root && me.repo_root === peer.repo_root;
     case "tag":
-      return peer.tags.includes(axis.name);
+      // 旧 meta.json (tags フィールド不在) の peer を踏んでも TypeError しない。
+      return (peer.tags ?? []).includes(axis.name);
   }
 }
 

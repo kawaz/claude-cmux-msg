@@ -41,14 +41,23 @@ export function getPidLstart(pid: number): string | null {
  * 引数:
  *   - heldByAlive: holder PID が OS 上 alive か (= `process.kill(pid, 0)` 結果)
  *   - heldByLstart: holder PID の現在の lstart (取れなければ null)
- *   - recordedLstart: lock 取得時に DB に記録された lstart (null なら旧 row、後方互換)
+ *   - recordedLstart: lock 取得時に DB に記録された lstart (null なら旧 row / lstart 取得失敗時)
  *
  * 戻り値:
  *   - "same"      : 同名 (奪取不可、二重起動防止が正しく発火)
  *   - "stale"     : holder dead または lstart 不一致 (奪取可能)
- *   - "unverified": recordedLstart が null (旧 row) → lstart 検証できない、alive のみで判定
+ *   - "unverified": recordedLstart が null (旧 row / ps 失敗で書かれた null) → lstart 検証できない
  *
- * 「unverified」かつ alive のケースは後方互換のため奪取しない (= 旧挙動維持)。
+ * 呼出側 (subscriber-state.tryAcquireLock) は **`unverified` を `stale` 扱いで
+ * 奪取可能側に倒す**。理由は次の 2 点:
+ *   - 旧 v1 schema (lstart 列不在) の row は古い deploy 環境のデータ。現プロセスは
+ *     v2 schema を読み書きするので、上書きして lstart を記録し直す方が運用上自然
+ *   - ps 失敗で recordedLstart=null が書かれたケースで「alive だが unverified」が
+ *     永続化されると、再起動で永久 lock 取得不能になる事故が起きる。奪取可能側に
+ *     倒すことで復旧経路を確保する
+ *
+ * 安全側に倒したい場合は呼出側で signature を渡さない (= sigOpts 未指定) ことで
+ * 従来の alive-only 判定に戻せる。
  */
 export type SignatureVerdict = "same" | "stale" | "unverified";
 

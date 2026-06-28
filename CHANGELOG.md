@@ -4,6 +4,88 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.1] - 2026-06-28
+
+### Fixed
+
+- **subscribe 検出を ppid chain fallback で全起動形態に対応** (DR-0007 補強)。
+  `claude "<prompt>"` 形式で直起動された claude は argv に `--session-id` を
+  持たないため、`detectSubscribeForSid` が argv 照合だけだと false negative に
+  なり、`check-subscribe` が常に exit 1 を返し UserPromptSubmit hook も毎ターン
+  「subscribe 不在」を誤発火していた。argv 照合 → ppid chain fallback の hybrid 化。
+  純粋関数 `src/lib/claude-ancestor.ts` 切出し + 11 件のテスト追加。
+
+## [0.31.0] - 2026-06-28
+
+### Removed (BREAKING, DR-0019)
+
+- **cmux 連携機能を完全除去**。cmux-msg は任意の起動形態 (ターミナル直起動 /
+  tmux / SSH / bg job 等) で動作する pure messaging plugin になった。
+- 削除サブコマンド: `spawn` / `stop` / `tell` / `screen`
+- 削除 `peers` / `broadcast` の軸: `--by ws` (= 旧 `workspace_id` 比較)。代替は
+  `--by repo` (同 worktree の peer はだいたい同 repo)
+- 削除 env: `CMUX_WORKSPACE_ID` / `CMUX_SURFACE_ID` / `CMUX_TAB_ID` /
+  `CMUXMSG_PARENT_SESSION_ID` / `CMUXMSG_WORKER_NAME` / `CMUXMSG_SURFACE_REF`
+  (設定しても無視される)
+- 削除 meta フィールド: `workspace_id` / `surface_id` / `surface_ref` /
+  `worker_name` / `parent_session_id` / `tab_id` (旧 meta.json に残っていても
+  読み捨て)
+- session_id 解決から `<base>/by-surface/<CMUX_SURFACE_ID>` lookup 経路を削除
+  (残るのは `CLAUDE_CODE_SESSION_ID` → `CMUXMSG_SESSION_ID` の 2 段)
+
+### Migration
+
+- 子 CC 起動は `claude --session-id <uuid> ...` を直接呼ぶ
+- pane 操作 (tell/screen) は hyoui 等の別 plugin に委譲
+- `--by ws` 使っていた場合は `--by repo` で代用
+
+プロダクト名 `cmux-msg` は名称負債 (DR-0013 で `ccmsg` への rename を予定) で
+あり、本リリースとは別の release で対応する。動作上は multiplexer 非依存。
+
+## [0.30.20] - 2026-06-28
+
+### Fixed
+
+- **subscribe lock の PID 再利用 false-positive 対策**。`subscribers` テーブルに
+  `lock_lstart` 列を追加 (SCHEMA_VERSION 2 で rolling migration)。`tryAcquireLock` に
+  optional な signatureOpts、PID alive + lstart 一致を AND して PID 再利用を識別。
+
+## [0.30.19] - 2026-06-28
+
+### Added
+
+- **`subscribe --force`** で前 subscribe を SIGTERM → 5s grace → SIGKILL で奪取。
+  plugin update 後 / Monitor 取り違え時 / 死にきれない subscribe の掃除用途。
+
+## [0.30.18] - 2026-06-28
+
+### Fixed
+
+- **全 SQLite WRITE transaction を BEGIN IMMEDIATE 化**。WAL モードで
+  READ → WRITE upgrade window で SQLITE_BUSY_SNAPSHOT が即時 throw され、
+  実機計測で 12-16% 発火していた問題を解消。
+- **`subscribe.ts` の SQLITE_BUSY silent failure を解消**。`isSqliteBusyError()`
+  判定追加で、SQLITE_BUSY 系は exit 1 で安全側停止 (旧来環境 fallback と区別)。
+
+## [0.30.17] - 2026-06-28
+
+### Changed
+
+- **subscribe lock の error message に sid と lock_pid を含める**。利用者が
+  cross-session lock 競合と誤読する余地を取り除く (interface-wording)。
+  `tryAcquireLock` の戻り値を `{ acquired, heldBy? }` に拡張。
+
+## [0.30.16] - 2026-06-27
+
+### Added
+
+- **SessionStart hook で PATH 上の `cmux-msg` を最新版に自動同期**。新規 hook
+  `src/hooks/session-start-ensure-path.ts`: hook 自身の realpath から plugin root
+  を導出し、PATH 上の cmux-msg と比較して以下を行う:
+  - PATH に無い → AI に HOME 内 bin 候補から symlink 作成を促すメッセージ
+  - symlink で旧版を指している → hook が atomic に張り替え
+  - 実体ファイルで版違い → AI に手動置換を促す
+
 ## [0.25.2] - 2026-05-09
 
 ### Changed (内部、機能変更なし)
