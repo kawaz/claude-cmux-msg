@@ -1,6 +1,6 @@
 ---
 title: エラーコード体系 + exit code 規約化 (機械可読 stable ID)
-status: open
+status: discarded
 category: request
 created: 2026-06-28T20:24:44+09:00
 last_read: 2026-06-29T00:00:00+09:00
@@ -8,11 +8,11 @@ open_entered: 2026-06-28T20:24:44+09:00
 wip_entered:
 blocked_entered:
 pending_entered:
-discarded_entered:
+discarded_entered: 2026-06-29T10:43:14+09:00
 resolved_entered:
-discard_reason:
+discard_reason: ["discarded:rewrite 戦略下で cmux-msg は p2p 機能のまま安定維持となり、新規 error code 体系導入は YAGNI。error code 設計は ccmsg (新リポ) 側で再検討。kawaz 判断で close"]
 pending_reason:
-close_reason:
+close_reason: ["discarded:rewrite 戦略下で cmux-msg は p2p 機能のまま安定維持となり、新規 error code 体系導入は YAGNI。error code 設計は ccmsg (新リポ) 側で再検討。kawaz 判断で close"]
 blocked_by:
 origin: claude-cmux-msg
 ---
