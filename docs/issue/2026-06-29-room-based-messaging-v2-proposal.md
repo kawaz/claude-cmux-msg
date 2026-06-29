@@ -63,3 +63,19 @@ die セッションから room-based messaging 再設計 (v2) 提案を受領。
 - [ ] kawaz と相談して設計方針確定 (DR 化 or SKILL 改訂単独)
 - [ ] 既存 issue / DR とのトリアージ完了
 - [ ] 具体的な実装計画が立案済み (後続 issue or DR に昇格)
+
+---
+
+## 2026-06-29 方向転換: rewrite 戦略へ分岐
+
+kawaz 判断 (本セッションでの設計議論):
+
+- 本提案 (room layer + JSONL model) の **方向性は採用**
+- ただし **既存 cmux-msg リポでの改修ではなく rewrite** で別リポに作る
+- 新リポ: `claude-ccmsg` (plugin + 中央デーモン), `ccmsg-webui` (Web UI 別サブプロジェクト)
+- 構成案: 中央デーモン書き込み集約 + サイドカー subscribe + jsonl room log + sqlite メタ + bun+hono web API
+- 既存 cmux-msg は **p2p 機能のまま安定維持** (rewrite 完成まで dogfood 継続)
+
+設計詳細は **central-daemon-architecture issue** (2026-06-29-central-daemon-architecture.md) に集約。本 issue は **die セッションからの提案受領記録 + 論点アーカイブ** として archive 移動せず active のまま残す (= central-daemon-architecture の出発点として参照される)。
+
+status はまだ idea のまま (= 提案受領記録は idea 性質を保持、設計判断は central-daemon-architecture 側で進行中)。
