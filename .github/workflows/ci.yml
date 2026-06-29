@@ -24,7 +24,7 @@ jobs:
 
       # Bun global install cache を再利用 (= claude-code 再 download 抑制)
       - name: Cache Bun global install
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/global
