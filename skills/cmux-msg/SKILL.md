@@ -203,16 +203,16 @@ cmux-msg peers --all --by cwd:<xx> -v
 
 ### 2. peer が居なければ起動する
 
-cmux-msg は messaging 専任 (DR-0019) で起動責務を持たないので、`hyoui run` で background 起動する。標準パターン:
+cmux-msg は messaging 専任 (DR-0019) で起動責務を持たないので、`hyoui run` で background 起動する。**canonical 標準パターン** (DR-0009 hyoui-delegation 準拠):
 
 ```bash
-# UUID v4 を先に採番
-SID=$(uuidgen | tr 'A-Z' 'a-z')
+# UUID v4 を先に採番 (lowercase 必須、claude --session-id 仕様)
+SID=$(uuidgen | tr A-F a-f)
 
-# 相手 repo の main worktree で claude を background 起動
-# stdin EOF で hyoui run が detach し、claude は daemon 配下で生存し続ける
+# 相手 repo の main worktree で claude を detached 起動
+# --detached で hyoui がそのまま return、claude は daemon 配下で継続稼働
 (cd /path/to/<xx>/main && \
- hyoui run --stdin-eof=detach -- claude --session-id "$SID" 'cmux-msg subscribe して待て' < /dev/null)
+ hyoui run --detached -- claude --session-id "$SID" 'SessionStart の指示に従え')
 
 # しばらく待ってから peers で生存確認 (SessionStart hook が走って meta.json + DB sessions row が出来る必要)
 sleep 5
@@ -220,8 +220,10 @@ cmux-msg peers --all --by cwd:<xx> -v | grep "$SID"
 ```
 
 ポイント:
-- `hyoui run --stdin-eof=detach`: stdin 即 EOF で hyoui run が exit、claude は daemon 配下で継続稼働
-- `'cmux-msg subscribe して待て'`: 起動 prompt。相手 AI は本指示を受けて Monitor で subscribe を張り、新着 msg を待つ姿勢になる
+- `hyoui run --detached`: hyoui がすぐ return、claude は detached で background 継続。`--stdin-eof=detach` / `< /dev/null` といった旧パターンは不要
+- **初期 prompt は固定文言** `'SessionStart の指示に従え'`: 各リポの SessionStart hook が canonical な起動指示 (`subscribe` 起動 / 必要な context 読み込み等) を流すので、起動側はその指示を実行させるだけで足りる
+- **`--dangerously-skip-permissions` は付けない**: 起動時 prompt は permission を生まないので不要
+- **namespace は使わない** (DR-0009 §3 — default に直接)
 - SessionStart hook (cmux-msg 0.31+) が走るまで数秒待ってから peers で確認
 
 ### 3. send / broadcast で通信開始
