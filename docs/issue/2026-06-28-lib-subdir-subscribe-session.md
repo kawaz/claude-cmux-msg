@@ -3,7 +3,7 @@ title: src/lib/ flat 構造をサブディレクトリ化 (subscribe/ + session/
 status: open
 category: request
 created: 2026-06-28T20:36:05+09:00
-last_read:
+last_read: 2026-06-29T09:16:49+09:00
 open_entered: 2026-06-28T20:36:05+09:00
 wip_entered:
 blocked_entered:
