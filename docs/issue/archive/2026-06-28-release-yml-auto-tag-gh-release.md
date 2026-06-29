@@ -1,6 +1,6 @@
 ---
 title: release.yml + 自動 tag + GH Release を整備 (release-flow-awareness 適合)
-status: open
+status: discarded
 category: request
 created: 2026-06-28T20:33:50+09:00
 last_read: 2026-06-29T09:17:24+09:00
@@ -8,11 +8,11 @@ open_entered: 2026-06-28T20:33:50+09:00
 wip_entered:
 blocked_entered:
 pending_entered:
-discarded_entered:
+discarded_entered: 2026-06-29T10:45:35+09:00
 resolved_entered:
-discard_reason:
+discard_reason: ["discarded:cmux-msg は Claude Code plugin として配布されており、GitHub Release を作っていないため release.yml は不要。kawaz 判断で close"]
 pending_reason:
-close_reason:
+close_reason: ["discarded:cmux-msg は Claude Code plugin として配布されており、GitHub Release を作っていないため release.yml は不要。kawaz 判断で close"]
 blocked_by:
 origin: claude-cmux-msg
 ---
