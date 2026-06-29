@@ -7,7 +7,15 @@
 #
 # zsh/bash/fish 等から alias で指せば PATH を汚さずに使える。
 
-__here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+__self="${BASH_SOURCE[0]}"
+while [ -L "$__self" ]; do
+  __link="$(readlink "$__self")"
+  case "$__link" in
+    /*) __self="$__link" ;;
+    *)  __self="$(dirname "$__self")/$__link" ;;
+  esac
+done
+__here="$(cd "$(dirname "$__self")" && pwd)"
 __src="${__here}/../src/cli.ts"
 
 if command -v bun >/dev/null 2>&1; then

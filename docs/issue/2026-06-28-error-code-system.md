@@ -19,6 +19,8 @@ origin: claude-cmux-msg
 
 # エラーコード体系 + exit code 規約化 (機械可読 stable ID)
 
+> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で新規 event 型 (post / create_room / move) が増え、error code 命名空間に影響あり。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+
 ## 概要
 
 cmux-msg のエラーメッセージは全部日本語自由文 (例: `[error] 同一 session_id の subscribe が既に起動中です`)。AI consumer が `grep '同一 session_id'` でパースする運用は**文言改訂で破綻**する。stable な error code (例: `ERR_SUBSCRIBE_LOCK_HELD`) を持たない。

@@ -19,6 +19,8 @@ origin: claude-cmux-msg
 
 # src/lib/ flat 構造をサブディレクトリ化 (subscribe/ + session/)
 
+> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で `src/lib/room/` 軸が追加される可能性あり、先に分割すると手戻り risk。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+
 ## 概要
 
 `src/lib/` に 30+ ファイルが flat に並んでおり、subscribe / session-lifecycle / message-store の責務軸が見えにくい。建築家視点レビューで指摘。

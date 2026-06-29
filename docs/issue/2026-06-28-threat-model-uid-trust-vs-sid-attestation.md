@@ -19,6 +19,8 @@ origin: claude-cmux-msg
 
 # Threat model 検討: 同 UID 信頼 vs sid attestation (sid spoofing / priority spoof 対策)
 
+> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer の member 概念追加で room 内 sid 検証の論点が増える、先に threat model を固めると手戻り risk。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+
 ## 概要
 
 攻撃者視点レビューで複数の Critical 級 spoofing 経路を発見した。**現状の threat model (= 同 UID 内の全プロセスを信頼) を維持するか / sid attestation (= 自セッション process tree しか sid を name 出来ない) に強化するか** の設計判断 issue。

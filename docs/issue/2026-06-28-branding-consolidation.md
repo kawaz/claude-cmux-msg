@@ -19,6 +19,8 @@ origin: claude-cmux-msg
 
 # プロダクト名 / env prefix を branding 集約 (DR-0013 rename 準備)
 
+> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で新 API (post / create_room) が増える可能性あり、命名集約と整合確認が必要。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+
 ## 概要
 
 DR-0013 (Accepted) でプロダクト名を `cmux-msg` → `ccmsg` に rename することが決まっているが、**現状の実装はプロダクト名をハードコードで散在させている**。rename 時の手間が大きく、変更漏れの risk もある。
