@@ -19,7 +19,7 @@ origin: claude-cmux-msg
 
 # プロダクト名 / env prefix を branding 集約 (DR-0013 rename 準備)
 
-> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で新 API (post / create_room) が増える可能性あり、命名集約と整合確認が必要。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+> ⚠️ **rewrite 戦略下で不要化候補** (2026-06-29 トリアージ更新): [central-daemon-architecture](./2026-06-29-central-daemon-architecture.md) で rewrite 戦略 (新リポ `claude-ccmsg` で別実装) が採用された場合、DR-0013 (cmux-msg → ccmsg rename) 自体が不要化される。既存 cmux-msg は cmux-msg のまま安定維持。→ **close 候補**、kawaz 判断待ち。
 
 ## 概要
 

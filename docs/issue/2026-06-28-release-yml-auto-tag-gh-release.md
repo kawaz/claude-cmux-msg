@@ -19,7 +19,7 @@ origin: claude-cmux-msg
 
 # release.yml + 自動 tag + GH Release を整備 (release-flow-awareness 適合)
 
-> ⚠️ **room-based-messaging とは独立、優先度判断のみ保留** (2026-06-29 トリアージ): release flow 整備自体は room 設計と独立。ただし「現フェーズは room 設計に集中」と判断され順序保留。room 方針 land or kawaz 指示で着手可。
+> ⚠️ **rewrite 戦略と独立、引き続き open** (2026-06-29 トリアージ更新): release flow 整備は cmux-msg にも ccmsg にも適用したい標準化作業。[central-daemon-architecture](./2026-06-29-central-daemon-architecture.md) の rewrite と独立に進められる。現フェーズは設計議論優先のため順序保留、後続セッションで着手可。
 
 ## 概要
 

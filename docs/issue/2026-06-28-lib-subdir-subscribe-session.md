@@ -19,7 +19,7 @@ origin: claude-cmux-msg
 
 # src/lib/ flat 構造をサブディレクトリ化 (subscribe/ + session/)
 
-> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で `src/lib/room/` 軸が追加される可能性あり、先に分割すると手戻り risk。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+> ⚠️ **rewrite 戦略下で着手見送り推奨** (2026-06-29 トリアージ更新): [central-daemon-architecture](./2026-06-29-central-daemon-architecture.md) で rewrite が決まると、cmux-msg は安定維持モード。大規模リファクタの ROI が下がる。**close or discarded 候補**、kawaz 判断待ち。
 
 ## 概要
 

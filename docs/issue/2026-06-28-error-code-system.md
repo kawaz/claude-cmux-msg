@@ -19,7 +19,7 @@ origin: claude-cmux-msg
 
 # エラーコード体系 + exit code 規約化 (機械可読 stable ID)
 
-> ⚠️ **room-based-messaging 設計確定後に再評価** (2026-06-29 トリアージ): [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) の room layer 導入で新規 event 型 (post / create_room / move) が増え、error code 命名空間に影響あり。room 方針 land まで着手保留 (blocked_by までは付けず判断保留)。
+> ⚠️ **rewrite 戦略下で YAGNI 寄り** (2026-06-29 トリアージ更新): [central-daemon-architecture](./2026-06-29-central-daemon-architecture.md) で rewrite が決まると、cmux-msg は p2p 機能のまま安定維持となり、新規 error code 体系導入の優先度は低い。error code 設計は ccmsg 側で再検討。**close 候補**、kawaz 判断待ち。
 
 ## 概要
 
