@@ -1,6 +1,6 @@
 ---
 title: launcher symlink 経由実行で "Module not found" エラー
-status: open
+status: resolved
 category: bug
 created: 2026-06-28T23:43:01+09:00
 last_read: 2026-06-29T00:00:00+09:00
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-29T09:14:34+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented: bin/cmux-msg に symlink resolve loop (while [ -L ]) を追加。macOS BSD readlink (-f なし) でも portable。実機検証: 直接実行 / 1-hop symlink / 2-hop symlink すべて whoami 正常動作。SessionStart hook の symlink 案内通りで break しなくなった"]
 blocked_by:
 origin: kuu.mbt
 ---
