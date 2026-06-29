@@ -28,7 +28,7 @@ room-based-messaging-v2-proposal で die セッションから受領した room 
 ### 中央デーモン方式が最も素直
 
 - **書き込みを 1 プロセス (デーモン) に集約**することで競合問題がシンプル化
-- 既存の p2p 方式 (UNIX perm + lockfile + PID 検査) で発生する subscribe lock 競合 / sid spoof / SIGKILL hijack 等の threat model が **構造的に消える**
+- 既存の p2p 方式 (UNIX perm + lockfile + PID 検査) で発生する subscribe lock 競合 / sid spoof / SIGKILL hijack 等の threat model は **境界が変わる** (= 同 UID 内プロセス相互の局所脅威は消えるが、daemon socket 乗っ取り / daemon impersonation / web API 露出 / token 漏洩 / log 改竄 / 再起動時未 flush 等の **daemon 中心の脅威に集中**する。「消える」ではなく「集約 + 移譲」)
 
 ### デーモン起動
 
