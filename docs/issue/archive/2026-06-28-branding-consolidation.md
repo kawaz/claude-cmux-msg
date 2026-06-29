@@ -1,6 +1,6 @@
 ---
 title: プロダクト名 / env prefix を branding 集約 (DR-0013 rename 準備)
-status: open
+status: discarded
 category: request
 created: 2026-06-28T20:38:04+09:00
 last_read: 2026-06-29T09:00:00+09:00
@@ -8,11 +8,11 @@ open_entered: 2026-06-28T20:38:04+09:00
 wip_entered:
 blocked_entered:
 pending_entered:
-discarded_entered:
+discarded_entered: 2026-06-29T10:42:02+09:00
 resolved_entered:
-discard_reason:
+discard_reason: ["discarded:rewrite 戦略 (central-daemon-architecture) で新リポ claude-ccmsg に作り直すため、既存 cmux-msg の rename (DR-0013) 自体が不要化。kawaz 判断で close"]
 pending_reason:
-close_reason:
+close_reason: ["discarded:rewrite 戦略 (central-daemon-architecture) で新リポ claude-ccmsg に作り直すため、既存 cmux-msg の rename (DR-0013) 自体が不要化。kawaz 判断で close"]
 blocked_by:
 origin: claude-cmux-msg
 ---
