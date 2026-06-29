@@ -1,6 +1,6 @@
 ---
 title: 中央デーモン方式アーキテクチャ検討 (rewrite: claude-ccmsg + ccmsg-webui)
-status: open
+status: resolved
 category: design
 created: 2026-06-29T10:14:32+09:00
 last_read:
@@ -9,10 +9,10 @@ wip_entered:
 blocked_entered:
 pending_entered:
 discarded_entered:
-resolved_entered:
+resolved_entered: 2026-06-29T11:42:37+09:00
 discard_reason:
 pending_reason:
-close_reason:
+close_reason: ["implemented:dr-claude-ccmsg/docs/decisions/DR-0001-central-daemon-architecture.md (Proposed) として方針を新リポ kawaz/claude-ccmsg に移管 (https://github.com/kawaz/claude-ccmsg/blob/main/docs/decisions/DR-0001-central-daemon-architecture.md)。本 issue は方針確定 + 移管記録として archive 移動。後続の MVP 設計 / 実装は claude-ccmsg リポで進行"]
 blocked_by:
 origin: 自リポ TODO
 ---
