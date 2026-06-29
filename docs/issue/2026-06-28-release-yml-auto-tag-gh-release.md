@@ -3,7 +3,7 @@ title: release.yml + 自動 tag + GH Release を整備 (release-flow-awareness �
 status: open
 category: request
 created: 2026-06-28T20:33:50+09:00
-last_read:
+last_read: 2026-06-29T09:17:24+09:00
 open_entered: 2026-06-28T20:33:50+09:00
 wip_entered:
 blocked_entered:
