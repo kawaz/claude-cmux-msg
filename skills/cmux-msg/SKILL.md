@@ -209,10 +209,16 @@ cmux-msg は messaging 専任 (DR-0019) で起動責務を持たないので、`
 # UUID v4 を先に採番 (lowercase 必須、claude --session-id 仕様)
 SID=$(uuidgen | tr A-F a-f)
 
-# 相手 repo の main worktree で claude を detached 起動
+# session name を repo/ws + 時刻で生成 (例: "claude-ccmsg/main 0629T11")
+# kawaz リポ慣習 (~/.local/share/repos/<host>/<owner>/<repo>/<ws>) で
+# repo 親 dir = repo 名、ws dir = workspace 名 (main / wip-xxx / 1234-feature-xxx 等)
+WS=/path/to/<xx>/main
+NAME="$(basename "$(dirname "$WS")")/$(basename "$WS") $(date +%m%dT%H)"
+
+# 相手 repo の workspace で claude を detached 起動
 # --detached で hyoui がそのまま return、claude は daemon 配下で継続稼働
-(cd /path/to/<xx>/main && \
- hyoui run --detached -- claude --session-id "$SID" 'SessionStart の指示に従え')
+(cd "$WS" && \
+ hyoui run --detached -- claude --session-id "$SID" --name "$NAME" 'SessionStart の指示に従え')
 
 # しばらく待ってから peers で生存確認 (SessionStart hook が走って meta.json + DB sessions row が出来る必要)
 sleep 5
@@ -221,6 +227,7 @@ cmux-msg peers --all --by cwd:<xx> -v | grep "$SID"
 
 ポイント:
 - `hyoui run --detached`: hyoui がすぐ return、claude は detached で background 継続。`--stdin-eof=detach` / `< /dev/null` といった旧パターンは不要
+- **`--name "<repo>/<ws> mmddThh"`** (例: `"claude-ccmsg/main 0629T11"`): claude TUI / `/sessions` / FleetView 等で識別しやすくする。デフォルトは「ホスト名 + 適当な単語」になり、複数 ws で起動した時に区別できないため明示する。同 ws 内で context 引き継ぎのため新規起動するケース (= 旧 session を閉じる前に msg で context 渡し → 新 session で続行 → 旧 session 閉じる) でも `mmddThh` (= 月日 + 時) で区別できる
 - **初期 prompt は固定文言** `'SessionStart の指示に従え'`: 各リポの SessionStart hook が canonical な起動指示 (`subscribe` 起動 / 必要な context 読み込み等) を流すので、起動側はその指示を実行させるだけで足りる
 - **`--dangerously-skip-permissions` は付けない**: 起動時 prompt は permission を生まないので不要
 - **namespace は使わない** (DR-0009 §3 — default に直接)
