@@ -1,6 +1,6 @@
 ---
 title: '設計議論: Claude Code jsonl 更新ストリーミング監視ループ (kawaz と議論)'
-status: idea
+status: discarded
 category: idea
 created: 2026-05-09T00:00:00+09:00
 last_read: 2026-06-28T20:12:34+09:00
@@ -8,11 +8,11 @@ open_entered:
 wip_entered:
 blocked_entered:
 pending_entered:
-discarded_entered:
+discarded_entered: 2026-06-29T09:12:20+09:00
 resolved_entered:
-discard_reason:
+discard_reason: ["51日idea進展なし。Claude Code jsonl監視ループはcmux-msgより外側の話で、必要になったら再起票"]
 pending_reason:
-close_reason:
+close_reason: ["51日idea進展なし。Claude Code jsonl監視ループはcmux-msgより外側の話で、必要になったら再起票"]
 blocked_by:
 origin: 自リポ TODO
 ---
