@@ -1,6 +1,6 @@
 ---
 title: src/lib/ flat 構造をサブディレクトリ化 (subscribe/ + session/)
-status: open
+status: discarded
 category: request
 created: 2026-06-28T20:36:05+09:00
 last_read: 2026-06-29T09:16:49+09:00
@@ -8,11 +8,11 @@ open_entered: 2026-06-28T20:36:05+09:00
 wip_entered:
 blocked_entered:
 pending_entered:
-discarded_entered:
+discarded_entered: 2026-06-29T10:44:33+09:00
 resolved_entered:
-discard_reason:
+discard_reason: ["discarded:rewrite 戦略下で cmux-msg は安定維持モードに入るため、大規模リファクタの ROI が低い。lib 構造の整理は ccmsg (新リポ) で最初から適切に設計。kawaz 判断で close"]
 pending_reason:
-close_reason:
+close_reason: ["discarded:rewrite 戦略下で cmux-msg は安定維持モードに入るため、大規模リファクタの ROI が低い。lib 構造の整理は ccmsg (新リポ) で最初から適切に設計。kawaz 判断で close"]
 blocked_by:
 origin: claude-cmux-msg
 ---
