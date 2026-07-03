@@ -7,7 +7,7 @@ description: 複数 Claude Code セッション間でファイルベースのメ
 
 複数 Claude Code セッション間でファイルベースのメッセージをやり取りするシステム。任意の起動形態 (ターミナル直起動 / tmux / SSH / bg job 等) で動作し、特定の terminal multiplexer に依存しない。
 
-> プロダクト名 `cmux-msg` は名称負債 (DR-0013 で `ccmsg` への rename を予定)。動作上は特定 multiplexer 非依存。
+> 後継の中央デーモン方式は別リポ [claude-ccmsg](https://github.com/kawaz/claude-ccmsg) で設計中。本プラグインは `cmux-msg` のまま当面現役維持。
 
 ## コマンドの呼び方
 

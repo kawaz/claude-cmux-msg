@@ -10,7 +10,6 @@ import { Database } from "bun:sqlite";
 import * as path from "path";
 import { getMsgBase } from "./paths";
 
-/** DR-0013 で ccmsg.db に rename 予定 (= 名称負債を一度だけ集約)。 */
 export const DB_FILENAME = "cmux-msg.db";
 
 export function getDbPath(): string {
