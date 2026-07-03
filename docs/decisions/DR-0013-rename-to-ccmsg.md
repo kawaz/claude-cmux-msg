@@ -1,6 +1,6 @@
 # DR-0013: パッケージ / コマンド / env の cmux- prefix を ccmsg に統一
 
-- Status: Accepted (2026-06-17, kawaz 一括承認)
+- Status: Superseded by [claude-ccmsg DR-0001](https://github.com/kawaz/claude-ccmsg/blob/main/docs/decisions/DR-0001-central-daemon-architecture.md) (2026-06-29: rewrite 戦略採用により rename でなく別リポでの作り直しに方針転換、本リポの `cmux-msg` 名称は rename せず維持)
 - Date: 2026-06-16
 - Related: [DR-0009](DR-0009-hyoui-delegation.md) / [DR-0010](DR-0010-drop-cmux-environment-requirement.md) (cmux 廃止系)
 

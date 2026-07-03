@@ -4,7 +4,7 @@
 
 A Claude Code plugin that provides file-based messaging between multiple Claude Code sessions. Works with any launch style (direct terminal, tmux, SSH, background job, etc.) — there is no dependency on a specific terminal multiplexer.
 
-> The product name `cmux-msg` is a naming debt (DR-0013 plans the rename to `ccmsg`). The runtime is multiplexer-agnostic.
+> A central-daemon successor is being designed in a separate repo, [claude-ccmsg](https://github.com/kawaz/claude-ccmsg). This plugin stays `cmux-msg` and remains in active use.
 
 Two main use cases:
 
