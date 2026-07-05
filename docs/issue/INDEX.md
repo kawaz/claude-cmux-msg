@@ -7,3 +7,4 @@ active な issue の一覧。close 済みは `archive/` にあり、ここには
 | 2026-05-17 | request | pending-sublimation | [process-info-tool](./2026-05-17-process-info-tool.md) | sid→プロセス情報の構造化 JSON 取得を単機能ツール / lib に切り出す |
 | 2026-06-28 | design | open | [threat-model-uid-trust-vs-sid-attestation](./2026-06-28-threat-model-uid-trust-vs-sid-attestation.md) | Threat model 検討: 同 UID 信頼 vs sid attestation (sid spoofing / priority spoof 対策) |
 | 2026-06-29 | design | idea | [room-based-messaging-v2-proposal](./2026-06-29-room-based-messaging-v2-proposal.md) | die セッションから room-based messaging v2 提案受領記録 + 論点整理 |
+| 2026-07-06 | bug | open | [peers-alive-detection-false-dead](./2026-07-06-peers-alive-detection-false-dead.md) | peers の alive 判定が実際に生きているセッションを dead 表示する疑い (broadcast --by repo が届かない実害) |
