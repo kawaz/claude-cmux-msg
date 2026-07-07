@@ -189,6 +189,21 @@ describe("listInbox / countInbox / readMessage", () => {
     setSelf(PEER_A);
     expect(() => readMessage("nonexistent.md")).toThrow();
   });
+
+  // notify (type=notify) は subscribe stream で即時 emit 済みの軽量通知 (DR-0017/0018)。
+  // read しても inbox file は消えない (accept/dismiss と違い状態遷移しない) ため、
+  // countInbox (= 未読カウントの土台) に含めると「読んでも減らない」ノイズになる
+  // (docs/issue/2026-07-07-notify-self-unread-never-clears.md)。listInbox 自体は
+  // subscribe 側の TTL/catch-up フィルタリングが全件必要とするので除外しない。
+  test("countInbox は notify を除外、listInbox は全件返す", async () => {
+    setSelf(SELF);
+    await sendMessage({ target: PEER_A, body: "hi", type: "request" });
+    await sendMessage({ target: PEER_A, body: "ping", type: "notify" });
+
+    setSelf(PEER_A);
+    expect(countInbox()).toBe(1);
+    expect(listInbox().length).toBe(2);
+  });
 });
 
 describe("acceptMessage", () => {

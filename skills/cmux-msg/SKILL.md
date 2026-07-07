@@ -45,7 +45,7 @@ peer agent と認識した時、ユーザ向けの忖度禁止ルールが対象
 - `thread <file> [--json]` — `in_reply_to` 連鎖で会話単位表示
 - `subscribe [--force]` — inbox 新着 JSONL stream (**必ず Monitor 経由**、後述)。`--force` で前 subscribe を奪取
 - `check-subscribe` — 自セッションの subscribe 稼働判定 (exit 0=動作中, 1=不在, 2=sid 解決失敗)。justfile push deps に組込みで subscribe 落ち時に recipe fail
-- `notify [--to <sid>|--self] [--text "<msg>"]` — 軽量通知。subscribe stream の payload に本文同梱 (= 受信側 read 不要で即実行可)。TTL 12 分、catch-up 60 秒 (DR-0017 / DR-0018)
+- `notify [--to <sid>|--self] [--text "<msg>"]` — 軽量通知。subscribe stream の payload に本文同梱 (= 受信側 read 不要で即実行可)。TTL 12 分、catch-up 60 秒 (DR-0017 / DR-0018)。`list` には出ない (= subscribe で emit 済みのため、`history` / `read` では引き続き参照可)
 - `gc [--force]` — dead session 掃除
 - `label add <name>[,<name>...]` / `label remove <name>[,<name>...]` / `label list` — 自セッションに動的に label を貼り剥がし (DR-0015、カンマ区切り複数同時可、文字制約 `[a-zA-Z0-9_=]+`)
 

@@ -24,10 +24,13 @@ export interface InboxMessage {
   broadcast_id: string | null;
 }
 
-export function listInbox(): InboxMessage[] {
-  const dir = myDir();
-  const inboxDir = path.join(dir, "inbox");
+/** notify (type=notify) は subscribe stream に本文同梱で即時 emit 済み (DR-0017)。
+ *  list / 未読カウントの対象からは除外する (history / read は対象外、DR-0018)。 */
+export function isNotify(m: Pick<InboxMessage, "type">): boolean {
+  return m.type === "notify";
+}
 
+export function listInboxAt(inboxDir: string): InboxMessage[] {
   if (!fs.existsSync(inboxDir)) {
     throw new Error(
       "inboxが未初期化です。cmux-msg init を実行してください。"
@@ -58,6 +61,10 @@ export function listInbox(): InboxMessage[] {
   return result;
 }
 
+export function listInbox(): InboxMessage[] {
+  return listInboxAt(path.join(myDir(), "inbox"));
+}
+
 export function readMessage(filename: string): string {
   const dir = myDir();
   const filepath = path.join(dir, "inbox", filename);
@@ -77,5 +84,5 @@ export function countInbox(): number {
     return 0;
   }
 
-  return fs.readdirSync(inboxDir).filter((f) => f.endsWith(".md")).length;
+  return listInboxAt(inboxDir).filter((m) => !isNotify(m)).length;
 }

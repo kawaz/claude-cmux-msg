@@ -19,6 +19,7 @@ import { transitionState } from "../lib/state";
 import { openDb } from "../lib/db";
 import { updateState } from "../lib/session-status";
 import { detectSubscribeForSid } from "../lib/subscribe-watch";
+import { listInboxAt, isNotify } from "../lib/inbox";
 
 interface Input {
   session_id: string;
@@ -26,9 +27,14 @@ interface Input {
   hook_event_name?: string;
 }
 
-function countUnread(inboxDir: string): number {
+/**
+ * notify (type=notify) は subscribe stream で即時 emit 済みの軽量通知 (DR-0017/0018)。
+ * 「未読 N 件」に混ぜると読んでも減らないノイズになるので除外する
+ * (docs/issue/2026-07-07-notify-self-unread-never-clears.md)。
+ */
+export function countUnread(inboxDir: string): number {
   if (!fs.existsSync(inboxDir)) return 0;
-  return fs.readdirSync(inboxDir).filter((f) => f.endsWith(".md")).length;
+  return listInboxAt(inboxDir).filter((m) => !isNotify(m)).length;
 }
 
 async function main(): Promise<void> {
@@ -95,7 +101,10 @@ async function main(): Promise<void> {
   console.log(lines.join("\n"));
 }
 
-main().catch(() => {
-  // フックは失敗しても claude のターンを止めない (exit 0)
-  process.exit(0);
-});
+// import.meta.main ガードでテストからの import 時は自動実行しない (Bun 標準の entry-point 判定)。
+if (import.meta.main) {
+  main().catch(() => {
+    // フックは失敗しても claude のターンを止めない (exit 0)
+    process.exit(0);
+  });
+}
